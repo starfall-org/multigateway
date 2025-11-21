@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:lmhub/src/core/storage/provider_repository.dart';
 import 'package:lmhub/src/features/settings/domain/provider.dart';
 
@@ -115,39 +117,139 @@ class _AddProviderScreenState extends State<AddProviderScreen>
   }
 
   Future<void> _fetchModels() async {
+    // Validate inputs
+    if (_apiKeyController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter API Key first')),
+      );
+      return;
+    }
+
     setState(() {
       _isFetchingModels = true;
     });
 
-    // Mock fetching models for now
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      // Determine the base URL
+      String baseUrl = _baseUrlController.text.isNotEmpty
+          ? _baseUrlController.text
+          : _getDefaultBaseUrl();
 
-    List<String> modelIds = [];
-    switch (_selectedType) {
-      case ProviderType.google:
-        modelIds = ['gemini-pro', 'gemini-pro-vision', 'gemini-ultra'];
-        break;
-      case ProviderType.openai:
-        modelIds = [
-          'gpt-4',
-          'gpt-3.5-turbo',
-          'gpt-4-turbo',
-          'dall-e-3',
-          'tts-1',
-        ];
-        break;
-      case ProviderType.anthropic:
-        modelIds = ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'];
-        break;
+      // Ensure baseUrl doesn't end with /
+      if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+      }
+
+      // Build models endpoint URL
+      final url = Uri.parse('$baseUrl/v1/models');
+
+      // Build headers
+      final headers = {
+        'Authorization': 'Bearer ${_apiKeyController.text}',
+        'Content-Type': 'application/json',
+      };
+
+      // Add custom headers
+      for (var entry in _headers) {
+        if (entry.key.text.isNotEmpty) {
+          headers[entry.key.text] = entry.value.text;
+        }
+      }
+
+      // Make API request
+      final response = await http
+          .get(url, headers: headers)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        // Parse response
+        final jsonData = json.decode(response.body);
+        List<String> modelIds = [];
+
+        if (jsonData['data'] != null && jsonData['data'] is List) {
+          // OpenAI-compatible format
+          modelIds = (jsonData['data'] as List)
+              .map((model) => model['id'] as String)
+              .toList();
+        } else if (jsonData['models'] != null && jsonData['models'] is List) {
+          // Alternative format (some APIs use 'models' instead of 'data')
+          modelIds = (jsonData['models'] as List)
+              .map((model) {
+                if (model is String) {
+                  return model;
+                } else if (model is Map && model['id'] != null) {
+                  return model['id'] as String;
+                }
+                return '';
+              })
+              .where((id) => id.isNotEmpty)
+              .toList();
+        }
+
+        if (modelIds.isEmpty) {
+          throw Exception('No models found in API response');
+        }
+
+        setState(() {
+          _availableModels = modelIds
+              .map((id) => _detectCapabilities(id))
+              .toList();
+          _selectedModelToAdd = _availableModels.isNotEmpty
+              ? _availableModels.first
+              : null;
+          _isFetchingModels = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Found ${modelIds.length} models')),
+          );
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please check your API key.');
+      } else {
+        throw Exception(
+          'Failed to fetch models: ${response.statusCode} ${response.reasonPhrase}',
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isFetchingModels = false;
+      });
+
+      if (mounted) {
+        String errorMessage = 'Failed to fetch models';
+        if (e.toString().contains('SocketException') ||
+            e.toString().contains('ClientException')) {
+          errorMessage = 'Connection error. Please check URL and network.';
+        } else if (e.toString().contains('TimeoutException')) {
+          errorMessage = 'Request timed out. Please try again.';
+        } else if (e.toString().contains('FormatException')) {
+          errorMessage = 'Invalid response format from API.';
+        } else {
+          errorMessage = e.toString().replaceFirst('Exception: ', '');
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
+  }
 
-    setState(() {
-      _availableModels = modelIds.map((id) => _detectCapabilities(id)).toList();
-      _selectedModelToAdd = _availableModels.isNotEmpty
-          ? _availableModels.first
-          : null;
-      _isFetchingModels = false;
-    });
+  String _getDefaultBaseUrl() {
+    switch (_selectedType) {
+      case ProviderType.openai:
+        return 'https://api.openai.com';
+      case ProviderType.google:
+        return 'https://generativelanguage.googleapis.com';
+      case ProviderType.anthropic:
+        return 'https://api.anthropic.com';
+    }
   }
 
   void _addModel() {
