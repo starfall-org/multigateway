@@ -140,7 +140,7 @@ class _AddTTSProfileScreenState extends State<AddTTSProfileScreen> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<TTSServiceType>(
-            value: _selectedType,
+            initialValue: _selectedType,
             decoration: const InputDecoration(
               labelText: 'Service Type',
               border: OutlineInputBorder(),
@@ -164,7 +164,7 @@ class _AddTTSProfileScreenState extends State<AddTTSProfileScreen> {
           const SizedBox(height: 16),
           if (_selectedType == TTSServiceType.provider) ...[
             DropdownButtonFormField<String>(
-              value: _selectedProviderId,
+              initialValue: _selectedProviderId,
               decoration: const InputDecoration(
                 labelText: 'Provider',
                 border: OutlineInputBorder(),
@@ -197,7 +197,7 @@ class _AddTTSProfileScreenState extends State<AddTTSProfileScreen> {
                 child: _isLoadingVoices
                     ? const LinearProgressIndicator()
                     : DropdownButtonFormField<String>(
-                        value: _selectedVoiceId,
+                        initialValue: _selectedVoiceId,
                         decoration: const InputDecoration(
                           labelText: 'Voice',
                           border: OutlineInputBorder(),

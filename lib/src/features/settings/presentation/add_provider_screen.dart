@@ -268,7 +268,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
       padding: const EdgeInsets.all(16),
       children: [
         DropdownButtonFormField<ProviderType>(
-          value: _selectedType,
+          initialValue: _selectedType,
           decoration: const InputDecoration(
             labelText: 'Provider Type',
             border: OutlineInputBorder(),
@@ -379,7 +379,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
               ],
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -395,7 +395,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                 child: _isFetchingModels
                     ? const LinearProgressIndicator()
                     : DropdownButtonFormField<ModelInfo>(
-                        value: _selectedModelToAdd,
+                        initialValue: _selectedModelToAdd,
                         decoration: const InputDecoration(
                           labelText: 'Available Models',
                           border: OutlineInputBorder(),
