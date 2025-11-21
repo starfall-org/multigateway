@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "LMHub (Web)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "-d",
+                "web-server",
+                "--web-port",
+                "8080",
+                "--web-hostname",
+                "0.0.0.0"
+            ]
+        }
+    ]
+}
