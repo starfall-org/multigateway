@@ -1,0 +1,36 @@
+{
+  "app_title": "LMHub",
+  "chat": {
+    "title": "Trò chuyện & Hỗ trợ",
+    "start": "Bắt đầu cuộc trò chuyện!",
+    "regenerate": "Tạo lại",
+    "clear": "Xóa trò chuyện",
+    "copy": "Sao chép bản ghi",
+    "copied": "Đã sao chép bản ghi",
+    "no_user_to_regen": "Không tìm thấy tin nhắn người dùng để tạo lại",
+    "unable_pick": "Không thể chọn tệp: {error}"
+  },
+  "drawer": {
+    "recent": "Gần đây",
+    "new_chat": "Cuộc trò chuyện mới",
+    "help_activity": "Trợ giúp & hoạt động",
+    "settings": "Cài đặt",
+    "change_agent": "Đổi Agent",
+    "no_history": "Không có lịch sử"
+  },
+  "input": {
+    "ask": "Hỏi LMHub",
+    "attach_files": "Đính kèm tệp",
+    "pick_images": "Chọn ảnh/tệp",
+    "placeholder": "Nhập tin nhắn...",
+    "mic_tts": "Mic/TTS",
+    "send": "Gửi"
+  },
+  "attachments": {
+    "title_count": "Đính kèm ({count})"
+  },
+  "role": {
+    "you": "Bạn",
+    "system": "Hệ thống"
+  }
+}

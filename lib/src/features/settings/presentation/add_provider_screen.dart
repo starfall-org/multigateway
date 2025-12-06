@@ -40,7 +40,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
     if (widget.provider != null) {
       _selectedType = widget.provider!.type;
       _nameController.text = widget.provider!.name;
-      _apiKeyController.text = widget.provider!.apiKey;
+      _apiKeyController.text = widget.provider!.apiKey ?? '';
       _baseUrlController.text = widget.provider!.baseUrl ?? '';
       widget.provider!.headers.forEach((key, value) {
         _headers.add(
@@ -52,8 +52,8 @@ class _AddProviderScreenState extends State<AddProviderScreen>
       });
       _selectedModels = List.from(widget.provider!.models);
     } else {
-      _selectedType = ProviderType.google;
-      _nameController.text = 'Google AI';
+      _selectedType = ProviderType.gemini;
+      _nameController.text = 'Gemini';
     }
   }
 
@@ -104,7 +104,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
     }
 
     if (modelId.contains('tts')) {
-      capabilities = [ModelCapability.tts];
+      capabilities = [ModelCapability.audioGeneration];
       outputTypes = [ModelIO.audio];
     }
 
@@ -141,7 +141,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
       }
 
       // Build models endpoint URL
-      final url = Uri.parse('$baseUrl/v1/models');
+      final url = Uri.parse('$baseUrl/models');
 
       // Build headers
       final headers = {
@@ -164,35 +164,25 @@ class _AddProviderScreenState extends State<AddProviderScreen>
       if (response.statusCode == 200) {
         // Parse response
         final jsonData = json.decode(response.body);
-        List<String> modelIds = [];
+        List models = [];
 
         if (jsonData['data'] != null && jsonData['data'] is List) {
           // OpenAI-compatible format
-          modelIds = (jsonData['data'] as List)
+          models = (jsonData['data'] as List)
               .map((model) => model['id'] as String)
               .toList();
         } else if (jsonData['models'] != null && jsonData['models'] is List) {
           // Alternative format (some APIs use 'models' instead of 'data')
-          modelIds = (jsonData['models'] as List)
-              .map((model) {
-                if (model is String) {
-                  return model;
-                } else if (model is Map && model['id'] != null) {
-                  return model['id'] as String;
-                }
-                return '';
-              })
-              .where((id) => id.isNotEmpty)
-              .toList();
+          models = (jsonData['models'] as List);
         }
 
-        if (modelIds.isEmpty) {
+        if (models.isEmpty) {
           throw Exception('No models found in API response');
         }
 
         setState(() {
-          _availableModels = modelIds
-              .map((id) => _detectCapabilities(id))
+          _availableModels = models
+              .map((model) => _detectCapabilities(model))
               .toList();
           _selectedModelToAdd = _availableModels.isNotEmpty
               ? _availableModels.first
@@ -202,7 +192,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Found ${modelIds.length} models')),
+            SnackBar(content: Text('Found ${models.length} models')),
           );
         }
       } else if (response.statusCode == 401) {
@@ -245,10 +235,14 @@ class _AddProviderScreenState extends State<AddProviderScreen>
     switch (_selectedType) {
       case ProviderType.openai:
         return 'https://api.openai.com';
-      case ProviderType.google:
+      case ProviderType.gemini:
         return 'https://generativelanguage.googleapis.com';
       case ProviderType.anthropic:
         return 'https://api.anthropic.com';
+      case ProviderType.ollama:
+        return 'http://localhost:11434';
+      case ProviderType.custom:
+        return '';
     }
   }
 
@@ -389,8 +383,8 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                     _nameController.text == 'OpenAI' ||
                     _nameController.text == 'Anthropic') {
                   switch (value) {
-                    case ProviderType.google:
-                      _nameController.text = 'Google AI';
+                    case ProviderType.gemini:
+                      _nameController.text = 'Gemini';
                       break;
                     case ProviderType.openai:
                       _nameController.text = 'OpenAI';
@@ -398,6 +392,11 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                     case ProviderType.anthropic:
                       _nameController.text = 'Anthropic';
                       break;
+                    case ProviderType.ollama:
+                      _nameController.text = 'Ollama';
+                      break;
+                    case ProviderType.custom:
+                      _nameController.text = 'Custom';
                   }
                 }
               });

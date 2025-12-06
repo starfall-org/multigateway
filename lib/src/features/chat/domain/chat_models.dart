@@ -7,12 +7,15 @@ class ChatMessage {
   final ChatRole role;
   final String content;
   final DateTime timestamp;
+  // Danh sách đường dẫn tệp đính kèm (ảnh/tệp). Mặc định rỗng để tương thích ngược.
+  final List<String> attachments;
 
   ChatMessage({
     required this.id,
     required this.role,
     required this.content,
     required this.timestamp,
+    this.attachments = const [],
   });
 
   Map<String, dynamic> toJson() {
@@ -21,6 +24,7 @@ class ChatMessage {
       'role': role.name,
       'content': content,
       'timestamp': timestamp.toIso8601String(),
+      'attachments': attachments,
     };
   }
 
@@ -30,6 +34,10 @@ class ChatMessage {
       role: ChatRole.values.firstWhere((e) => e.name == json['role']),
       content: json['content'] as String,
       timestamp: DateTime.parse(json['timestamp'] as String),
+      attachments: (json['attachments'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
     );
   }
 }
@@ -79,8 +87,7 @@ class ChatSession {
       title: json['title'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
-      messages:
-          (json['messages'] as List<dynamic>?)
+      messages: (json['messages'] as List<dynamic>?)
               ?.map((e) => ChatMessage.fromJson(e))
               .toList() ??
           [],

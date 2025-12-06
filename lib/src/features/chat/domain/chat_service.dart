@@ -74,7 +74,8 @@ class ChatService {
 
     final base = provider.baseUrl?.replaceAll(RegExp(r'/$'), '') ??
         'https://api.openai.com';
-    final url = Uri.parse('$base/v1/chat/completions');
+    // Removed `/v1/` segment to support proxies or custom gateways that expect root-level endpoints
+    final url = Uri.parse('$base/chat/completions');
 
     final headers = <String, String>{
       'Authorization': 'Bearer ${provider.apiKey}',

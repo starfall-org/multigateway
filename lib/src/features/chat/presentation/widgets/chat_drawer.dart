@@ -3,6 +3,7 @@ import 'package:lmhub/src/features/agents/presentation/agent_list_screen.dart';
 import 'package:lmhub/src/features/settings/presentation/settings_screen.dart';
 import 'package:lmhub/src/core/storage/chat_repository.dart';
 import 'package:lmhub/src/features/chat/domain/chat_models.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ChatDrawer extends StatefulWidget {
   final Function(String) onSessionSelected;
@@ -78,7 +79,7 @@ class _ChatDrawerState extends State<ChatDrawer> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.add, color: Colors.blue),
-                  tooltip: 'New Chat',
+                  tooltip: 'drawer.new_chat'.tr(),
                   onPressed: widget.onNewChat,
                 ),
               ],
@@ -89,11 +90,11 @@ class _ChatDrawerState extends State<ChatDrawer> {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
                 const SizedBox(height: 16),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Text(
-                    'Gần đây',
-                    style: TextStyle(
+                    'drawer.recent'.tr(),
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: Colors.black54,
@@ -101,11 +102,11 @@ class _ChatDrawerState extends State<ChatDrawer> {
                   ),
                 ),
                 if (_sessions.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(12.0),
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
                     child: Text(
-                      'No history',
-                      style: TextStyle(color: Colors.grey),
+                      'drawer.no_history'.tr(),
+                      style: const TextStyle(color: Colors.grey),
                     ),
                   ),
                 ..._sessions.map((session) => _buildHistoryItem(session)),
@@ -120,12 +121,12 @@ class _ChatDrawerState extends State<ChatDrawer> {
                 _buildDrawerItem(
                   context,
                   Icons.help_outline,
-                  'Trợ giúp & hoạt động',
+                  'drawer.help_activity'.tr(),
                 ),
                 _buildDrawerItem(
                   context,
                   Icons.settings_outlined,
-                  'Cài đặt',
+                  'drawer.settings'.tr(),
                   onTap: () {
                     Navigator.pop(context); // Close drawer
                     Navigator.push(
@@ -139,7 +140,7 @@ class _ChatDrawerState extends State<ChatDrawer> {
                 _buildDrawerItem(
                   context,
                   Icons.swap_horiz_outlined,
-                  'Change Agent',
+                  'drawer.change_agent'.tr(),
                   onTap: () async {
                     Navigator.pop(context); // Close drawer
                     final result = await Navigator.push(

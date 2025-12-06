@@ -1,0 +1,36 @@
+{
+  "app_title": "LMHub",
+  "chat": {
+    "title": "Chat & Support",
+    "start": "Start a conversation!",
+    "regenerate": "Regenerate",
+    "clear": "Clear chat",
+    "copy": "Copy transcript",
+    "copied": "Transcript copied",
+    "no_user_to_regen": "No user message found to regenerate",
+    "unable_pick": "Unable to pick files: {error}"
+  },
+  "drawer": {
+    "recent": "Recent",
+    "new_chat": "New Chat",
+    "help_activity": "Help & Activity",
+    "settings": "Settings",
+    "change_agent": "Change Agent",
+    "no_history": "No history"
+  },
+  "input": {
+    "ask": "Ask LMHub",
+    "attach_files": "Attach files",
+    "pick_images": "Pick images/files",
+    "placeholder": "Type a message...",
+    "mic_tts": "Mic/TTS",
+    "send": "Send"
+  },
+  "attachments": {
+    "title_count": "Attachments ({count})"
+  },
+  "role": {
+    "you": "You",
+    "system": "System"
+  }
+}

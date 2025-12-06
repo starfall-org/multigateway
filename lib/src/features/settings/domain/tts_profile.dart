@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-enum TTSServiceType { system, provider, elevenLabs }
+enum TTSServiceType { system, fromProvider, elevenLabs }
 
 class TTSProfile {
   final String id;
