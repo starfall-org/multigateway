@@ -1,8 +1,8 @@
 import 'package:ai_gateway/core/storage/provider_repository.dart';
-import 'package:ai_gateway/features/agents/dto/agent.dart';
+import 'package:ai_gateway/core/models/agent.dart';
 import 'package:ai_gateway/features/home/models/chat_models.dart';
-import 'package:ai_gateway/core/models/mcp_llm_wrapper.dart';
-import 'package:ai_gateway/core/models/settings/provider.dart';
+import 'package:ai_gateway/features/mcp/models/mcp_llm_wrapper.dart';
+import 'package:ai_gateway/core/models/provider.dart';
 
 class ChatService {
   static Future<String> generateReply({

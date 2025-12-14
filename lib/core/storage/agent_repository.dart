@@ -1,6 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
-import '../../features/agents/dto/agent.dart';
+import '../models/agent.dart';
 import 'base_repository.dart';
 
 class AgentRepository extends BaseRepository<Agent> {

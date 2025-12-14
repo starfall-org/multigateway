@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/settings/theme.dart';
+import '../models/theme.dart';
 import 'base_repository.dart';
 
 class ThemeRepository extends BaseRepository<ThemeSettings> {

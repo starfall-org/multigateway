@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/storage/theme_repository.dart';
-import '../../../core/models/settings/theme.dart';
+import 'package:ai_gateway/core/models/theme.dart';
 
 import 'package:easy_localization/easy_localization.dart';
 import '../widgets/settings_section_header.dart';

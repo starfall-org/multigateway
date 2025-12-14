@@ -1,4 +1,4 @@
-import 'package:ai_gateway/core/models/settings/provider.dart';
+import 'package:ai_gateway/core/models/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'base_repository.dart';
