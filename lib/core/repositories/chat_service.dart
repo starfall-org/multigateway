@@ -1,7 +1,6 @@
 import 'package:ai_gateway/core/storage/provider_repository.dart';
 import 'package:ai_gateway/core/models/agent.dart';
 import 'package:ai_gateway/core/models/chat/chat_message.dart';
-import 'package:ai_gateway/features/mcp/models/mcp_llm_wrapper.dart';
 import 'package:ai_gateway/core/models/provider.dart';
 
 class ChatService {
@@ -17,7 +16,7 @@ class ChatService {
     }
 
     // Prefer Anthropic if available, otherwise prefer OpenAI
-    LLMProvider provider = providers.first;
+    Provider provider = providers.first;
     final anthropic = providers.where((p) => p.type == ProviderType.anthropic);
     if (anthropic.isNotEmpty) {
       provider = anthropic.first;

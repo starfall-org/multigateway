@@ -1,10 +1,10 @@
-import 'package:ai_gateway/features/agents/views/agent_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:ai_gateway/features/chat/views/chat_screen_viewmodel.dart';
-import 'package:ai_gateway/features/chat/widgets/chat_drawer.dart';
-import 'package:ai_gateway/features/chat/widgets/chat_input_area.dart';
-import 'package:ai_gateway/features/chat/widgets/chat_message_list.dart';
+import '../../agents/views/agent_list_screen.dart';
+import 'chat_viewmodel.dart';
+import '../widgets/chat_drawer.dart';
+import '../widgets/chat_input_area.dart';
+import '../widgets/chat_message_list.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -14,12 +14,12 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  late ChatScreenViewModel _viewModel;
+  late ChatViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
-    _viewModel = ChatScreenViewModel();
+    _viewModel = ChatViewModel();
     _viewModel.initChat();
     _viewModel.loadSelectedAgent();
   }

@@ -11,7 +11,7 @@ import 'package:ai_gateway/app.dart';
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const LMHubApp());
+    await tester.pumpWidget(const AIGatewayApp());
 
     // Verify that our app title is present.
     // Note: The title in the AppBar is 'Chào Hỏi Và Hỗ Trợ'

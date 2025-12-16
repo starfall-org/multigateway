@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'features/chat/views/chat_screen.dart';
+import 'features/chat/presentation/chat_screen.dart';
 import 'core/storage/theme_repository.dart';
+import 'core/routes.dart';
+import 'app_routes.dart';
 
-class LMHubApp extends StatelessWidget {
-  const LMHubApp({super.key});
+class AIGatewayApp extends StatelessWidget {
+  const AIGatewayApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -12,8 +14,8 @@ class LMHubApp extends StatelessWidget {
       future: ThemeRepository.init(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          // While loading, use a minimal safe theme
           return MaterialApp(
+            routes: {AppRoutes.chat: (context) => const ChatScreen()},
             home: const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             ),
@@ -44,13 +46,13 @@ class LMHubApp extends StatelessWidget {
                   brightness: Brightness.dark,
                 ),
                 useMaterial3: true,
-                // Standard dark scaffold usually a bit lighter than pure black
                 scaffoldBackgroundColor: const Color(0xFF121212),
               ),
               localizationsDelegates: context.localizationDelegates,
               supportedLocales: context.supportedLocales,
               locale: context.locale,
-              home: const ChatScreen(),
+              onGenerateRoute: generateRoute,
+              initialRoute: AppRoutes.chat,
             );
           },
         );

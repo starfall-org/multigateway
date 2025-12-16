@@ -1,38 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-import 'package:ai_gateway/core/storage/chat_repository.dart';
-import 'package:ai_gateway/core/models/chat/chat_message.dart';
-import 'package:ai_gateway/core/storage/agent_repository.dart';
-import 'package:ai_gateway/features/agents/dto/agent.dart';
-import 'package:ai_gateway/core/models/chat/chat_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:easy_localization/easy_localization.dart';
 
-class ChatScreenViewModel extends ChangeNotifier {
+import '../../../core/models/agent.dart';
+import '../../../core/models/chat/chat_message.dart';
+import '../../../core/repositories/chat_service.dart';
+import '../../../core/models/chat/conversation.dart';
+import '../../../core/storage/agent_repository.dart';
+import '../../../core/storage/chat_repository.dart';
+
+class ChatViewModel extends ChangeNotifier {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   ChatRepository? _chatRepository;
-  ChatSession? _currentSession;
+  Conversation? _currentSession;
   AgentRepository? _agentRepository;
   Agent? _selectedAgent;
   bool _isLoading = true;
   bool _isGenerating = false;
 
-  // Đính kèm đang chờ gửi
   final List<String> _pendingAttachments = [];
 
-  // TTS
   FlutterTts? _tts;
 
-  // Getters
   GlobalKey<ScaffoldState> get scaffoldKey => _scaffoldKey;
   TextEditingController get textController => _textController;
   ScrollController get scrollController => _scrollController;
-  ChatSession? get currentSession => _currentSession;
+  Conversation? get currentSession => _currentSession;
   Agent? get selectedAgent => _selectedAgent;
   bool get isLoading => _isLoading;
   bool get isGenerating => _isGenerating;
@@ -40,7 +39,7 @@ class ChatScreenViewModel extends ChangeNotifier {
 
   Future<void> initChat() async {
     _chatRepository = await ChatRepository.init();
-    final sessions = _chatRepository!.getSessions();
+    final sessions = _chatRepository!.getConversations();
 
     if (sessions.isNotEmpty) {
       _currentSession = sessions.first;
@@ -59,7 +58,7 @@ class ChatScreenViewModel extends ChangeNotifier {
   }
 
   Future<void> createNewSession() async {
-    final session = await _chatRepository!.createSession();
+    final session = await _chatRepository!.createConversation();
     _currentSession = session;
     _isLoading = false;
     notifyListeners();
@@ -69,7 +68,7 @@ class ChatScreenViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final sessions = _chatRepository!.getSessions();
+    final sessions = _chatRepository!.getConversations();
     final session = sessions.firstWhere(
       (s) => s.id == sessionId,
       orElse: () => sessions.first,
@@ -81,9 +80,11 @@ class ChatScreenViewModel extends ChangeNotifier {
   }
 
   Future<void> handleSubmitted(String text, BuildContext context) async {
-    if (((text.trim().isEmpty) && _pendingAttachments.isEmpty) || _currentSession == null) return;
+    if (((text.trim().isEmpty) && _pendingAttachments.isEmpty) ||
+        _currentSession == null) {
+      return;
+    }
 
-    // Chuẩn bị dữ liệu gửi
     final List<String> attachments = List<String>.from(_pendingAttachments);
     _textController.clear();
 
@@ -103,36 +104,34 @@ class ChatScreenViewModel extends ChangeNotifier {
     _pendingAttachments.clear();
     notifyListeners();
 
-    // Cập nhật tiêu đề khi là tin đầu tiên
     if (_currentSession!.messages.length == 1) {
       final base = text.isNotEmpty
           ? text
           : (attachments.isNotEmpty
-              ? 'attachments.title_count'.tr(namedArgs: {'count': attachments.length.toString()})
-              : 'drawer.new_chat'.tr());
+                ? 'attachments.title_count'.tr(
+                    namedArgs: {'count': attachments.length.toString()},
+                  )
+                : 'drawer.new_chat'.tr());
       final title = base.length > 30 ? '${base.substring(0, 30)}...' : base;
       _currentSession = _currentSession!.copyWith(title: title);
     }
 
-    await _chatRepository!.saveSession(_currentSession!);
+    await _chatRepository!.saveConversation(_currentSession!);
     scrollToBottom();
 
-    // Gộp chú thích đính kèm vào prompt để nhà cung cấp biết
     String modelInput = text;
     if (attachments.isNotEmpty) {
       final names = attachments.map((p) => p.split('/').last).join(', ');
-      modelInput = '${modelInput.isEmpty ? '' : '$modelInput\n'}[Attachments: $names]';
+      modelInput =
+          '${modelInput.isEmpty ? '' : '$modelInput\n'}[Attachments: $names]';
     }
 
-    // Gọi ChatService sinh phản hồi
     final reply = await ChatService.generateReply(
       userText: modelInput,
       history: _currentSession!.messages,
-      agent: _selectedAgent ?? Agent(
-        id: const Uuid().v4(),
-        name: 'Default Agent',
-        systemPrompt: '',
-      ),
+      agent:
+          _selectedAgent ??
+          Agent(id: const Uuid().v4(), name: 'Default Agent', systemPrompt: ''),
     );
 
     final modelMessage = ChatMessage(
@@ -149,7 +148,7 @@ class ChatScreenViewModel extends ChangeNotifier {
     _isGenerating = false;
     notifyListeners();
 
-    await _chatRepository!.saveSession(_currentSession!);
+    await _chatRepository!.saveConversation(_currentSession!);
     scrollToBottom();
   }
 
@@ -181,9 +180,16 @@ class ChatScreenViewModel extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('chat.unable_pick'.tr(namedArgs: {'error': e.toString()}))),
-      );
+      // Check if context is still valid before using it
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'chat.unable_pick'.tr(namedArgs: {'error': e.toString()}),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -195,21 +201,29 @@ class ChatScreenViewModel extends ChangeNotifier {
 
   String getTranscript() {
     if (_currentSession == null) return '';
-    return _currentSession!.messages.map((m) {
-      final who = m.role == ChatRole.user
-          ? 'role.you'.tr(context: _scaffoldKey.currentContext!)
-          : (m.role == ChatRole.model ? (_selectedAgent?.name ?? 'AI') : 'role.system'.tr(context: _scaffoldKey.currentContext!));
-      return '$who: ${m.content}';
-    }).join('\n\n');
+    return _currentSession!.messages
+        .map((m) {
+          final who = m.role == ChatRole.user
+              ? 'role.you'.tr(context: _scaffoldKey.currentContext!)
+              : (m.role == ChatRole.model
+                    ? (_selectedAgent?.name ?? 'AI')
+                    : 'role.system'.tr(context: _scaffoldKey.currentContext!));
+          return '$who: ${m.content}';
+        })
+        .join('\n\n');
   }
 
   Future<void> copyTranscript(BuildContext context) async {
     final txt = getTranscript();
     if (txt.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: txt));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('chat.copied'.tr())),
-    );
+
+    // Check if context is still valid before using it
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('chat.copied'.tr())));
+    }
   }
 
   Future<void> clearChat() async {
@@ -219,7 +233,7 @@ class ChatScreenViewModel extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
     notifyListeners();
-    await _chatRepository!.saveSession(_currentSession!);
+    await _chatRepository!.saveConversation(_currentSession!);
   }
 
   Future<void> regenerateLast(BuildContext context) async {
@@ -234,9 +248,12 @@ class ChatScreenViewModel extends ChangeNotifier {
       }
     }
     if (lastUserIndex == -1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('chat.no_user_to_regen'.tr())),
-      );
+      // Check if context is still valid before using it
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('chat.no_user_to_regen'.tr())));
+      }
       return;
     }
 
@@ -249,11 +266,9 @@ class ChatScreenViewModel extends ChangeNotifier {
     final reply = await ChatService.generateReply(
       userText: userText,
       history: history,
-      agent: _selectedAgent ?? Agent(
-        id: const Uuid().v4(),
-        name: 'Default Agent',
-        systemPrompt: '',
-      ),
+      agent:
+          _selectedAgent ??
+          Agent(id: const Uuid().v4(), name: 'Default Agent', systemPrompt: ''),
     );
 
     final modelMessage = ChatMessage(
@@ -264,11 +279,7 @@ class ChatScreenViewModel extends ChangeNotifier {
     );
 
     // Cắt bỏ các câu trả lời model sau lastUser (nếu có) rồi thêm câu trả lời mới
-    final newMessages = [
-      ...history,
-      msgs[lastUserIndex],
-      modelMessage,
-    ];
+    final newMessages = [...history, msgs[lastUserIndex], modelMessage];
 
     _currentSession = _currentSession!.copyWith(
       messages: newMessages,
@@ -277,7 +288,7 @@ class ChatScreenViewModel extends ChangeNotifier {
     _isGenerating = false;
     notifyListeners();
 
-    await _chatRepository!.saveSession(_currentSession!);
+    await _chatRepository!.saveConversation(_currentSession!);
     scrollToBottom();
   }
 
@@ -303,6 +314,7 @@ class ChatScreenViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    super.dispose();
     _textController.dispose();
     _scrollController.dispose();
     _tts?.stop();
