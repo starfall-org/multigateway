@@ -1,10 +1,10 @@
 import 'package:ai_gateway/features/agents/views/agent_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:ai_gateway/features/home/views/chat_screen_viewmodel.dart';
-import 'package:ai_gateway/features/home/widgets/chat_drawer.dart';
-import 'package:ai_gateway/features/home/widgets/chat_input_area.dart';
-import 'package:ai_gateway/features/home/widgets/chat_message_list.dart';
+import 'package:ai_gateway/features/chat/views/chat_screen_viewmodel.dart';
+import 'package:ai_gateway/features/chat/widgets/chat_drawer.dart';
+import 'package:ai_gateway/features/chat/widgets/chat_input_area.dart';
+import 'package:ai_gateway/features/chat/widgets/chat_message_list.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});

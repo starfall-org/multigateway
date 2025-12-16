@@ -32,11 +32,11 @@ class AgentRepository extends BaseRepository<Agent> {
     if (items.isEmpty) {
       final defaultAgent = _createDefaultAgent();
       // Persist the default so other features see consistent state
-      // Use super.saveItem wouldn't work easily here as it expects an add to generic list, 
+      // Use super.saveItem wouldn't work easily here as it expects an add to generic list,
       // but we want to initialize the list.
       // We can just use the underlying prefs since we have access to it from base.
       prefs.setStringList(storageKey, [serializeItem(defaultAgent)]);
-      
+
       // Ensure a valid selection exists
       prefs.setString(_selectedKey, defaultAgent.id);
       return [defaultAgent];
@@ -94,10 +94,6 @@ class AgentRepository extends BaseRepository<Agent> {
   }
 
   Agent _createDefaultAgent() {
-    return Agent(
-      id: const Uuid().v4(),
-      name: 'Default Agent',
-      systemPrompt: '',
-    );
+    return Agent(id: const Uuid().v4(), name: 'Basic Agent', systemPrompt: '');
   }
 }

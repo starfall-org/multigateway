@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'features/home/views/chat_screen.dart';
+import 'features/chat/views/chat_screen.dart';
 import 'core/storage/theme_repository.dart';
 
 class LMHubApp extends StatelessWidget {

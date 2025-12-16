@@ -1,6 +1,6 @@
 import 'package:ai_gateway/core/storage/provider_repository.dart';
 import 'package:ai_gateway/core/models/agent.dart';
-import 'package:ai_gateway/features/home/models/chat_models.dart';
+import 'package:ai_gateway/core/models/chat/chat_message.dart';
 import 'package:ai_gateway/features/mcp/models/mcp_llm_wrapper.dart';
 import 'package:ai_gateway/core/models/provider.dart';
 

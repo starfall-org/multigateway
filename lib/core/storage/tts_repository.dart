@@ -1,5 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/settings/tts_profile.dart';
+import '../models/tts_profile.dart';
 import 'base_repository.dart';
 
 class TTSRepository extends BaseRepository<TTSProfile> {

@@ -1,9 +1,9 @@
-import 'package:ai_gateway/core/models/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/provider.dart';
 import 'base_repository.dart';
 
-class ProviderRepository extends BaseRepository<LLMProvider> {
+class ProviderRepository extends BaseRepository<Provider> {
   static const String _storageKey = 'providers';
 
   ProviderRepository(super.prefs);
@@ -17,19 +17,19 @@ class ProviderRepository extends BaseRepository<LLMProvider> {
   String get storageKey => _storageKey;
 
   @override
-  LLMProvider deserializeItem(String json) => LLMProvider.fromJsonString(json);
+  Provider deserializeItem(String json) => Provider.fromJsonString(json);
 
   @override
-  String serializeItem(LLMProvider item) => item.toJsonString();
+  String serializeItem(Provider item) => item.toJsonString();
 
   @override
-  String getItemId(LLMProvider item) => item.id;
+  String getItemId(Provider item) => item.name;
 
-  List<LLMProvider> getProviders() => getItems();
+  List<Provider> getProviders() => getItems();
 
-  Future<void> addProvider(LLMProvider provider) => saveItem(provider);
+  Future<void> addProvider(Provider provider) => saveItem(provider);
 
-  Future<void> updateProvider(LLMProvider provider) => saveItem(provider);
+  Future<void> updateProvider(Provider provider) => saveItem(provider);
 
-  Future<void> deleteProvider(String id) => deleteItem(id);
+  Future<void> deleteProvider(String name) => deleteItem(name);
 }

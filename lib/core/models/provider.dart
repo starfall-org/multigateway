@@ -1,89 +1,59 @@
 import 'dart:convert';
+import 'ai_model.dart';
 
-enum ProviderType { gemini, openai, anthropic, ollama }
+enum ProviderType { googleGenAI, openAI, anthropic, ollama }
 
-enum ModelIO { text, image, audio, video, document }
-
-enum ModelCapability {
-  textGeneration,
-  imageGeneration,
-  audioGeneration,
-  videoGeneration,
-  embedding,
-  rerank,
-}
-
-class ModelInfo {
-  final String id;
-  final List<ModelIO> inputTypes;
-  final List<ModelIO> outputTypes;
-  final List<ModelCapability> capabilities;
-
-  ModelInfo({
-    required this.id,
-    this.inputTypes = const [ModelIO.text],
-    this.outputTypes = const [ModelIO.text],
-    this.capabilities = const [ModelCapability.textGeneration],
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'inputTypes': inputTypes.map((e) => e.name).toList(),
-      'outputTypes': outputTypes.map((e) => e.name).toList(),
-      'capabilities': capabilities.map((e) => e.name).toList(),
-    };
-  }
-
-  factory ModelInfo.fromJson(Map<String, dynamic> json) {
-    return ModelInfo(
-      id: json['id'] as String,
-      inputTypes: (json['inputTypes'] as List<dynamic>?)
-              ?.map((e) => ModelIO.values.firstWhere((v) => v.name == e))
-              .toList() ??
-          [ModelIO.text],
-      outputTypes: (json['outputTypes'] as List<dynamic>?)
-              ?.map((e) => ModelIO.values.firstWhere((v) => v.name == e))
-              .toList() ??
-          [ModelIO.text],
-      capabilities: (json['capabilities'] as List<dynamic>?)
-              ?.map(
-                  (e) => ModelCapability.values.firstWhere((v) => v.name == e))
-              .toList() ??
-          [ModelCapability.textGeneration],
-    );
-  }
-
-  String toJsonString() => json.encode(toJson());
-
-  factory ModelInfo.fromJsonString(String jsonString) =>
-      ModelInfo.fromJson(json.decode(jsonString));
-}
-
-class LLMProvider {
-  final String id;
+class Provider {
   final String name;
   final ProviderType type;
   final String? apiKey;
+  final String? logoUrl;
   final String? baseUrl;
   final Map<String, String> headers;
   final List<ModelInfo> models;
 
-  LLMProvider({
-    required this.id,
-    required this.name,
+  Provider({
     required this.type,
+    String? name,
     this.apiKey,
-    this.baseUrl,
+    this.logoUrl,
+    String? baseUrl,
     this.headers = const {},
     this.models = const [],
-  });
+  }) : baseUrl = baseUrl ?? _defaultBaseUrl(type),
+       name = name ?? _defaultName(type);
+
+  static String _defaultName(ProviderType type) {
+    switch (type) {
+      case ProviderType.openAI:
+        return 'OpenAI';
+      case ProviderType.anthropic:
+        return 'Anthropic';
+      case ProviderType.ollama:
+        return 'Ollama';
+      case ProviderType.googleGenAI:
+        return 'Google Generative AI';
+    }
+  }
+
+  static String? _defaultBaseUrl(ProviderType type) {
+    switch (type) {
+      case ProviderType.openAI:
+        return 'https://api.openai.com/v1';
+      case ProviderType.anthropic:
+        return 'https://api.anthropic.com/v1';
+      case ProviderType.ollama:
+        return 'https://ollama.com';
+      case ProviderType.googleGenAI:
+        return 'https://generativelanguage.googleapis.com/v1beta';
+    }
+  }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'name': name,
       'type': type.name,
+      'name': name,
+      'logoUrl': logoUrl,
       'apiKey': apiKey,
       'baseUrl': baseUrl,
       'headers': headers,
@@ -91,7 +61,7 @@ class LLMProvider {
     };
   }
 
-  factory LLMProvider.fromJson(Map<String, dynamic> json) {
+  factory Provider.fromJson(Map<String, dynamic> json) {
     var modelsJson = json['models'];
     List<ModelInfo> parsedModels = [];
 
@@ -99,18 +69,20 @@ class LLMProvider {
       if (modelsJson is List &&
           modelsJson.isNotEmpty &&
           modelsJson.first is String) {
-        parsedModels =
-            modelsJson.map((e) => ModelInfo(id: e as String)).toList();
-      } else if (modelsJson is List) {
-        parsedModels =
-            modelsJson.map((e) => ModelInfo.fromJson(e)).toList();
+        parsedModels = modelsJson
+            .map((e) => ModelInfo(name: e as String))
+            .toList();
+      } else {
+        parsedModels = (modelsJson as List)
+            .map((e) => ModelInfo.fromJson(e))
+            .toList();
       }
     }
 
-    return LLMProvider(
-      id: json['id'] as String,
-      name: json['name'] as String,
+    return Provider(
       type: ProviderType.values.firstWhere((e) => e.name == json['type']),
+      name: json['name'] as String,
+      logoUrl: json['logoUrl'] as String?,
       apiKey: json['apiKey'] as String?,
       baseUrl: json['baseUrl'] as String?,
       headers: Map<String, String>.from(json['headers'] ?? {}),
@@ -120,6 +92,6 @@ class LLMProvider {
 
   String toJsonString() => json.encode(toJson());
 
-  factory LLMProvider.fromJsonString(String jsonString) =>
-      LLMProvider.fromJson(json.decode(jsonString));
+  factory Provider.fromJsonString(String jsonString) =>
+      Provider.fromJson(json.decode(jsonString));
 }

@@ -1,10 +1,10 @@
+import 'package:ai_gateway/core/models/chat/conversation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
-import '../../features/home/models/chat_models.dart';
 import 'base_repository.dart';
 
-class ChatRepository extends BaseRepository<ChatSession> {
-  static const String _storageKey = 'chat_sessions';
+class ChatRepository extends BaseRepository<Conversation> {
+  static const String _storageKey = 'conversations';
 
   ChatRepository(super.prefs);
 
@@ -17,37 +17,39 @@ class ChatRepository extends BaseRepository<ChatSession> {
   String get storageKey => _storageKey;
 
   @override
-  ChatSession deserializeItem(String json) => ChatSession.fromJsonString(json);
+  Conversation deserializeItem(String json) =>
+      Conversation.fromJsonString(json);
 
   @override
-  String serializeItem(ChatSession item) => item.toJsonString();
+  String serializeItem(Conversation item) => item.toJsonString();
 
   @override
-  String getItemId(ChatSession item) => item.id;
+  String getItemId(Conversation item) => item.id;
 
   @override
-  List<ChatSession> getItems() {
+  List<Conversation> getItems() {
     final sessions = super.getItems();
     // Sort by updated at descending
     sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return sessions;
   }
 
-  List<ChatSession> getSessions() => getItems();
+  List<Conversation> getConversations() => getItems();
 
-  Future<ChatSession> createSession() async {
-    final session = ChatSession(
+  Future<Conversation> createConversation() async {
+    final conversation = Conversation(
       id: const Uuid().v4(),
       title: 'New Chat',
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       messages: [],
     );
-    await saveItem(session);
-    return session;
+    await saveItem(conversation);
+    return conversation;
   }
 
-  Future<void> saveSession(ChatSession session) => saveItem(session);
+  Future<void> saveConversation(Conversation conversation) =>
+      saveItem(conversation);
 
-  Future<void> deleteSession(String id) => deleteItem(id);
+  Future<void> deleteConversation(String id) => deleteItem(id);
 }

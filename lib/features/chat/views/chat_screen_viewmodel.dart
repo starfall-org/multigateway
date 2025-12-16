@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ai_gateway/core/storage/chat_repository.dart';
-import 'package:ai_gateway/features/home/models/chat_models.dart';
+import 'package:ai_gateway/core/models/chat/chat_message.dart';
 import 'package:ai_gateway/core/storage/agent_repository.dart';
 import 'package:ai_gateway/features/agents/dto/agent.dart';
-import 'package:ai_gateway/features/home/models/chat_service.dart';
+import 'package:ai_gateway/core/models/chat/chat_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';

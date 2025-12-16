@@ -1,13 +1,12 @@
 import 'dart:convert';
 
-enum TTSServiceType { system, fromProvider, elevenLabs }
+enum TTSServiceType { system, provider }
 
 class TTSProfile {
   final String id;
   final String name;
   final TTSServiceType type;
-  final String? providerId;
-  final String? apiKey;
+  final String? provider;
   final String? voiceId;
   final Map<String, dynamic> settings;
 
@@ -15,8 +14,7 @@ class TTSProfile {
     required this.id,
     required this.name,
     required this.type,
-    this.providerId,
-    this.apiKey,
+    this.provider,
     this.voiceId,
     this.settings = const {},
   });
@@ -26,8 +24,7 @@ class TTSProfile {
       'id': id,
       'name': name,
       'type': type.name,
-      'providerId': providerId,
-      'apiKey': apiKey,
+      'provider': provider,
       'voiceId': voiceId,
       'settings': settings,
     };
@@ -38,8 +35,7 @@ class TTSProfile {
       id: json['id'] as String,
       name: json['name'] as String,
       type: TTSServiceType.values.firstWhere((e) => e.name == json['type']),
-      providerId: json['providerId'] as String?,
-      apiKey: json['apiKey'] as String?,
+      provider: json['provider'] as String?,
       voiceId: json['voiceId'] as String?,
       settings: json['settings'] as Map<String, dynamic>? ?? {},
     );
