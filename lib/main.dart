@@ -26,19 +26,24 @@ Future<void> main() async {
     overlays: SystemUiOverlay.values,
   );
 
-  // Lấy preferences ngôn ngữ đã lưu
-  final languageRepo = LanguageRepository.instance;
-  final preferences = languageRepo.currentPreferences;
-  
+  // Lấy preferences ngôn ngữ đã lưu với error handling
   Locale selectedLocale;
-  
-  if (preferences.autoDetectLanguage || preferences.languageCode == 'auto') {
-    // Tự động phát hiện ngôn ngữ thiết bị
-    final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
-    selectedLocale = _getSupportedLocale(deviceLocale);
-  } else {
-    // Sử dụng ngôn ngữ đã lưu
-    selectedLocale = _getLocaleFromPreferences(preferences);
+  try {
+    final languageRepo = LanguageRepository.instance;
+    final preferences = languageRepo.currentPreferences;
+    
+    if (preferences.autoDetectLanguage || preferences.languageCode == 'auto') {
+      // Tự động phát hiện ngôn ngữ thiết bị
+      final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
+      selectedLocale = _getSupportedLocale(deviceLocale);
+    } else {
+      // Sử dụng ngôn ngữ đã lưu với error handling
+      selectedLocale = _getLocaleFromPreferences(preferences);
+    }
+  } catch (e) {
+    // Nếu có lỗi khi đọc preferences, fallback sang tiếng Anh
+    print('Error loading language preferences: $e');
+    selectedLocale = const Locale('en');
   }
   
   runApp(
@@ -62,46 +67,84 @@ Future<void> main() async {
   );
 }
 
-// Hàm để xác định locale được hỗ trợ dựa trên ngôn ngữ thiết bị
+// Hàm để xác định locale được hỗ trợ dựa trên ngôn ngữ thiết bị với error handling
 Locale _getSupportedLocale(Locale deviceLocale) {
-  // Danh sách các locale được hỗ trợ
-  const supportedLocales = [
-    Locale('en'),
-    Locale('vi'),
-    Locale('zh', 'CN'),
-    Locale('zh', 'TW'),
-    Locale('ja'),
-    Locale('fr'),
-    Locale('de')
-  ];
-  
-  // Kiểm tra xem locale của thiết bị có được hỗ trợ trực tiếp không
-  for (final supportedLocale in supportedLocales) {
-    if (supportedLocale.languageCode == deviceLocale.languageCode &&
-        supportedLocale.countryCode == deviceLocale.countryCode) {
-      return supportedLocale;
+  try {
+    // Validate device locale
+    if (deviceLocale.languageCode.isEmpty) {
+      return const Locale('en');
     }
-  }
-  
-  // Kiểm tra xem ngôn ngữ có được hỗ trợ không (không quan tâm đến quốc gia)
-  for (final supportedLocale in supportedLocales) {
-    if (supportedLocale.languageCode == deviceLocale.languageCode) {
-      // Đối với tiếng Trung, ưu tiên giản thể nếu không có quốc gia cụ thể
-      if (deviceLocale.languageCode == 'zh') {
-        return const Locale('zh', 'CN');
+    
+    // Danh sách các locale được hỗ trợ
+    const supportedLocales = [
+      Locale('en'),
+      Locale('vi'),
+      Locale('zh', 'CN'),
+      Locale('zh', 'TW'),
+      Locale('ja'),
+      Locale('fr'),
+      Locale('de')
+    ];
+    
+    // Kiểm tra xem locale của thiết bị có được hỗ trợ trực tiếp không
+    for (final supportedLocale in supportedLocales) {
+      if (supportedLocale.languageCode == deviceLocale.languageCode &&
+          supportedLocale.countryCode == deviceLocale.countryCode) {
+        return supportedLocale;
       }
-      return supportedLocale;
     }
+    
+    // Kiểm tra xem ngôn ngữ có được hỗ trợ không (không quan tâm đến quốc gia)
+    for (final supportedLocale in supportedLocales) {
+      if (supportedLocale.languageCode == deviceLocale.languageCode) {
+        // Đối với tiếng Trung, ưu tiên giản thể nếu không có quốc gia cụ thể
+        if (deviceLocale.languageCode == 'zh') {
+          return const Locale('zh', 'CN');
+        }
+        return supportedLocale;
+      }
+    }
+    
+    // Fallback sang tiếng Anh
+    return const Locale('en');
+  } catch (e) {
+    print('Error getting supported locale: $e');
+    return const Locale('en');
   }
-  
-  // Fallback sang tiếng Anh
-  return const Locale('en');
 }
 
-// Hàm để lấy locale từ preferences
+// Hàm để lấy locale từ preferences với error handling
 Locale _getLocaleFromPreferences(preferences) {
-  if (preferences.countryCode != null) {
-    return Locale(preferences.languageCode, preferences.countryCode);
+  try {
+    // Validate language code
+    if (preferences.languageCode.isEmpty) {
+      return const Locale('en');
+    }
+    
+    // Check if the language is supported
+    final supportedLanguages = ['en', 'vi', 'zh', 'ja', 'fr', 'de'];
+    if (!supportedLanguages.contains(preferences.languageCode)) {
+      return const Locale('en');
+    }
+    
+    // For Chinese, we need country code
+    if (preferences.languageCode == 'zh') {
+      if (preferences.countryCode != null &&
+          (preferences.countryCode == 'CN' || preferences.countryCode == 'TW')) {
+        return Locale(preferences.languageCode, preferences.countryCode);
+      } else {
+        return const Locale('zh', 'CN'); // Default to simplified Chinese
+      }
+    }
+    
+    // For other languages, country code is optional
+    if (preferences.countryCode != null && preferences.countryCode!.isNotEmpty) {
+      return Locale(preferences.languageCode, preferences.countryCode);
+    }
+    
+    return Locale(preferences.languageCode);
+  } catch (e) {
+    print('Error parsing locale from preferences: $e');
+    return const Locale('en');
   }
-  return Locale(preferences.languageCode);
 }

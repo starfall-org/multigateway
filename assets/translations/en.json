@@ -122,6 +122,10 @@
     "auto_detect_language": "Auto Detect Language",
     "select_language": "Select Language",
     "about": "About",
-    "current_language": "Current Language"
+    "current_language": "Current Language",
+    "language_changed": "Language has been changed. The app will restart.",
+    "language_change_error": "Failed to change language. Please try again.",
+    "auto_detect_enabled": "Auto detect language has been enabled. The app will restart.",
+    "auto_detect_error": "Failed to toggle auto detect. Please try again."
   }
 }

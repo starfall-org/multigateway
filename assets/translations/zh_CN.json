@@ -122,6 +122,10 @@
     "auto_detect_language": "自动检测语言",
     "select_language": "选择语言",
     "about": "关于",
-    "current_language": "当前语言"
+    "current_language": "当前语言",
+    "language_changed": "语言已更改。应用程序将重新启动。",
+    "language_change_error": "更改语言失败。请重试。",
+    "auto_detect_enabled": "自动检测语言已启用。应用程序将重新启动。",
+    "auto_detect_error": "切换自动检测失败。请重试。"
   }
 }

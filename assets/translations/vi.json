@@ -123,6 +123,10 @@
     "auto_detect_language": "Tự động phát hiện ngôn ngữ",
     "select_language": "Chọn ngôn ngữ",
     "about": "Thông tin",
-    "current_language": "Ngôn ngữ hiện tại"
+    "current_language": "Ngôn ngữ hiện tại",
+    "language_changed": "Ngôn ngữ đã được thay đổi. Ứng dụng sẽ khởi động lại.",
+    "language_change_error": "Không thể thay đổi ngôn ngữ. Vui lòng thử lại.",
+    "auto_detect_enabled": "Tự động phát hiện ngôn ngữ đã được bật. Ứng dụng sẽ khởi động lại.",
+    "auto_detect_error": "Không thể bật/tắt tự động phát hiện. Vui lòng thử lại."
   }
 }

@@ -55,28 +55,40 @@ class LanguageRepository extends BaseRepository<LanguagePreferences> {
   String getItemId(LanguagePreferences item) => 'language_settings';
 
   Future<void> updatePreferences(LanguagePreferences preferences) async {
-    // We only ever store one item for settings
-    await saveItem(preferences);
-    languageNotifier.value = preferences;
+    try {
+      // We only ever store one item for settings
+      await saveItem(preferences);
+      languageNotifier.value = preferences;
+    } catch (e) {
+      throw Exception('Failed to update language preferences: $e');
+    }
   }
 
   LanguagePreferences get currentPreferences => languageNotifier.value;
 
   // Convenience methods
   Future<void> setLanguage(String languageCode, {String? countryCode}) async {
-    final current = currentPreferences;
-    final updated = current.copyWith(
-      languageCode: languageCode,
-      countryCode: countryCode,
-      autoDetectLanguage: false,
-    );
-    await updatePreferences(updated);
+    try {
+      final current = currentPreferences;
+      final updated = current.copyWith(
+        languageCode: languageCode,
+        countryCode: countryCode,
+        autoDetectLanguage: false,
+      );
+      await updatePreferences(updated);
+    } catch (e) {
+      throw Exception('Failed to set language: $e');
+    }
   }
 
   Future<void> setAutoDetect(bool autoDetect) async {
-    final current = currentPreferences;
-    final updated = current.copyWith(autoDetectLanguage: autoDetect);
-    await updatePreferences(updated);
+    try {
+      final current = currentPreferences;
+      final updated = current.copyWith(autoDetectLanguage: autoDetect);
+      await updatePreferences(updated);
+    } catch (e) {
+      throw Exception('Failed to set auto detect: $e');
+    }
   }
 
   Future<void> resetToDefaults() async {

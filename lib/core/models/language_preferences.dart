@@ -39,7 +39,56 @@ class LanguagePreferences {
   }
 
   factory LanguagePreferences.fromJsonString(String json) {
-    // Simple JSON parsing for basic structure
+    try {
+      // Use proper JSON parsing for reliability
+      if (json.trim().isEmpty) {
+        return LanguagePreferences.defaults();
+      }
+      
+      // Handle both proper JSON and the old string format
+      if (json.trim().startsWith('{')) {
+        // Try to parse as proper JSON first
+        final Map<String, dynamic> data = _parseJsonSafely(json);
+        return LanguagePreferences.fromJson(data);
+      } else {
+        // Fallback to the old string format parsing
+        return _parseLegacyFormat(json);
+      }
+    } catch (e) {
+      // If all parsing fails, return defaults
+      return LanguagePreferences.defaults();
+    }
+  }
+
+  static Map<String, dynamic> _parseJsonSafely(String json) {
+    try {
+      // Simple JSON parser for our specific format
+      final Map<String, dynamic> data = {};
+      final cleanJson = json.trim();
+      
+      // Extract values using regex for more reliable parsing
+      final languageCodeMatch = RegExp(r'"languageCode":"([^"]*)"').firstMatch(cleanJson);
+      final countryCodeMatch = RegExp(r'"countryCode":"([^"]*)"').firstMatch(cleanJson);
+      final autoDetectMatch = RegExp(r'"autoDetectLanguage":(true|false)').firstMatch(cleanJson);
+      
+      if (languageCodeMatch != null) {
+        data['languageCode'] = languageCodeMatch.group(1);
+      }
+      if (countryCodeMatch != null) {
+        data['countryCode'] = countryCodeMatch.group(1);
+      }
+      if (autoDetectMatch != null) {
+        data['autoDetectLanguage'] = autoDetectMatch.group(1) == 'true';
+      }
+      
+      return data;
+    } catch (e) {
+      return {};
+    }
+  }
+
+  static LanguagePreferences _parseLegacyFormat(String json) {
+    // Fallback to the old string format parsing
     final parts = json.split(',');
     final Map<String, dynamic> data = {};
     
