@@ -4,13 +4,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:ai_gateway/core/services/ai/openai/openai.dart';
-import 'package:ai_gateway/core/services/ai/anthropic/anthropic.dart';
+import 'package:ai_gateway/core/services/ai/openai.dart';
+import 'package:ai_gateway/core/services/ai/anthropic.dart';
+import 'package:ai_gateway/core/services/ai/base.dart';
 import 'package:ai_gateway/core/models/ai_model.dart';
-import 'package:ai_gateway/core/services/ai/openai/models.dart'
-    show OpenAIChatCompletionsResponse, OpenAIResponsesResponse;
-import 'package:ai_gateway/core/services/ai/anthropic/models.dart'
-    show AnthropicMessagesResponse;
 
 Future<HttpServer> _startServer(
   FutureOr<void> Function(HttpRequest req) handler,
@@ -57,9 +54,9 @@ void main() {
       addTearDown(() => server.close(force: true));
 
       final baseUrl = 'http://${server.address.host}:${server.port}/v1';
-      final svc = OpenAIService(baseUrl: baseUrl, apiKey: 'sk-test');
+      final svc = OpenAI(baseUrl: baseUrl, apiKey: 'sk-test');
 
-      final models = await svc.models();
+      final models = await svc.listModels();
       expect(models, isA<List<AIModel>>());
       expect(models.length, 2);
       expect(models.first.name, 'gpt-4o-mini');
@@ -109,18 +106,22 @@ void main() {
       addTearDown(() => server.close(force: true));
 
       final baseUrl = 'http://${server.address.host}:${server.port}/v1';
-      final svc = OpenAIService(baseUrl: baseUrl, apiKey: 'sk-test');
+      final svc = OpenAI(baseUrl: baseUrl, apiKey: 'sk-test');
 
-      final resp = await svc.chatCompletions(
-        model: 'gpt-4o-mini',
-        messages: [
-          {'role': 'user', 'content': 'Hi'},
-        ],
-        stream: false,
+      final resp = await svc.generate(
+        AIRequest(
+          model: 'gpt-4o-mini',
+          messages: [
+            AIMessage(
+              role: 'user',
+              content: [AIContent(type: AIContentType.text, text: 'Hi')],
+            ),
+          ],
+          stream: false,
+        ),
       );
-      expect(resp, isA<OpenAIChatCompletionsResponse>());
-      expect(resp.choices, isNotEmpty);
-      expect(resp.choices.first.message?.content, 'Hello');
+      expect(resp, isA<AIResponse>());
+      expect(resp.text, 'Hello');
     });
 
     test('chatCompletions stream via SSE aggregates deltas', () async {
@@ -186,16 +187,26 @@ void main() {
       addTearDown(() => server.close(force: true));
 
       final baseUrl = 'http://${server.address.host}:${server.port}/v1';
-      final svc = OpenAIService(baseUrl: baseUrl, apiKey: 'sk-test');
+      final svc = OpenAI(baseUrl: baseUrl, apiKey: 'sk-test');
 
-      final resp = await svc.chatCompletions(
-        model: 'gpt-4o-mini',
-        messages: [
-          {'role': 'user', 'content': 'Hi'},
-        ],
-        stream: true,
+      final stream = svc.generateStream(
+        AIRequest(
+          model: 'gpt-4o-mini',
+          messages: [
+            AIMessage(
+              role: 'user',
+              content: [AIContent(type: AIContentType.text, text: 'Hi')],
+            ),
+          ],
+          stream: true,
+        ),
       );
-      expect(resp.choices.first.message?.content, 'Hello');
+
+      String result = '';
+      await for (final resp in stream) {
+        result += resp.text;
+      }
+      expect(result, 'Hello');
     });
 
     test('responses stream via SSE aggregates output_text/delta', () async {
@@ -237,15 +248,26 @@ void main() {
       addTearDown(() => server.close(force: true));
 
       final baseUrl = 'http://${server.address.host}:${server.port}/v1';
-      final svc = OpenAIService(baseUrl: baseUrl, apiKey: 'sk-test');
+      final svc = OpenAI(baseUrl: baseUrl, apiKey: 'sk-test');
 
-      final resp = await svc.responses(
-        model: 'gpt-4o-mini',
-        input: 'Hi',
-        stream: true,
+      final stream = svc.generateStream(
+        AIRequest(
+          model: 'gpt-4o-mini',
+          messages: [
+            AIMessage(
+              role: 'user',
+              content: [AIContent(type: AIContentType.text, text: 'Hi')],
+            ),
+          ],
+          extra: {'mode': 'responses'},
+        ),
       );
-      expect(resp, isA<OpenAIResponsesResponse>());
-      expect(resp.toJson()['output_text'], 'Hello');
+
+      String result = '';
+      await for (final resp in stream) {
+        result += resp.text;
+      }
+      expect(result, 'Hello');
     });
   });
 
@@ -274,9 +296,9 @@ void main() {
       addTearDown(() => server.close(force: true));
 
       final baseUrl = 'http://${server.address.host}:${server.port}/v1';
-      final svc = AnthropicService(baseUrl: baseUrl, apiKey: 'sk-ant');
+      final svc = Anthropic(baseUrl: baseUrl, apiKey: 'sk-ant');
 
-      final models = await svc.models();
+      final models = await svc.listModels();
       expect(models, isA<List<AIModel>>());
       expect(models.length, 2);
       expect(models.first.name, 'claude-3-5-sonnet-20241022');
@@ -320,16 +342,21 @@ void main() {
       addTearDown(() => server.close(force: true));
 
       final baseUrl = 'http://${server.address.host}:${server.port}/v1';
-      final svc = AnthropicService(baseUrl: baseUrl, apiKey: 'sk-ant');
+      final svc = Anthropic(baseUrl: baseUrl, apiKey: 'sk-ant');
 
-      final resp = await svc.messagesCreate(
-        model: 'claude-3-haiku',
-        messages: [
-          {'role': 'user', 'content': 'Hi'},
-        ],
-        stream: false,
+      final resp = await svc.generate(
+        AIRequest(
+          model: 'claude-3-haiku',
+          messages: [
+            AIMessage(
+              role: 'user',
+              content: [AIContent(type: AIContentType.text, text: 'Hi')],
+            ),
+          ],
+          stream: false,
+        ),
       );
-      expect(resp, isA<AnthropicMessagesResponse>());
+      expect(resp, isA<AIResponse>());
       expect(resp.text, 'Hello');
     });
 
@@ -399,16 +426,26 @@ void main() {
         addTearDown(() => server.close(force: true));
 
         final baseUrl = 'http://${server.address.host}:${server.port}/v1';
-        final svc = AnthropicService(baseUrl: baseUrl, apiKey: 'sk-ant');
+        final svc = Anthropic(baseUrl: baseUrl, apiKey: 'sk-ant');
 
-        final resp = await svc.messagesCreate(
-          model: 'claude-3-haiku',
-          messages: [
-            {'role': 'user', 'content': 'Hi'},
-          ],
-          stream: true,
+        final stream = svc.generateStream(
+          AIRequest(
+            model: 'claude-3-haiku',
+            messages: [
+              AIMessage(
+                role: 'user',
+                content: [AIContent(type: AIContentType.text, text: 'Hi')],
+              ),
+            ],
+            stream: true,
+          ),
         );
-        expect(resp.text, 'Hello');
+
+        String result = '';
+        await for (final resp in stream) {
+          result += resp.text;
+        }
+        expect(result, 'Hello');
       },
     );
   });

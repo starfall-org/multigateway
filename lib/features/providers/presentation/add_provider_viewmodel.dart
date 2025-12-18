@@ -8,8 +8,8 @@ import 'package:easy_localization/easy_localization.dart';
 
 class AddProviderViewModel extends ChangeNotifier {
   // Form State
-  ProviderType _selectedType = ProviderType.googleGenAI;
-  final _nameController = TextEditingController(text: 'Gemini');
+  ProviderType _selectedType = ProviderType.google;
+  final _nameController = TextEditingController(text: 'Google');
   final _apiKeyController = TextEditingController();
   final _baseUrlController = TextEditingController();
   final List<MapEntry<TextEditingController, TextEditingController>> _headers =
@@ -92,8 +92,8 @@ class AddProviderViewModel extends ChangeNotifier {
       _selectedType = provider.type;
       _nameController.text = provider.name;
       _apiKeyController.text = provider.apiKey ?? '';
-      _baseUrlController.text = (provider.baseUrl?.isNotEmpty == true)
-          ? provider.baseUrl!
+      _baseUrlController.text = (provider.baseUrl.isNotEmpty == true)
+          ? provider.baseUrl
           : getDefaultBaseUrl();
 
       provider.headers.forEach((key, value) {
@@ -108,37 +108,25 @@ class AddProviderViewModel extends ChangeNotifier {
 
       // Load custom routes if present for the provider type
       switch (_selectedType) {
-        case ProviderType.googleGenAI:
-          final r = provider.customGoogleGenAIRoutes;
-          if (r != null) {
-            _googleGenerateContentController.text = r.generateContent;
-            _googleGenerateContentStreamController.text =
-                r.generateContentStream;
-            _googleModelsRouteController.text = r.models;
-          }
+        case ProviderType.google:
+          // Google does not use custom routes
           break;
-        case ProviderType.openAI:
-          final r = provider.customOpenAIRoutes;
-          if (r != null) {
-            _openAIChatCompletionsRouteController.text = r.chatCompletion;
-            _openAIResponsesRouteController.text = r.responses;
-            _openAIEmbeddingsRouteController.text = r.embeddings;
-            _openAIModelsRouteController.text = r.models;
-          }
+        case ProviderType.openai:
+          final r = provider.openAIRoutes;
+          _openAIChatCompletionsRouteController.text = r.chatCompletion;
+          _openAIResponsesRouteController.text = r.responses;
+          _openAIEmbeddingsRouteController.text = r.embeddings;
+          _openAIModelsRouteController.text = r.models;
           break;
         case ProviderType.anthropic:
-          final r = provider.customAnthropicRoutes;
-          if (r != null) {
-            _anthropicMessagesRouteController.text = r.messages;
-            _anthropicModelsRouteController.text = r.models;
-          }
+          final r = provider.anthropicRoutes;
+          _anthropicMessagesRouteController.text = r.messages;
+          _anthropicModelsRouteController.text = r.models;
           break;
         case ProviderType.ollama:
-          final r = provider.customOllamaRoutes;
-          if (r != null) {
-            _ollamaChatRouteController.text = r.chat;
-            _ollamaTagsRouteController.text = r.tags;
-          }
+          final r = provider.ollamaRoutes;
+          _ollamaChatRouteController.text = r.chat;
+          _ollamaTagsRouteController.text = r.tags;
           break;
       }
     } else {
@@ -238,10 +226,10 @@ class AddProviderViewModel extends ChangeNotifier {
       // Determine models route per provider type
       String modelsRoute;
       switch (_selectedType) {
-        case ProviderType.openAI:
+        case ProviderType.openai:
           modelsRoute = _openAIModelsRouteController.text;
           break;
-        case ProviderType.googleGenAI:
+        case ProviderType.google:
           modelsRoute = _googleModelsRouteController.text;
           break;
         case ProviderType.anthropic:
@@ -350,9 +338,9 @@ class AddProviderViewModel extends ChangeNotifier {
 
   String getDefaultBaseUrl() {
     switch (_selectedType) {
-      case ProviderType.openAI:
+      case ProviderType.openai:
         return 'https://api.openai.com/v1';
-      case ProviderType.googleGenAI:
+      case ProviderType.google:
         return 'https://generativelanguage.googleapis.com/v1beta';
       case ProviderType.anthropic:
         return 'https://api.anthropic.com/v1';
@@ -412,22 +400,16 @@ class AddProviderViewModel extends ChangeNotifier {
     }
 
     // Build custom routes only for the selected provider type
-    CustomGoogleGenAIRoutes? googleRoutes;
-    CustomOpenAIRoutes? openaiRoutes;
-    CustomAnthropicRoutes? anthropicRoutes;
-    CustomOllamaRoutes? ollamaRoutes;
+    OpenAIRoutes? openaiRoutes;
+    AnthropicRoutes? anthropicRoutes;
+    OllamaRoutes? ollamaRoutes;
 
     switch (_selectedType) {
-      case ProviderType.googleGenAI:
-        googleRoutes = CustomGoogleGenAIRoutes(
-          generateContent: _googleGenerateContentController.text,
-          generateContentStream:
-              _googleGenerateContentStreamController.text,
-          models: _googleModelsRouteController.text,
-        );
+      case ProviderType.google:
+        // Google does not use custom routes
         break;
-      case ProviderType.openAI:
-        openaiRoutes = CustomOpenAIRoutes(
+      case ProviderType.openai:
+        openaiRoutes = OpenAIRoutes(
           chatCompletion: _openAIChatCompletionsRouteController.text,
           responses: _openAIResponsesRouteController.text,
           embeddings: _openAIEmbeddingsRouteController.text,
@@ -435,13 +417,13 @@ class AddProviderViewModel extends ChangeNotifier {
         );
         break;
       case ProviderType.anthropic:
-        anthropicRoutes = CustomAnthropicRoutes(
+        anthropicRoutes = AnthropicRoutes(
           messages: _anthropicMessagesRouteController.text,
           models: _anthropicModelsRouteController.text,
         );
         break;
       case ProviderType.ollama:
-        ollamaRoutes = CustomOllamaRoutes(
+        ollamaRoutes = OllamaRoutes(
           chat: _ollamaChatRouteController.text,
           tags: _ollamaTagsRouteController.text,
         );
@@ -456,10 +438,9 @@ class AddProviderViewModel extends ChangeNotifier {
           _baseUrlController.text.isNotEmpty ? _baseUrlController.text : null,
       headers: headersMap,
       models: _selectedModels,
-      customGoogleGenAIRoutes: googleRoutes,
-      customOpenAIRoutes: openaiRoutes,
-      customAnthropicRoutes: anthropicRoutes,
-      customOllamaRoutes: ollamaRoutes,
+      openAIRoutes: openaiRoutes ?? const OpenAIRoutes(),
+      anthropicRoutes: anthropicRoutes ?? const AnthropicRoutes(),
+      ollamaRoutes: ollamaRoutes ?? const OllamaRoutes(),
     );
 
     if (existingProvider != null) {

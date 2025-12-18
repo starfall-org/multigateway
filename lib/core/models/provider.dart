@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'ai_model.dart';
 
 enum ProviderType {
-  googleGenAI('Google'),
-  openAI("OpenAI"),
+  google('Google'),
+  openai("OpenAI"),
   anthropic("Anthropic"),
   ollama("Ollama");
 
@@ -12,46 +12,25 @@ enum ProviderType {
   const ProviderType(this.name);
 }
 
-class CustomGoogleGenAIRoutes {
-  final String generateContent;
-  final String generateContentStream;
-  final String models;
-
-  CustomGoogleGenAIRoutes({
-    this.generateContent = '/generateContent',
-    this.generateContentStream = '/generateContentStream',
-    this.models = '/models',
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'generateContent': generateContent,
-      'generateContentStream': generateContentStream,
-      'models': models,
-    };
-  }
-
-  static CustomGoogleGenAIRoutes fromJson(Map<String, dynamic> json) {
-    return CustomGoogleGenAIRoutes(
-      generateContent: json['generateContent'] ?? '/generateContent',
-      generateContentStream:
-          json['generateContentStream'] ?? '/generateContentStream',
-      models: json['models'] ?? '/models',
-    );
-  }
-}
-
-class CustomOpenAIRoutes {
+class OpenAIRoutes {
   final String chatCompletion;
   final String responses;
   final String embeddings;
   final String models;
+  final String imagesGenerations;
+  final String imagesEdits;
+  final String videos;
+  final String audioSpeech;
 
-  CustomOpenAIRoutes({
+  const OpenAIRoutes({
     this.chatCompletion = '/chat/completions',
     this.responses = '/responses',
     this.embeddings = '/embeddings',
     this.models = '/models',
+    this.imagesGenerations = '/images/generations',
+    this.imagesEdits = '/images/edits',
+    this.videos = '/videos',
+    this.audioSpeech = '/audio/speech',
   });
 
   Map<String, dynamic> toJson() {
@@ -60,51 +39,79 @@ class CustomOpenAIRoutes {
       'responses': responses,
       'embeddings': embeddings,
       'models': models,
+      'imagesGenerations': imagesGenerations,
+      'imagesEdits': imagesEdits,
+      'videos': videos,
+      'audioSpeech': audioSpeech,
     };
   }
 
-  static CustomOpenAIRoutes fromJson(Map<String, dynamic> json) {
-    return CustomOpenAIRoutes(
+  static OpenAIRoutes fromJson(Map<String, dynamic> json) {
+    return OpenAIRoutes(
       chatCompletion: json['chatCompletion'] ?? '/chat/completions',
       responses: json['responses'] ?? '/responses',
       embeddings: json['embeddings'] ?? '/embeddings',
       models: json['models'] ?? '/models',
+      imagesGenerations: json['imagesGenerations'] ?? '/images/generations',
+      imagesEdits: json['imagesEdits'] ?? '/images/edits',
+      videos: json['videos'] ?? '/videos',
+      audioSpeech: json['audioSpeech'] ?? '/audio/speech',
     );
   }
 }
 
-class CustomAnthropicRoutes {
+class AnthropicRoutes {
   final String messages;
   final String models;
+  final String anthropicVersion;
 
-  CustomAnthropicRoutes({this.messages = '/messages', this.models = '/models'});
+  const AnthropicRoutes({
+    this.messages = '/messages',
+    this.models = '/models',
+    this.anthropicVersion = '2023-06-01',
+  });
 
   Map<String, dynamic> toJson() {
-    return {'messages': messages, 'models': models};
+    return {
+      'messages': messages,
+      'models': models,
+      'anthropicVersion': anthropicVersion,
+    };
   }
 
-  static CustomAnthropicRoutes fromJson(Map<String, dynamic> json) {
-    return CustomAnthropicRoutes(
+  static AnthropicRoutes fromJson(Map<String, dynamic> json) {
+    return AnthropicRoutes(
       messages: json['messages'] ?? '/messages',
       models: json['models'] ?? '/models',
+      anthropicVersion: json['anthropicVersion'] ?? '2023-06-01',
     );
   }
 }
 
-class CustomOllamaRoutes {
+class OllamaRoutes {
   final String chat;
   final String tags;
+  final String embeddings;
 
-  CustomOllamaRoutes({this.chat = '/chat', this.tags = '/tags'});
+  const OllamaRoutes({
+    this.chat = '/api/chat',
+    this.tags = '/api/tags',
+    this.embeddings = '/api/embeddings',
+  });
 
   Map<String, dynamic> toJson() {
-    return {'chat': chat, 'tags': tags};
+    return {
+      'chat': chat,
+      'tags': tags,
+      'embeddings': embeddings,
+    };
   }
 
-  static CustomOllamaRoutes fromJson(Map<String, dynamic> json) {
-    return CustomOllamaRoutes(
-      chat: json['chat'] ?? '/chat',
-      tags: json['tags'] ?? '/tags',
+  static OllamaRoutes fromJson(Map<String, dynamic> json) {
+    return OllamaRoutes(
+      chat: json['chat'] ?? '/api/chat',
+      tags: json['tags'] ?? '/api/tags',
+      embeddings: json['embeddings'] ?? '/api/embeddings',
     );
   }
 }
@@ -112,53 +119,51 @@ class CustomOllamaRoutes {
 class Provider {
   final String name;
   final ProviderType type;
-  final String? apiKey;
-  final String? logoUrl;
-  final String? baseUrl;
-  final CustomGoogleGenAIRoutes? customGoogleGenAIRoutes;
-  final CustomOpenAIRoutes? customOpenAIRoutes;
-  final CustomAnthropicRoutes? customAnthropicRoutes;
-  final CustomOllamaRoutes? customOllamaRoutes;
+  final String apiKey;
+  final String logoUrl;
+  final String baseUrl;
+  final OpenAIRoutes openAIRoutes;
+  final AnthropicRoutes anthropicRoutes;
+  final OllamaRoutes ollamaRoutes;
   final Map<String, String> headers;
   final List<AIModel> models;
 
   Provider({
     required this.type,
     String? name,
-    this.apiKey,
-    this.logoUrl,
+    this.apiKey = '',
+    this.logoUrl = '',
     String? baseUrl,
-    this.customGoogleGenAIRoutes,
-    this.customOpenAIRoutes,
-    this.customAnthropicRoutes,
-    this.customOllamaRoutes,
+    this.openAIRoutes = const OpenAIRoutes(),
+    this.anthropicRoutes = const AnthropicRoutes(),
+    this.ollamaRoutes = const OllamaRoutes(),
     this.headers = const {},
     this.models = const [],
-  }) : baseUrl = baseUrl ?? _defaultBaseUrl(type),
-       name = name ?? _defaultName(type);
+  })  : name = name ?? _defaultName(type),
+        baseUrl = baseUrl ?? _defaultBaseUrl(type);
 
   static String _defaultName(ProviderType type) {
     switch (type) {
-      case ProviderType.openAI:
+      case ProviderType.openai:
         return 'OpenAI';
       case ProviderType.anthropic:
         return 'Anthropic';
       case ProviderType.ollama:
         return 'Ollama';
-      case ProviderType.googleGenAI:
-        return 'Google Generative AI';
+      case ProviderType.google:
+        return 'Google';
     }
   }
 
-  static String? _defaultBaseUrl(ProviderType type) {
+  static String _defaultBaseUrl(ProviderType type) {
     switch (type) {
-      case ProviderType.openAI:
+      case ProviderType.openai:
         return 'https://api.openai.com/v1';
       case ProviderType.anthropic:
         return 'https://api.anthropic.com/v1';
       case ProviderType.ollama:
         return 'https://ollama.com';
-      case ProviderType.googleGenAI:
+      case ProviderType.google:
         return 'https://generativelanguage.googleapis.com/v1beta';
     }
   }
@@ -171,10 +176,9 @@ class Provider {
       'apiKey': apiKey,
       'baseUrl': baseUrl,
       'headers': headers,
-      'customGoogleGenAIRoutes': customGoogleGenAIRoutes?.toJson(),
-      'customOpenAIRoutes': customOpenAIRoutes?.toJson(),
-      'customAnthropicRoutes': customAnthropicRoutes?.toJson(),
-      'customOllamaRoutes': customOllamaRoutes?.toJson(),
+      'openAIRoutes': openAIRoutes.toJson(),
+      'anthropicRoutes': anthropicRoutes.toJson(),
+      'ollamaRoutes': ollamaRoutes.toJson(),
       'models': models.map((m) => m.toJson()).toList(),
     };
   }
@@ -199,25 +203,22 @@ class Provider {
 
     return Provider(
       type: ProviderType.values.firstWhere((e) => e.name == json['type']),
-      name: json['name'] as String,
-      logoUrl: json['logoUrl'] as String?,
-      apiKey: json['apiKey'] as String?,
+      name: json['name'] as String?,
+      logoUrl: (json['logoUrl'] as String?) ?? '',
+      apiKey: (json['apiKey'] as String?) ?? '',
       baseUrl: json['baseUrl'] as String?,
-      customGoogleGenAIRoutes: json['customGoogleGenAIRoutes'] != null
-          ? CustomGoogleGenAIRoutes.fromJson(json['customGoogleGenAIRoutes'])
-          : null,
-      customOpenAIRoutes: json['customOpenAIRoutes'] != null
-          ? CustomOpenAIRoutes.fromJson(json['customOpenAIRoutes'])
-          : null,
-      customAnthropicRoutes: json['customAnthropicRoutes'] != null
-          ? CustomAnthropicRoutes.fromJson(json['customAnthropicRoutes'])
-          : null,
-      customOllamaRoutes: json['customOllamaRoutes'] != null
-          ? CustomOllamaRoutes.fromJson(json['customOllamaRoutes'])
-          : null,
-      headers: (json['headers'] as Map<String, dynamic>?)?.map(
-        (key, value) => MapEntry(key, value.toString()),
-      ) ?? {},
+      openAIRoutes: json['openAIRoutes'] != null
+          ? OpenAIRoutes.fromJson(json['openAIRoutes'])
+          : const OpenAIRoutes(),
+      anthropicRoutes: json['anthropicRoutes'] != null
+          ? AnthropicRoutes.fromJson(json['anthropicRoutes'])
+          : const AnthropicRoutes(),
+      ollamaRoutes: json['ollamaRoutes'] != null
+          ? OllamaRoutes.fromJson(json['ollamaRoutes'])
+          : const OllamaRoutes(),
+      headers: (json['headers'] as Map<String, dynamic>?)
+              ?.map((key, value) => MapEntry(key, value.toString())) ??
+          {},
       models: parsedModels,
     );
   }

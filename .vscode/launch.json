@@ -5,9 +5,8 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "ai-gateway (Flutter Web Server)",
+            "name": "ai-gateway",
             "program": "lib/main.dart",
-            "deviceId": "web-server",
             "request": "launch",
             "type": "dart",
             "flutterMode": "debug",

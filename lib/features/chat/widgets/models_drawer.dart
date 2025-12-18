@@ -127,9 +127,9 @@ class ModelsDrawer extends StatelessWidget {
 
   IconData _getProviderIcon(ProviderType type) {
     switch (type) {
-      case ProviderType.googleGenAI:
+      case ProviderType.google:
         return Icons.android;
-      case ProviderType.openAI:
+      case ProviderType.openai:
         return Icons.smart_toy;
       case ProviderType.anthropic:
         return Icons.psychology;

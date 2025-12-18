@@ -1,6 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/storage/language_repository.dart';
 import '../widgets/settings_section_header.dart';
@@ -201,7 +200,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     : null,
                 onTap: () => _selectLanguage(language['code']),
               );
-            }).toList(),
+            }),
           ],
           SettingsSectionHeader('preferences.about'.tr()),
           SettingsTile(

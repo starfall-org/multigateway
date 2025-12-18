@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // Use foundation.dart for debugPrint
+// Use foundation.dart for debugPrint
 import 'core/routes.dart';
 import 'features/agents/presentation/agent_list_screen.dart';
 import 'features/chat/presentation/chat_screen.dart';

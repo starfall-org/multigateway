@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../../core/models/ai_model.dart';
 import '../../../core/models/provider.dart';
-import '../widgets/models_drawer.dart';
 import '../widgets/fetch_models_drawer.dart';
 import '../widgets/model_card.dart';
 import 'add_provider_viewmodel.dart';
@@ -210,7 +209,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
 
   Widget _buildCustomRoutesSection() {
     switch (_viewModel.selectedType) {
-      case ProviderType.googleGenAI:
+      case ProviderType.google:
         return Column(
           children: [
             _routeField(_viewModel.googleGenerateContentController, 'Generate Content'),
@@ -220,7 +219,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
             _routeField(_viewModel.googleModelsRouteController, 'Models'),
           ],
         );
-      case ProviderType.openAI:
+      case ProviderType.openai:
         return Column(
           children: [
             _routeField(_viewModel.openAIChatCompletionsRouteController, 'Chat Completions'),
@@ -366,14 +365,14 @@ class _AddProviderScreenState extends State<AddProviderScreen>
   }
 
   void _updateNameForType(ProviderType type) {
-    if (_viewModel.nameController.text == 'Google AI' ||
+    if (_viewModel.nameController.text == 'Google' ||
         _viewModel.nameController.text == 'OpenAI' ||
         _viewModel.nameController.text == 'Anthropic') {
       switch (type) {
-        case ProviderType.googleGenAI:
-          _viewModel.nameController.text = 'Gemini';
+        case ProviderType.google:
+          _viewModel.nameController.text = 'Google';
           break;
-        case ProviderType.openAI:
+        case ProviderType.openai:
           _viewModel.nameController.text = 'OpenAI';
           break;
         case ProviderType.anthropic:
