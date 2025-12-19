@@ -1,21 +1,78 @@
-                    GNU GENERAL PUBLIC LICENSE
-                       Version 3, 29 June 2007
+                    STARFALL SOFTWARES PUBLIC LICENSE
+                       Version 1.0, December 2025
 
- Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Copyright (C) 2025 Starfall Organization.
  Everyone is permitted to copy and distribute verbatim copies
  of this license document, but changing it is not allowed.
 
-                            Preamble
+                            PREAMBLE
 
-  The GNU General Public License is a free, copyleft license for
-software and other kinds of works.
+  The Starfall Software Public License is a modified copyleft license 
+  designed to protect the author's work while allowing free access 
+  for non-commercial purposes. 
 
-  The licenses for most software and other practical works are designed
-to take away your freedom to share and change the works.  By contrast,
-the GNU General Public License is intended to guarantee your freedom to
-share and change all versions of a program--to make sure it remains free
-software for all its users.  We, the Free Software Foundation, use the
-GNU General Public License for most of our software; it applies also to
+  This license is intended to guarantee your freedom to share and 
+  change all versions of a program for personal, educational, or 
+  research use. However, commercial use of this software requires 
+  a separate, specific license from the original copyright holders.
+
+                       TERMS AND CONDITIONS
+
+  0. Definitions.
+
+  "This License" refers to the Starfall Software Public License.
+  "The Program" refers to any copyrightable work licensed under this License.
+  "Commercial Use" means any use of the Program by a for-profit 
+  entity or any use intended for or directed toward commercial 
+  advantage or private monetary compensation.
+
+  1. Commercial Use Restriction.
+
+  Any use, reproduction, or distribution of the Program for Commercial 
+  Purposes is strictly prohibited unless specifically authorized 
+  through a separate written agreement (Special License) provided 
+  by the Licensor. 
+
+  For-profit organizations, or individuals using the software for 
+  business-related activities, must contact [Your Contact Info/Link] 
+  to obtain a Commercial License.
+
+  2. Non-Commercial Permissions.
+
+  You may convey verbatim or modified copies of the Program's source 
+  code for non-commercial purposes, provided that:
+  a) You include this license and all original copyright notices.
+  b) All modified files carry prominent notices stating that you 
+     changed them and the date of any change.
+  c) The entire work, as a whole, must be licensed under this License 
+     to anyone who comes into possession of it.
+
+  3. No Sublicensing.
+
+  You may not sublicense the Program. Any attempt to otherwise 
+  propagate or modify it is void, and will automatically terminate 
+  your rights under this License.
+
+  4. Termination.
+
+  Your rights under this License terminate immediately if you 
+  violate any of its terms, especially the Commercial Use 
+  Restriction in Section 1.
+
+  5. Disclaimer of Warranty.
+
+  THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY 
+  APPLICABLE LAW. THE PROGRAM IS PROVIDED "AS IS" WITHOUT WARRANTY 
+  OF ANY KIND, EITHER EXPRESSED OR IMPLIED.
+
+  6. Limitation of Liability.
+
+  IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW WILL ANY COPYRIGHT 
+  HOLDER BE LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, 
+  SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE 
+  USE OR INABILITY TO USE THE PROGRAM.
+
+                     END OF TERMS AND CONDITIONS
 any other work released this way by its authors.  You can apply it to
 your programs, too.
 
