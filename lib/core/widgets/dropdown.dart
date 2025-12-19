@@ -86,12 +86,12 @@ class CommonDropdown<T> extends StatelessWidget {
     );
 
     final Color boxBg =
-        iconBoxBackground ?? scheme.surfaceVariant.withOpacity(0.8);
+        iconBoxBackground ?? scheme.surfaceContainerHighest.withOpacity(0.8);
     final BorderSide boxBorder =
         iconBoxBorder ?? BorderSide(color: scheme.outlineVariant, width: 1);
 
     return DropdownButtonFormField<T>(
-      value: value,
+      initialValue: value,
       isExpanded: isExpanded,
       onChanged: enabled ? onChanged : null,
       menuMaxHeight: menuMaxHeight,

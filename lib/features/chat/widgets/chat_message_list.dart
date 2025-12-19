@@ -49,7 +49,7 @@ class ChatMessageList extends StatelessWidget {
   Widget _buildUserMessage(BuildContext context, ChatMessage message) {
     final secondary = Theme.of(context).extension<SecondarySurface>();
     final bg = secondary?.backgroundColor ??
-        Theme.of(context).colorScheme.surfaceVariant;
+        Theme.of(context).colorScheme.surfaceContainerHighest;
     final borderSide = secondary?.borderSide ??
         BorderSide(
           color: Theme.of(context).dividerColor.withAlpha(80),
@@ -170,7 +170,7 @@ class ChatMessageList extends StatelessWidget {
     final name = path.split('/').last;
     return Container(
       padding: const EdgeInsets.all(8),
-      color: Theme.of(context).colorScheme.surfaceVariant,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

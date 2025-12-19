@@ -329,7 +329,7 @@ class _ChatScreenState extends State<ChatScreen> {
       height: 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(Icons.insert_drive_file, color: Theme.of(context).iconTheme.color),

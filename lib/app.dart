@@ -52,7 +52,7 @@ class AIGatewayApp extends StatelessWidget {
               return hsl.withLightness(newLightness).toColor();
             }
 
-            Color _deriveSecondaryBg(
+            Color deriveSecondaryBg(
               Brightness br,
               ColorScheme scheme,
               Color mainBg,
@@ -75,7 +75,7 @@ class AIGatewayApp extends StatelessWidget {
 
             // Light palette surfaces
             final Color lightSecondaryBg =
-                _deriveSecondaryBg(Brightness.light, lightScheme, lightMainBg);
+                deriveSecondaryBg(Brightness.light, lightScheme, lightMainBg);
             final BorderSide? lightBorderSide =
                 settings.secondaryBackgroundMode == SecondaryBackgroundMode.off
                     ? BorderSide(color: borderFor(lightMainBg), width: 1)
@@ -83,7 +83,7 @@ class AIGatewayApp extends StatelessWidget {
 
             // Dark palette surfaces
             final Color darkSecondaryBg =
-                _deriveSecondaryBg(Brightness.dark, darkScheme, darkMainBg);
+                deriveSecondaryBg(Brightness.dark, darkScheme, darkMainBg);
             final BorderSide? darkBorderSide =
                 settings.secondaryBackgroundMode == SecondaryBackgroundMode.off
                     ? BorderSide(color: borderFor(darkMainBg), width: 1)
