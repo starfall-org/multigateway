@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../base.dart';
 import '../ai_utils.dart';
-import '../../../models/ai_model.dart';
+import '../../../models/ai/ai_model.dart';
 
 /// Azure OpenAI Service
 /// Tương thích với OpenAI API nhưng sử dụng Azure endpoints
@@ -23,7 +23,8 @@ class AzureOpenAI extends AIBaseApi {
     this.apiVersion = '2024-02-15-preview',
     this.chatPath = '/openai/deployments/{deployment-id}/chat/completions',
     this.embeddingsPath = '/openai/deployments/{deployment-id}/embeddings',
-    this.imagesGenerationsPath = '/openai/deployments/{deployment-id}/images/generations',
+    this.imagesGenerationsPath =
+        '/openai/deployments/{deployment-id}/images/generations',
     super.headers = const {},
   });
 
@@ -113,7 +114,9 @@ class AzureOpenAI extends AIBaseApi {
         }
         return AIResponse(text: '', contents: contents, raw: j);
       }
-      throw Exception('Azure OpenAI images error ${res.statusCode}: ${res.body}');
+      throw Exception(
+        'Azure OpenAI images error ${res.statusCode}: ${res.body}',
+      );
     }
 
     // default chat
@@ -191,72 +194,8 @@ class AzureOpenAI extends AIBaseApi {
   @override
   Future<List<AIModel>> listModels() async {
     // Azure OpenAI không có endpoint list models như OpenAI
-    // Trả về danh sách models phổ biến
-    return [
-      AIModel(
-        name: 'gpt-4',
-        type: ModelType.textGeneration,
-        input: [ModelIOType.text],
-        output: [ModelIOType.text],
-        tool: true,
-        reasoning: true,
-        contextWindow: 8192,
-      ),
-      AIModel(
-        name: 'gpt-4-32k',
-        type: ModelType.textGeneration,
-        input: [ModelIOType.text],
-        output: [ModelIOType.text],
-        tool: true,
-        reasoning: true,
-        contextWindow: 32768,
-      ),
-      AIModel(
-        name: 'gpt-4-turbo',
-        type: ModelType.textGeneration,
-        input: [ModelIOType.text, ModelIOType.image],
-        output: [ModelIOType.text],
-        tool: true,
-        reasoning: true,
-        contextWindow: 128000,
-      ),
-      AIModel(
-        name: 'gpt-35-turbo',
-        type: ModelType.textGeneration,
-        input: [ModelIOType.text],
-        output: [ModelIOType.text],
-        tool: true,
-        reasoning: false,
-        contextWindow: 4096,
-      ),
-      AIModel(
-        name: 'gpt-35-turbo-16k',
-        type: ModelType.textGeneration,
-        input: [ModelIOType.text],
-        output: [ModelIOType.text],
-        tool: true,
-        reasoning: false,
-        contextWindow: 16384,
-      ),
-      AIModel(
-        name: 'text-embedding-ada-002',
-        type: ModelType.embedding,
-        input: [ModelIOType.text],
-        output: [ModelIOType.text],
-        tool: false,
-        reasoning: false,
-        contextWindow: 8191,
-      ),
-      AIModel(
-        name: 'dall-e-3',
-        type: ModelType.imageGeneration,
-        input: [ModelIOType.text],
-        output: [ModelIOType.image],
-        tool: false,
-        reasoning: false,
-        contextWindow: 4000,
-      ),
-    ];
+    // Trả về danh sách models trống
+    return [];
   }
 
   @override

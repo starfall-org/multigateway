@@ -2,9 +2,9 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/storage/agent_repository.dart';
+import '../../../core/storage/ai_profile_repository.dart';
 import '../../../core/storage/mcp_repository.dart';
-import '../../../core/models/ai_agent.dart';
+import '../../../core/models/ai/ai_profile.dart';
 import '../../../core/models/mcp/mcp_server.dart';
 
 /// Options for chat persistence: On, Off, and Disable
@@ -18,7 +18,7 @@ class AddAgentViewModel extends ChangeNotifier {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController promptController = TextEditingController();
 
-  // State variables representing all fields of AIAgent
+  // State variables representing all fields of AIProfile
   bool enableStream = true;
   bool isTopPEnabled = false;
   double topPValue = 1.0;
@@ -32,47 +32,47 @@ class AddAgentViewModel extends ChangeNotifier {
   bool isCustomThinkingTokensEnabled = false;
   int customThinkingTokensValue = 0;
   ThinkingLevel thinkingLevel = ThinkingLevel.auto;
-  bool agentConversations = false;
+  bool profileConversations = false;
   List<MCPServer> availableMCPServers = [];
   final List<String> selectedMCPServerIds = [];
   PersistOverride persistOverride = PersistOverride.off;
 
-  // Initialize with optional existing agent
-  void initialize(AIAgent? agent) {
-    if (agent != null) {
-      nameController.text = agent.name;
-      promptController.text = agent.config.systemPrompt;
-      enableStream = agent.config.enableStream;
+  // Initialize with optional existing profile
+  void initialize(AIProfile? profile) {
+    if (profile != null) {
+      nameController.text = profile.name;
+      promptController.text = profile.config.systemPrompt;
+      enableStream = profile.config.enableStream;
 
-      if (agent.config.topP != null) {
+      if (profile.config.topP != null) {
         isTopPEnabled = true;
-        topPValue = agent.config.topP!;
+        topPValue = profile.config.topP!;
       }
-      if (agent.config.topK != null) {
+      if (profile.config.topK != null) {
         isTopKEnabled = true;
-        topKValue = agent.config.topK!;
+        topKValue = profile.config.topK!;
       }
-      if (agent.config.temperature != null) {
+      if (profile.config.temperature != null) {
         isTemperatureEnabled = true;
-        temperatureValue = agent.config.temperature!;
+        temperatureValue = profile.config.temperature!;
       }
 
-      contextWindowValue = agent.config.contextWindow;
-      conversationLengthValue = agent.config.conversationLength;
-      maxTokensValue = agent.config.maxTokens;
-      if (agent.config.customThinkingTokens != null) {
+      contextWindowValue = profile.config.contextWindow;
+      conversationLengthValue = profile.config.conversationLength;
+      maxTokensValue = profile.config.maxTokens;
+      if (profile.config.customThinkingTokens != null) {
         isCustomThinkingTokensEnabled = true;
-        customThinkingTokensValue = agent.config.customThinkingTokens!;
+        customThinkingTokensValue = profile.config.customThinkingTokens!;
       }
 
-      thinkingLevel = agent.config.thinkingLevel;
-      agentConversations = agent.agentConversations;
-      selectedMCPServerIds.addAll(agent.activeMCPServerIds);
+      thinkingLevel = profile.config.thinkingLevel;
+      profileConversations = profile.profileConversations;
+      selectedMCPServerIds.addAll(profile.activeMCPServerIds);
 
-      if (agent.persistChatSelection == null) {
+      if (profile.persistChatSelection == null) {
         persistOverride = PersistOverride.off;
       } else {
-        persistOverride = agent.persistChatSelection!
+        persistOverride = profile.persistChatSelection!
             ? PersistOverride.on
             : PersistOverride.disable;
       }
@@ -86,7 +86,10 @@ class AddAgentViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> saveAgent(AIAgent? existingAgent, BuildContext context) async {
+  Future<void> saveAgent(
+    AIProfile? existingProfile,
+    BuildContext context,
+  ) async {
     if (nameController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -94,9 +97,9 @@ class AddAgentViewModel extends ChangeNotifier {
       return;
     }
 
-    final repository = await AgentRepository.init();
-    final newAgent = AIAgent(
-      id: existingAgent?.id ?? const Uuid().v4(),
+    final repository = await AIProfileRepository.init();
+    final newProfile = AIProfile(
+      id: existingProfile?.id ?? const Uuid().v4(),
       name: nameController.text,
       config: RequestConfig(
         systemPrompt: promptController.text,
@@ -112,7 +115,7 @@ class AddAgentViewModel extends ChangeNotifier {
             : null,
         thinkingLevel: thinkingLevel,
       ),
-      agentConversations: agentConversations,
+      profileConversations: profileConversations,
       activeMCPServers: selectedMCPServerIds
           .map((id) => ActiveMCPServer(id: id, activeToolIds: []))
           .toList(),
@@ -121,10 +124,10 @@ class AddAgentViewModel extends ChangeNotifier {
           : (persistOverride == PersistOverride.on ? true : false),
     );
 
-    if (existingAgent != null) {
-      await repository.updateAgent(newAgent);
+    if (existingProfile != null) {
+      await repository.updateProfile(newProfile);
     } else {
-      await repository.addAgent(newAgent);
+      await repository.addProfile(newProfile);
     }
   }
 
@@ -204,8 +207,8 @@ class AddAgentViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleAgentConversations(bool value) {
-    agentConversations = value;
+  void toggleProfileConversations(bool value) {
+    profileConversations = value;
     notifyListeners();
   }
 

@@ -1,34 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
-/// Thẻ hiển thị tài nguyên dạng lưới (Grid) theo Material 3.
+enum ItemCardLayout { grid, list }
+
+/// Thẻ hiển thị tài nguyên dạng lưới (Grid) hoặc danh sách (List) theo Material 3.
 /// Dùng chung cho providers/agents/tts/mcp.
 class ItemCard extends StatelessWidget {
   final Widget icon;
   final Color? iconColor;
   final String title;
+  final Widget? subtitleWidget;
   final String? subtitle;
   final VoidCallback? onTap;
   final VoidCallback? onView;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final Widget? trailing;
   final EdgeInsetsGeometry padding;
   final double borderRadius;
   final double elevation;
+  final ItemCardLayout layout;
 
   const ItemCard({
     super.key,
     required this.icon,
     required this.title,
     this.subtitle,
+    this.subtitleWidget,
     this.onTap,
     this.onView,
     this.onEdit,
     this.onDelete,
+    this.trailing,
     this.iconColor,
     this.padding = const EdgeInsets.all(12),
     this.borderRadius = 12,
     this.elevation = 1,
+    this.layout = ItemCardLayout.grid,
   });
 
   @override
@@ -36,9 +44,25 @@ class ItemCard extends StatelessWidget {
     final theme = Theme.of(context);
     final _ = iconColor ?? theme.colorScheme.primary;
 
-    Widget cardBody = Padding(
-      padding: padding,
-      child: Column(
+    Widget buildSubtitle() {
+      if (subtitleWidget != null) return subtitleWidget!;
+      if (subtitle != null) {
+        return Text(
+          subtitle!,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.textTheme.bodySmall?.color,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        );
+      }
+      return const SizedBox.shrink();
+    }
+
+    Widget cardBody;
+
+    if (layout == ItemCardLayout.grid) {
+      Widget content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -52,36 +76,60 @@ class ItemCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          if (subtitle != null) ...[
+          if (subtitle != null || subtitleWidget != null) ...[
             const SizedBox(height: 4),
-            Text(
-              subtitle!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.textTheme.bodySmall?.color,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            buildSubtitle(),
           ],
         ],
-      ),
-    );
+      );
 
-    // Nếu có menu hành động, hiển thị nút 3 chấm ở góc trên bên phải
-    if (onView != null || onEdit != null || onDelete != null) {
-      cardBody = Stack(
-        children: [
-          Positioned.fill(child: cardBody),
-          Positioned(
-            top: 4,
-            right: 4,
-            child: _ActionMenu(
-              onView: onView,
-              onEdit: onEdit,
-              onDelete: onDelete,
+      // Nếu có trailing widget hoặc menu hành động
+      if (trailing != null ||
+          onView != null ||
+          onEdit != null ||
+          onDelete != null) {
+        content = Stack(
+          children: [
+            Positioned.fill(child: content),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: trailing ??
+                  _ActionMenu(
+                    onView: onView,
+                    onEdit: onEdit,
+                    onDelete: onDelete,
+                  ),
             ),
+          ],
+        );
+      }
+      cardBody = Padding(padding: padding, child: content);
+    } else {
+      // List layout
+      cardBody = ListTile(
+        contentPadding: padding,
+        leading: icon,
+        title: Text(
+          title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
           ),
-        ],
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: (subtitle != null || subtitleWidget != null)
+            ? buildSubtitle()
+            : null,
+        trailing: trailing ??
+            (onView != null || onEdit != null || onDelete != null
+                ? _ActionMenu(
+                    onView: onView,
+                    onEdit: onEdit,
+                    onDelete: onDelete,
+                  )
+                : null),
+        onTap: onTap,
       );
     }
 
@@ -91,11 +139,13 @@ class ItemCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(borderRadius),
-        onTap: onTap,
-        child: cardBody,
-      ),
+      child: layout == ItemCardLayout.grid
+          ? InkWell(
+              borderRadius: BorderRadius.circular(borderRadius),
+              onTap: onTap,
+              child: cardBody,
+            )
+          : cardBody,
     );
   }
 }

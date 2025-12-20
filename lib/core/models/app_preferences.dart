@@ -9,6 +9,7 @@ class AppPreferences {
   final bool hideStatusBar;
   final bool hideNavigationBar;
   final bool debugMode;
+  final bool hasInitializedIcons;
 
   const AppPreferences({
     required this.persistChatSelection,
@@ -16,6 +17,7 @@ class AppPreferences {
     this.hideStatusBar = false,
     this.hideNavigationBar = false,
     this.debugMode = false,
+    this.hasInitializedIcons = false,
   });
 
   factory AppPreferences.defaults() {
@@ -25,6 +27,7 @@ class AppPreferences {
       hideStatusBar: false,
       hideNavigationBar: false,
       debugMode: false,
+      hasInitializedIcons: false,
     );
   }
 
@@ -34,6 +37,7 @@ class AppPreferences {
     bool? hideStatusBar,
     bool? hideNavigationBar,
     bool? debugMode,
+    bool? hasInitializedIcons,
   }) {
     return AppPreferences(
       persistChatSelection: persistChatSelection ?? this.persistChatSelection,
@@ -41,6 +45,7 @@ class AppPreferences {
       hideStatusBar: hideStatusBar ?? this.hideStatusBar,
       hideNavigationBar: hideNavigationBar ?? this.hideNavigationBar,
       debugMode: debugMode ?? this.debugMode,
+      hasInitializedIcons: hasInitializedIcons ?? this.hasInitializedIcons,
     );
   }
 
@@ -51,6 +56,7 @@ class AppPreferences {
       'hideStatusBar': hideStatusBar,
       'hideNavigationBar': hideNavigationBar,
       'debugMode': debugMode,
+      'hasInitializedIcons': hasInitializedIcons,
     };
   }
 
@@ -61,6 +67,7 @@ class AppPreferences {
       hideStatusBar: (json['hideStatusBar'] as bool?) ?? false,
       hideNavigationBar: (json['hideNavigationBar'] as bool?) ?? false,
       debugMode: (json['debugMode'] as bool?) ?? false,
+      hasInitializedIcons: (json['hasInitializedIcons'] as bool?) ?? false,
     );
   }
 

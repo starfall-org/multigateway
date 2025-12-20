@@ -65,10 +65,10 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading providers: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
             action: SnackBarAction(
               label: 'Retry',
-              textColor: Colors.white,
+              textColor: Theme.of(context).colorScheme.onError,
               onPressed: () => _loadProviders(),
             ),
           ),
@@ -96,7 +96,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error deleting provider: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }

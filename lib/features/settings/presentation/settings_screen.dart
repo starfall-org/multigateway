@@ -60,7 +60,7 @@ class SettingsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   SettingsTile(
-                    icon: Icons.record_voice_over_outlined,
+                    icon: Icons.speaker_notes,
                     title: 'tts.title'.tr(),
                     onTap: () => Navigator.pushNamed(context, AppRoutes.tts),
                   ),
@@ -68,6 +68,14 @@ class SettingsScreen extends StatelessWidget {
                   SettingsTile(
                     icon: Icons.extension_outlined,
                     title: 'mcp.title'.tr(),
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.mcp),
+                  ),
+                  const Divider(height: 1, indent: 56, endIndent: 16),
+                  SettingsTile(
+                    icon: Icons.generating_tokens,
+                    title: 'ai_profiles.title'.tr(),
+                    onTap: () =>
+                        Navigator.pushNamed(context, AppRoutes.aiProfiles),
                   ),
                 ],
               ),
@@ -78,13 +86,13 @@ class SettingsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   SettingsTile(
-                    icon: Icons.info_outline,
-                    title: 'settings.info.title'.tr(),
+                    icon: Icons.system_update_outlined,
+                    title: 'settings.update.title'.tr(),
                   ),
                   const Divider(height: 1, indent: 56, endIndent: 16),
                   SettingsTile(
-                    icon: Icons.system_update_outlined,
-                    title: 'settings.update.title'.tr(),
+                    icon: Icons.info_outline,
+                    title: 'settings.info.title'.tr(),
                   ),
                 ],
               ),

@@ -13,6 +13,13 @@ extension ChatViewModelUIActions on ChatViewModel {
     });
   }
 
+  bool isNearBottom() {
+    if (!scrollController.hasClients) return true;
+    final position = scrollController.position;
+    // Considered near bottom if within 100 pixels of the max extent
+    return position.pixels >= position.maxScrollExtent - 100;
+  }
+
   void openDrawer() {
     scaffoldKey.currentState?.openDrawer();
   }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
-import '../../../core/models/ai_model.dart';
+import '../../../core/models/ai/ai_model.dart';
 import '../../../core/widgets/dropdown.dart';
+import '../../settings/widgets/settings_card.dart';
+import '../../../core/widgets/item_card.dart';
 
 class ModelsDrawer extends StatefulWidget {
   final List<AIModel> availableModels;
@@ -38,56 +40,53 @@ class _ModelsDrawerState extends State<ModelsDrawer> {
     return Drawer(
       width: MediaQuery.of(context).size.width, // Tối đa chiều ngang
       child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.5, // Mặc định 1/2 chiều dọc
+        height:
+            MediaQuery.of(context).size.height * 0.5, // Mặc định 1/2 chiều dọc
         child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.fromLTRB(8, 60, 8, 16),
-            decoration: const BoxDecoration(
-              color: Colors.blue,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(8, 60, 8, 16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.model_training, color: Colors.white, size: 28),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'settings.manage_models'.tr(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+              child: Row(
+                children: [
+                  Icon(Icons.model_training,
+                      color: Theme.of(context).colorScheme.onPrimary, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'settings.manage_models'.tr(),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
+                  IconButton(
+                    icon: Icon(Icons.close,
+                        color: Theme.of(context).colorScheme.onPrimary),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // Content
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Fetch Models Section
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
+            // Content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Fetch Models Section
+                    SettingsCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -95,7 +94,7 @@ class _ModelsDrawerState extends State<ModelsDrawer> {
                             children: [
                               Icon(
                                 Icons.cloud_download,
-                                color: Colors.blue[600],
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -120,8 +119,12 @@ class _ModelsDrawerState extends State<ModelsDrawer> {
                                         : '${widget.availableModels.length} ${'settings.models_available'.tr()}',
                                     style: TextStyle(
                                       color: widget.availableModels.isEmpty
-                                          ? Colors.grey
-                                          : Colors.green[600],
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .primary,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -131,8 +134,10 @@ class _ModelsDrawerState extends State<ModelsDrawer> {
                                   icon: const Icon(Icons.refresh, size: 16),
                                   label: Text('settings.fetch'.tr()),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
-                                    foregroundColor: Colors.white,
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.onPrimary,
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
                                       vertical: 8,
@@ -144,142 +149,144 @@ class _ModelsDrawerState extends State<ModelsDrawer> {
                         ],
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Available Models Section
-                  if (widget.availableModels.isNotEmpty) ...[
+                    // Available Models Section
+                    if (widget.availableModels.isNotEmpty) ...[
+                      Text(
+                        'settings.available_models'.tr(),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      CommonDropdown<AIModel>(
+                        value: widget.selectedModelToAdd,
+                        options: widget.availableModels.map((model) {
+                          return DropdownOption<AIModel>(
+                            value: model,
+                            label: model.name,
+                            icon: const Icon(Icons.smart_toy),
+                          );
+                        }).toList(),
+                        onChanged: widget.onUpdateSelectedModel,
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: widget.onAddModel,
+                          icon: const Icon(Icons.add, size: 16),
+                          label: Text('settings.add_model'.tr()),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.secondary,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+
+                    // Selected Models Section
                     Text(
-                      'settings.available_models'.tr(),
+                      'settings.selected_models'.tr(),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    CommonDropdown<AIModel>(
-                      value: widget.selectedModelToAdd,
-                      options: widget.availableModels.map((model) {
-                        return DropdownOption<AIModel>(
-                          value: model,
-                          label: model.name,
-                          icon: const Icon(Icons.smart_toy),
-                        );
-                      }).toList(),
-                      onChanged: widget.onUpdateSelectedModel,
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: widget.onAddModel,
-                        icon: const Icon(Icons.add, size: 16),
-                        label: Text('settings.add_model'.tr()),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 20),
-
-                  // Selected Models Section
-                  Text(
-                    'settings.selected_models'.tr(),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: widget.selectedModels.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.model_training,
-                                  size: 48,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'settings.no_models_selected'.tr(),
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
+                    Expanded(
+                      child: widget.selectedModels.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.model_training,
+                                    size: 48,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                        .withValues(alpha: 0.4),
                                   ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.separated(
-                            itemCount: widget.selectedModels.length,
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final model = widget.selectedModels[index];
-                              return Card(
-                                elevation: 1,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: Colors.blue[100],
-                                    child: Icon(
-                                      Icons.smart_toy,
-                                      color: Colors.blue[600],
-                                      size: 20,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    model.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w500,
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'settings.no_models_selected'.tr(),
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                       fontSize: 14,
                                     ),
                                   ),
-                                  subtitle: Wrap(spacing: 4, runSpacing: -4),
+                                ],
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: widget.selectedModels.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (context, index) {
+                                final model = widget.selectedModels[index];
+                                return ItemCard(
+                                  layout: ItemCardLayout.list,
+                                  title: model.name,
+                                  icon: CircleAvatar(
+                                    backgroundColor: Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer,
+                                    child: Icon(
+                                      Icons.smart_toy,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  onTap: () => widget.onShowCapabilities(model),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        icon: const Icon(
+                                        icon: Icon(
                                           Icons.info_outline,
                                           size: 18,
-                                          color: Colors.blue,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
                                         ),
                                         onPressed: () =>
                                             widget.onShowCapabilities(model),
                                       ),
                                       IconButton(
-                                        icon: const Icon(
+                                        icon: Icon(
                                           Icons.delete,
                                           size: 18,
-                                          color: Colors.red,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .error,
                                         ),
                                         onPressed: () =>
                                             widget.onRemoveModel(model.name),
                                       ),
                                     ],
                                   ),
-                                  onTap: () => widget.onShowCapabilities(model),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                ],
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }

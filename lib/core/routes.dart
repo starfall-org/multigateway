@@ -1,9 +1,8 @@
 class AppRoutes {
   static const String home = '/';
   static const String chat = '/chat';
-  static const String agents = '/agents';
-  static const String agentsAddOrEdit = '/agents/add_or_edit';
-  static const String agentsView = '/agents/view';
+  static const String aiProfiles = '/ai_profiles';
+  static const String aiProfilesAddOrEdit = '/ai_profiles/add_or_edit';
   static const String settings = '/settings';
   static const String mcp = '/mcp';
   static const String mcpAddOrEdit = '/mcp/add_or_edit';

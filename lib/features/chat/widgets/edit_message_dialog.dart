@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../../core/widgets/dialog.dart';
+import '../../../core/widgets/custom_text_field.dart';
 import 'dart:io';
 
 class EditMessageResult {
@@ -134,7 +135,7 @@ class _EditMessageDialogState extends State<EditMessageDialog> {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withAlpha(40),
+                      color: Theme.of(context).shadowColor.withAlpha(40),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -190,14 +191,11 @@ class _EditMessageDialogState extends State<EditMessageDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
+            CustomTextField(
               controller: _controller,
+              label: 'dialog.message'.tr(),
               minLines: 3,
               maxLines: 10,
-              decoration: InputDecoration(
-                labelText: 'dialog.message'.tr(),
-                border: const OutlineInputBorder(),
-              ),
             ),
             const SizedBox(height: 12),
             Row(

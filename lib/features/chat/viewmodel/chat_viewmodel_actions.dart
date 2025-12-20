@@ -1,10 +1,10 @@
 part of 'chat_viewmodel.dart';
 
 extension ChatViewModelActions on ChatViewModel {
-  Future<List<String>> _snapshotEnabledToolNames(AIAgent agent) async {
+  Future<List<String>> _snapshotEnabledToolNames(AIProfile profile) async {
     try {
       final mcpRepo = await MCPRepository.init();
-      final servers = agent.activeMCPServerIds
+      final servers = profile.activeMCPServerIds
           .map((id) => mcpRepo.getItem(id))
           .whereType<MCPServer>()
           .toList();
@@ -19,5 +19,4 @@ extension ChatViewModelActions on ChatViewModel {
       return const <String>[];
     }
   }
-
 }

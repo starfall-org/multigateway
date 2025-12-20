@@ -1,12 +1,14 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/models/app_preferences.dart';
 import '../../../core/storage/language_repository.dart';
 import '../../../core/storage/app_preferences_repository.dart';
 import '../widgets/settings_section_header.dart';
 import '../widgets/settings_tile.dart';
 import '../widgets/settings_card.dart';
 
+// TODO: move logic to viewmodel
 class PreferencesScreen extends StatefulWidget {
   const PreferencesScreen({super.key});
 
@@ -19,19 +21,24 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
   bool _autoDetectLanguage = true;
   String _selectedLanguage = 'auto';
 
-  // App (chat) preferences
-  bool _persistChatSelection = false; // mặc định không lưu
-  bool _preferAgentSettings = false; // mặc định ưu tiên global
+  // App preferences
+  bool _persistChatSelection = false;
+  VibrationSettings _vibrationSettings = VibrationSettings.defaults();
+  bool _hideStatusBar = false;
+  bool _hideNavigationBar = false;
+  bool _debugMode = false;
 
   final List<Map<String, dynamic>> _supportedLanguages = [
-    {'code': 'auto', 'name': 'settings.preferences.auto_detect', 'flag': '🌐'},
+    {'code': 'auto', 'name': 'settings.preferences.auto_detect', 'flag': ''},
     {'code': 'en', 'name': 'English', 'flag': '🇺🇸'},
-    {'code': 'vi', 'name': 'Tiếng Việt', 'flag': '🇻🇳'},
-    {'code': 'zh_CN', 'name': '简体中文', 'flag': '🇨🇳'},
-    {'code': 'zh_TW', 'name': '繁體中文', 'flag': '🇹🇼'},
-    {'code': 'ja', 'name': '日本語', 'flag': '🇯🇵'},
-    {'code': 'fr', 'name': 'Français', 'flag': '🇫🇷'},
-    {'code': 'de', 'name': 'Deutsch', 'flag': '🇩🇪'},
+    {'code': 'fr', 'name': 'French', 'flag': '🇫🇷'},
+    {'code': 'de', 'name': 'German', 'flag': '🇩🇪'},
+    {'code': 'ja', 'name': 'Japanese', 'flag': '🇯🇵'},
+    {'code': 'zh_CN', 'name': 'Chinese (Simplified)', 'flag': '🇨🇳'},
+    {'code': 'zh_TW', 'name': 'Chinese (Traditional)', 'flag': '🇹🇼'},
+    {'code': 'ko', 'name': 'Korean', 'flag': '🇰🇷'},
+    {'code': 'vi', 'name': 'Vietnamese', 'flag': '🇻🇳'},
+    {'code': 'es', 'name': 'Spanish', 'flag': '🇪🇸'},
   ];
 
   @override
@@ -54,8 +61,45 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     final appPrefs = AppPreferencesRepository.instance.currentPreferences;
     setState(() {
       _persistChatSelection = appPrefs.persistChatSelection;
-      _preferAgentSettings = appPrefs.preferAgentSettings;
+      _vibrationSettings = appPrefs.vibrationSettings;
+      _hideStatusBar = appPrefs.hideStatusBar;
+      _hideNavigationBar = appPrefs.hideNavigationBar;
+      _debugMode = appPrefs.debugMode;
     });
+  }
+
+  Future<void> _updateAppPreferences({
+    bool? persistChatSelection,
+    VibrationSettings? vibrationSettings,
+    bool? hideStatusBar,
+    bool? hideNavigationBar,
+    bool? debugMode,
+  }) async {
+    final newPrefs = AppPreferencesRepository.instance.currentPreferences
+        .copyWith(
+          persistChatSelection: persistChatSelection,
+          vibrationSettings: vibrationSettings,
+          hideStatusBar: hideStatusBar,
+          hideNavigationBar: hideNavigationBar,
+          debugMode: debugMode,
+        );
+
+    setState(() {
+      if (persistChatSelection != null) {
+        _persistChatSelection = persistChatSelection;
+      }
+      if (vibrationSettings != null) _vibrationSettings = vibrationSettings;
+      if (hideStatusBar != null) _hideStatusBar = hideStatusBar;
+      if (hideNavigationBar != null) _hideNavigationBar = hideNavigationBar;
+      if (debugMode != null) _debugMode = debugMode;
+    });
+
+    try {
+      await AppPreferencesRepository.instance.updatePreferences(newPrefs);
+    } catch (_) {
+      // Revert changes on error
+      _loadAppPreferences();
+    }
   }
 
   Future<void> _toggleAutoDetect(bool value) async {
@@ -70,7 +114,6 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       await _languageRepository.setAutoDetect(value);
 
       if (value) {
-        // Show success message briefly before restart
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -79,12 +122,9 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             ),
           );
         }
-
-        // Apply auto-detection immediately without delay
         _restartApp();
       }
     } catch (e) {
-      // Handle errors during auto-detection toggle
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -92,7 +132,6 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
-        // Reload preferences to restore previous state
         _loadPreferences();
       }
     }
@@ -112,13 +151,11 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
         languageCode = parts[0];
       }
 
-      // Save language preferences with error handling
       await _languageRepository.setLanguage(
         languageCode,
         countryCode: countryCode,
       );
 
-      // Show success message briefly before restart
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -127,11 +164,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
           ),
         );
       }
-
-      // Apply language change immediately without delay
       _restartApp();
     } catch (e) {
-      // Handle errors during language change
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -139,29 +173,21 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
-        // Reload preferences to restore previous state
         _loadPreferences();
       }
     }
   }
 
   void _restartApp() {
-    // Instead of restarting the entire app, we'll use EasyLocalization's
-    // built-in method to change language dynamically
-    // This is safer and prevents the blank screen issue
-
     final preferences = _languageRepository.currentPreferences;
     Locale newLocale;
 
     if (preferences.autoDetectLanguage || preferences.languageCode == 'auto') {
-      // Use device locale for auto-detect
       newLocale = WidgetsBinding.instance.platformDispatcher.locale;
-      // Make sure it's a supported locale
       if (newLocale.languageCode == 'zh') {
         newLocale = const Locale('zh', 'CN');
       }
     } else {
-      // Use the saved language preference
       if (preferences.countryCode != null) {
         newLocale = Locale(preferences.languageCode, preferences.countryCode);
       } else {
@@ -169,7 +195,6 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       }
     }
 
-    // Change language dynamically without restarting the app
     context.setLocale(newLocale);
   }
 
@@ -178,7 +203,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'settings.preferences.select_language'.tr(),
+          'settings.preferences.title'.tr(),
           style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -189,8 +214,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       ),
       body: ListView(
         children: [
-          // Chat preferences section
-          SettingsSectionHeader('settings.preferences.chat_settings'.tr()),
+          // General settings
+          SettingsSectionHeader('settings.preferences.general'.tr()),
           const SizedBox(height: 12),
           SettingsCard(
             child: Column(
@@ -200,45 +225,69 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   title: 'settings.preferences.persist_chat_selection'.tr(),
                   trailing: Switch(
                     value: _persistChatSelection,
-                    onChanged: (val) async {
-                      setState(() => _persistChatSelection = val);
-                      try {
-                        await AppPreferencesRepository.instance
-                            .setPersistChatSelection(val);
-                      } catch (_) {
-                        setState(
-                          () => _persistChatSelection = AppPreferencesRepository
-                              .instance
-                              .currentPreferences
-                              .persistChatSelection,
-                        );
-                      }
-                    },
+                    onChanged: (val) =>
+                        _updateAppPreferences(persistChatSelection: val),
                   ),
                 ),
                 const Divider(height: 1, indent: 56, endIndent: 16),
                 SettingsTile(
-                  icon: Icons.manage_accounts_outlined,
-                  title: 'settings.preferences.prefer_agent_settings'.tr(),
+                  icon: Icons.vibration_outlined,
+                  title: 'settings.preferences.vibration_enabled'.tr(),
                   trailing: Switch(
-                    value: _preferAgentSettings,
-                    onChanged: (val) async {
-                      setState(() => _preferAgentSettings = val);
-                      try {
-                        await AppPreferencesRepository.instance
-                            .setPreferAgentSettings(val);
-                      } catch (_) {
-                        setState(
-                          () => _preferAgentSettings = AppPreferencesRepository
-                              .instance
-                              .currentPreferences
-                              .preferAgentSettings,
-                        );
-                      }
-                    },
+                    value: _vibrationSettings.enable,
+                    onChanged: (val) => _updateAppPreferences(
+                      vibrationSettings: _vibrationSettings.copyWith(
+                        enable: val,
+                      ),
+                    ),
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // Display settings
+          const SizedBox(height: 24),
+          SettingsSectionHeader('settings.preferences.display'.tr()),
+          const SizedBox(height: 12),
+          SettingsCard(
+            child: Column(
+              children: [
+                SettingsTile(
+                  icon: Icons.fullscreen_outlined,
+                  title: 'settings.preferences.hide_status_bar'.tr(),
+                  trailing: Switch(
+                    value: _hideStatusBar,
+                    onChanged: (val) =>
+                        _updateAppPreferences(hideStatusBar: val),
+                  ),
+                ),
+                const Divider(height: 1, indent: 56, endIndent: 16),
+                SettingsTile(
+                  icon: Icons.keyboard_hide_outlined,
+                  title: 'settings.preferences.hide_navigation_bar'.tr(),
+                  trailing: Switch(
+                    value: _hideNavigationBar,
+                    onChanged: (val) =>
+                        _updateAppPreferences(hideNavigationBar: val),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Developer settings
+          const SizedBox(height: 24),
+          SettingsSectionHeader('settings.preferences.developer'.tr()),
+          const SizedBox(height: 12),
+          SettingsCard(
+            child: SettingsTile(
+              icon: Icons.bug_report_outlined,
+              title: 'settings.preferences.debug_mode'.tr(),
+              trailing: Switch(
+                value: _debugMode,
+                onChanged: (val) => _updateAppPreferences(debugMode: val),
+              ),
             ),
           ),
 

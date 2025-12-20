@@ -69,11 +69,17 @@ class AppPreferencesRepository extends BaseRepository<AppPreferences> {
   }
 
   Future<void> setPreferAgentSettings(bool preferAgent) async {
-    final current = currentPreferences;
-    await updatePreferences(current.copyWith(preferAgentSettings: preferAgent));
+    // Deprecated in new model, but keeping for compatibility if needed or removing
+    // final current = currentPreferences;
+    // await updatePreferences(current.copyWith(preferAgentSettings: preferAgent));
   }
 
   Future<void> resetToDefaults() async {
     await updatePreferences(AppPreferences.defaults());
+  }
+
+  Future<void> setInitializedIcons(bool initialized) async {
+    final current = currentPreferences;
+    await updatePreferences(current.copyWith(hasInitializedIcons: initialized));
   }
 }

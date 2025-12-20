@@ -1,4 +1,4 @@
-import '../../models/ai_model.dart';
+import '../../models/ai/ai_model.dart';
 import '../../models/ai/ai_dto.dart';
 
 export '../../models/ai/ai_dto.dart';

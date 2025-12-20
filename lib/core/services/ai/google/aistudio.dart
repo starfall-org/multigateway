@@ -2,12 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-import '../../../models/ai_model.dart';
+import '../../../models/ai/ai_model.dart';
 import '../../../models/ai/ai_dto.dart';
 import '../../../models/provider.dart';
 
-/// Google AI Studio service sử dụng REST API
-/// Chỉ chia sẻ AIModel và DTO models, không chia sẻ các đối tượng nội bộ với providers khác
 class GoogleAIStudio {
   final String _defaultModel;
   final Provider? _provider;
@@ -151,17 +149,40 @@ class GoogleAIStudio {
 
     // Thêm tools nếu có
     if (request.tools.isNotEmpty) {
-      body['tools'] = [
-        {
-          'functionDeclarations': request.tools.map((tool) {
-            return {
-              'name': tool.name,
-              if (tool.description != null) 'description': tool.description,
-              'parameters': tool.parameters,
-            };
-          }).toList(),
+      final toolsList = <Map<String, dynamic>>[];
+
+      // Filter special tools vs function declarations
+      final functionDeclarations = <Map<String, dynamic>>[];
+      bool hasGoogleSearch = false;
+      bool hasCodeExecution = false;
+
+      for (final tool in request.tools) {
+        if (tool.name == '__google_search__') {
+          hasGoogleSearch = true;
+        } else if (tool.name == '__code_execution__') {
+          hasCodeExecution = true;
+        } else {
+          functionDeclarations.add({
+            'name': tool.name,
+            if (tool.description != null) 'description': tool.description,
+            'parameters': tool.parameters,
+          });
         }
-      ];
+      }
+
+      if (hasGoogleSearch) {
+        toolsList.add({'googleSearch': {}});
+      }
+
+      if (hasCodeExecution) {
+        toolsList.add({'codeExecution': {}});
+      }
+
+      if (functionDeclarations.isNotEmpty) {
+        toolsList.add({'functionDeclarations': functionDeclarations});
+      }
+
+      body['tools'] = toolsList;
     }
 
     return body;
@@ -180,27 +201,29 @@ class GoogleAIStudio {
 
     final textParts = <String>[];
     final toolCalls = <AIToolCall>[];
-    
+
     if (parts != null) {
       for (final part in parts) {
         final partMap = part as Map<String, dynamic>;
-        
+
         // Xử lý text
         if (partMap.containsKey('text')) {
           textParts.add(partMap['text'] as String);
         }
-        
+
         // Xử lý function call
         if (partMap.containsKey('functionCall')) {
           final functionCall = partMap['functionCall'] as Map<String, dynamic>;
           final name = functionCall['name'] as String;
           final args = functionCall['args'] as Map<String, dynamic>? ?? {};
-          
-          toolCalls.add(AIToolCall(
-            id: 'call_${DateTime.now().millisecondsSinceEpoch}',
-            name: name,
-            arguments: args,
-          ));
+
+          toolCalls.add(
+            AIToolCall(
+              id: 'call_${DateTime.now().millisecondsSinceEpoch}',
+              name: name,
+              arguments: args,
+            ),
+          );
         }
       }
     }
@@ -251,24 +274,20 @@ class GoogleAIStudio {
     return [
       AIModel(
         name: 'gemini-pro',
+        displayName: 'Gemini Pro',
         type: ModelType.textGeneration,
         input: [ModelIOType.text, ModelIOType.image],
         output: [ModelIOType.text],
-        tool: true,
         reasoning: true,
-        builtinWebSearch: true,
-        builtinWebFetch: true,
         contextWindow: 2097152,
       ),
       AIModel(
         name: 'gemini-flash',
+        displayName: 'Gemini Flash',
         type: ModelType.textGeneration,
         input: [ModelIOType.text, ModelIOType.image],
         output: [ModelIOType.text],
-        tool: true,
         reasoning: false,
-        builtinWebSearch: true,
-        builtinWebFetch: true,
         contextWindow: 1048576,
       ),
     ];

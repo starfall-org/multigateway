@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../base.dart';
 import '../ai_utils.dart';
-import '../../../models/ai_model.dart';
+import '../../../models/ai/ai_model.dart';
 
 class OpenAI extends AIBaseApi {
   final String responsesPath;
@@ -432,7 +432,8 @@ class OpenAI extends AIBaseApi {
           .map((e) => AIModel.fromJson((e as Map).cast<String, dynamic>()))
           .toList();
     }
-    throw Exception('OpenAI list models error ${res.statusCode}: ${res.body}');
+    // Fallback nếu API list models lỗi hoặc không được hỗ trợ (một số provider tương thích OpenAI nhưng chặn endpoint này)
+    return [];
   }
 
   @override

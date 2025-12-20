@@ -6,25 +6,36 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
-import 'models/ai_agent.dart';
-import 'models/ai_model.dart';
+import 'di/app_services.dart';
+import 'models/ai/ai_profile.dart';
+import 'models/ai/ai_model.dart';
 import 'models/mcp/mcp_server.dart';
 import 'models/provider.dart';
 
 void initIcons() {
-  _cacheAllIcons();
+  final hasInitialized = AppServices.instance.appPreferencesRepository.currentPreferences.hasInitializedIcons;
+  if (!hasInitialized) {
+    // Run in background, don't await
+    _cacheAllIcons().then((_) async {
+       await AppServices.instance.appPreferencesRepository.setInitializedIcons(true);
+    });
+  }
 }
 
 Future<void> _cacheAllIcons() async {
-  String objPath = "assets/brand_icons.json";
-  final String jsonString = await rootBundle.loadString(objPath);
-  final List<dynamic> data = json.decode(jsonString);
+  try {
+    String objPath = "assets/brand_icons.json";
+    final String jsonString = await rootBundle.loadString(objPath);
+    final List<dynamic> data = json.decode(jsonString);
 
-  for (var item in data) {
-    final List<dynamic> patterns = item['pattern'];
-    for (var pattern in patterns) {
-      await _cacheBrandIcon(pattern);
+    for (var item in data) {
+      final List<dynamic> patterns = item['pattern'];
+      for (var pattern in patterns) {
+        await _cacheBrandIcon(pattern);
+      }
     }
+  } catch (e) {
+    debugPrint("Error caching icons: $e");
   }
 }
 
@@ -62,7 +73,7 @@ Widget buildLogoIcon(dynamic item, {double size = 24}) {
       return SizedBox(width: size, height: size, child: buildBrandLogo(brand));
     }
     return Icon(Icons.dns_outlined, size: size);
-  } else if (item is AIAgent) {
+  } else if (item is AIProfile) {
     String? brand = _detectBrand(item.name);
     if (brand != null) {
       return SizedBox(width: size, height: size, child: buildBrandLogo(brand));

@@ -16,11 +16,8 @@ class AIModel {
   final ModelType type;
   final List<ModelIOType> input;
   final List<ModelIOType> output;
-  final ModelBuiltInTools builtInTools;
-  final bool tool;
+  final ModelBuiltInTools? builtInTools;
   final bool reasoning;
-  final bool builtinWebSearch;
-  final bool builtinWebFetch;
   final int? contextWindow;
   final int? parameters;
 
@@ -31,11 +28,8 @@ class AIModel {
     this.type = ModelType.textGeneration,
     this.input = const [ModelIOType.text],
     this.output = const [ModelIOType.text],
-    required this.builtInTools,
-    this.tool = true,
+    this.builtInTools,
     this.reasoning = false,
-    this.builtinWebSearch = false,
-    this.builtinWebFetch = false,
     this.contextWindow,
     this.parameters,
   });
@@ -48,11 +42,8 @@ class AIModel {
       'type': type.name,
       'input': input.map((e) => e.name).toList(),
       'output': output.map((e) => e.name).toList(),
-      'builtInTools': builtInTools.toJson(),
-      'tool': tool,
+      if (builtInTools != null) 'builtInTools': builtInTools!.toJson(),
       'reasoning': reasoning,
-      'builtinWebSearch': builtinWebSearch,
-      'builtinWebFetch': builtinWebFetch,
       'contextWindow': contextWindow,
       'parameters': parameters,
     };
@@ -68,7 +59,15 @@ class AIModel {
     // Infer ModelType from name/id as providers don't return our internal enum values
     ModelType type = ModelType.textGeneration;
     final lowerName = name.toLowerCase();
-    final bool defaultBuiltin = lowerName.contains('gemini');
+    ModelBuiltInTools? builtInTools;
+    if (lowerName.contains('gemini')) {
+      builtInTools = ModelBuiltInTools(
+        urlContext: true,
+        googleSearch: false,
+        codeExecution: false,
+      );
+    }
+
     if (lowerName.contains('embed')) {
       type = ModelType.embedding;
     } else if (lowerName.contains('dall-e') ||
@@ -141,19 +140,8 @@ class AIModel {
       output: json['output'] != null
           ? parseIOList(json['output'])
           : defaultOutput,
-      builtInTools: ModelBuiltInTools(
-        urlContext: json['urlContext'] as bool,
-        search: json['search'] as bool,
-        codeExecution: json['codeExecution'] as bool,
-      ),
-      tool: json['tool'] is bool ? json['tool'] : true,
+      builtInTools: builtInTools,
       reasoning: reasoning,
-      builtinWebSearch: json['builtinWebSearch'] is bool
-          ? json['builtinWebSearch']
-          : defaultBuiltin,
-      builtinWebFetch: json['builtinWebFetch'] is bool
-          ? json['builtinWebFetch']
-          : defaultBuiltin,
       contextWindow: contextWindow,
       parameters: safeInt(json['parameters']),
     );
@@ -185,19 +173,19 @@ List<ModelIOType> parseIOList(dynamic list) {
 
 class ModelBuiltInTools {
   final bool urlContext;
-  final bool search;
+  final bool googleSearch;
   final bool codeExecution;
 
   ModelBuiltInTools({
-    required this.urlContext,
-    required this.search,
-    required this.codeExecution,
+    this.urlContext = false,
+    this.googleSearch = false,
+    this.codeExecution = false,
   });
 
   factory ModelBuiltInTools.fromJson(Map<String, dynamic> json) {
     return ModelBuiltInTools(
       urlContext: json['urlContext'] as bool,
-      search: json['search'] as bool,
+      googleSearch: json['googleSearch'] as bool,
       codeExecution: json['codeExecution'] as bool,
     );
   }
@@ -205,7 +193,7 @@ class ModelBuiltInTools {
   Map<String, dynamic> toJson() {
     return {
       'urlContext': urlContext,
-      'search': search,
+      'googleSearch': googleSearch,
       'codeExecution': codeExecution,
     };
   }

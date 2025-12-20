@@ -70,10 +70,10 @@ class AttachmentOptionsDrawer extends StatelessWidget {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.camera_alt, color: Colors.green),
+                child: Icon(Icons.camera_alt, color: Theme.of(context).colorScheme.secondary),
               ),
               onTap: () {
                 Navigator.pop(context);
@@ -89,14 +89,14 @@ class AttachmentOptionsDrawer extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.attach_file, color: Colors.orange),
+                child: Icon(Icons.attach_file, color: Theme.of(context).colorScheme.tertiary),
               ),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Implement document pick
+                // TODO: Implement document pick (allow multiple)
               },
             ),
           ],

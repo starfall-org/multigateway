@@ -8,7 +8,7 @@ extension ChatViewModelOperations on ChatViewModel {
           final who = m.role == ChatRole.user
               ? 'role.you'.tr(context: scaffoldKey.currentContext!)
               : (m.role == ChatRole.model
-                    ? (selectedAgent?.name ?? 'AI')
+                    ? (selectedProfile?.name ?? 'AI')
                     : 'role.system'.tr(context: scaffoldKey.currentContext!));
           return '$who: ${m.content}';
         })
@@ -34,7 +34,7 @@ extension ChatViewModelOperations on ChatViewModel {
       updatedAt: DateTime.now(),
     );
     notify();
-    await chatRepository!.saveConversation(currentSession!);
+    await chatRepository.saveConversation(currentSession!);
   }
 
   Future<void> speakLastModelMessage() async {
@@ -49,7 +49,6 @@ extension ChatViewModelOperations on ChatViewModel {
       ),
     );
     if (lastModel.content.isEmpty) return;
-    tts ??= FlutterTts();
-    await tts!.speak(lastModel.content);
+    await ttsService.speak(lastModel.content);
   }
 }

@@ -15,7 +15,7 @@
     "new_chat": "Cuộc trò chuyện mới",
     "help_activity": "Trợ giúp & hoạt động",
     "settings": "Cài đặt",
-    "change_agent": "Đổi Agent",
+    "change_agent": "Đổi AI Profile",
     "no_history": "Không có lịch sử"
   },
   "input": {
@@ -115,7 +115,7 @@
       "auto_detect_error": "Không thể bật/tắt tự động",
       "chat_settings": "Cài đặt chat",
       "persist_chat_selection": "Lưu lựa chọn",
-      "prefer_agent_settings": "Ưu tiên cài đặt Agent"
+      "prefer_agent_settings": "Ưu tiên cài đặt AI Profile"
     }
   },
   "providers": {
@@ -160,14 +160,14 @@
     "tap_to_fetch_models": "Nhấn để tải danh sách mô hình"
   },
   "agents": {
-    "title": "Danh sách Agent",
-    "no_agents": "Không tìm thấy Agent nào",
+    "title": "Danh sách AI Profile",
+    "no_agents": "Không tìm thấy AI Profile nào",
     "delete_confirm": "Bạn có chắc chắn muốn xóa {} không?",
-    "agent_deleted": "Đã xóa Agent {}",
-    "add_new_agent": "Thêm Agent Mới",
-    "edit_agent": "Chỉnh sửa Agent",
-    "agent_details": "Chi tiết Agent",
-    "name": "Tên Agent",
+    "agent_deleted": "Đã xóa AI Profile {}",
+    "add_new_agent": "Thêm AI Profile Mới",
+    "edit_agent": "Chỉnh sửa AI Profile",
+    "agent_details": "Chi tiết AI Profile",
+    "name": "Tên AI Profile",
     "system_prompt": "System Prompt",
     "parameters": "Tham số",
     "stream": "Stream",
@@ -179,6 +179,7 @@
     "conversation_length": "Độ dài hội thoại",
     "max_tokens": "Số lượng Token tối đa",
     "mcp_servers": "Máy chủ MCP",
+    "no_mcp_servers": "Không có máy chủ MCP nào",
     "persist_selection": "Ghi nhớ lựa chọn",
     "persist_disable": "Theo mặc định chung",
     "persist_on": "Luôn bật",

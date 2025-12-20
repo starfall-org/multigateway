@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'item_card.dart';
 
 class ResourceTile extends StatelessWidget {
   final String title;
@@ -24,64 +25,27 @@ class ResourceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return ItemCard(
+      layout: ItemCardLayout.list,
       elevation: 0,
-      color: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-        ),
-      ),
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      child: ListTile(
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: (leadingColor ?? Theme.of(context).primaryColor).withValues(
-              alpha: 0.1,
-            ),
-            shape: BoxShape.circle,
+      title: title,
+      subtitle: subtitle,
+      icon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: (leadingColor ?? Theme.of(context).primaryColor).withValues(
+            alpha: 0.1,
           ),
-          child: leadingIcon,
+          shape: BoxShape.circle,
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: subtitle != null
-            ? Text(
-                subtitle!,
-                style: TextStyle(
-                  color: Theme.of(context).textTheme.bodySmall?.color,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              )
-            : null,
-        trailing:
-            trailing ??
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (onEdit != null)
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20),
-                    onPressed: onEdit,
-                    tooltip: 'Edit',
-                  ),
-                if (onDelete != null)
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete_outline,
-                      size: 20,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    onPressed: onDelete,
-                    tooltip: 'Delete',
-                  ),
-              ],
-            ),
+        child: leadingIcon,
       ),
+      onTap: onTap,
+      onEdit: onEdit,
+      onDelete: onDelete,
+      trailing: trailing,
+      // Note: ItemCard uses padding for contentPadding in list mode
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
 }

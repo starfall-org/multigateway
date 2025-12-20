@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-class AppDrawer extends StatelessWidget {
+class AppBottomSheet extends StatelessWidget {
   final Widget? header;
   final List<Widget> items;
   final Widget? footer;
 
-  const AppDrawer({super.key, this.header, required this.items, this.footer});
+  const AppBottomSheet({super.key, this.header, required this.items, this.footer});
 
   @override
   Widget build(BuildContext context) {

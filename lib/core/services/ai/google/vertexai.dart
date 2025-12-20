@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-import '../../../models/ai_model.dart';
+import '../../../models/ai/ai_model.dart';
 import '../../../models/ai/ai_dto.dart';
 import '../../../models/provider.dart';
 
@@ -19,24 +19,24 @@ class GoogleVertexAI {
     Provider? provider,
     required String projectId,
     String location = 'us-central1',
-  })  : _defaultModel = defaultModel,
-        _provider = provider,
-        _projectId = projectId,
-        _location = location;
+  }) : _defaultModel = defaultModel,
+       _provider = provider,
+       _projectId = projectId,
+       _location = location;
 
   String get _accessToken => _provider?.apiKey ?? '';
-  String get _baseUrl => _provider?.baseUrl ?? 
-      'https://$_location-aiplatform.googleapis.com';
+  String get _baseUrl =>
+      _provider?.baseUrl ?? 'https://$_location-aiplatform.googleapis.com';
 
   /// Generate content với AIRequest (sử dụng DTO chung)
   Future<AIResponse> generate(AIRequest request) async {
     final model = request.model.isEmpty ? _defaultModel : request.model;
     final url = Uri.parse(
-      '$_baseUrl/v1/projects/$_projectId/locations/$_location/publishers/google/models/$model:generateContent'
+      '$_baseUrl/v1/projects/$_projectId/locations/$_location/publishers/google/models/$model:generateContent',
     );
 
     final body = _buildRequestBody(request);
-    
+
     final response = await http.post(
       url,
       headers: {
@@ -58,11 +58,11 @@ class GoogleVertexAI {
   Stream<AIResponse> generateStream(AIRequest request) async* {
     final model = request.model.isEmpty ? _defaultModel : request.model;
     final url = Uri.parse(
-      '$_baseUrl/v1/projects/$_projectId/locations/$_location/publishers/google/models/$model:streamGenerateContent'
+      '$_baseUrl/v1/projects/$_projectId/locations/$_location/publishers/google/models/$model:streamGenerateContent',
     );
 
     final body = _buildRequestBody(request);
-    
+
     final client = http.Client();
     try {
       final streamRequest = http.Request('POST', url)
@@ -73,7 +73,9 @@ class GoogleVertexAI {
       final streamResponse = await client.send(streamRequest);
 
       if (streamResponse.statusCode >= 200 && streamResponse.statusCode < 300) {
-        await for (final chunk in streamResponse.stream.transform(utf8.decoder)) {
+        await for (final chunk in streamResponse.stream.transform(
+          utf8.decoder,
+        )) {
           final lines = chunk.split('\n');
           for (final line in lines) {
             if (line.startsWith('data: ')) {
@@ -131,7 +133,7 @@ class GoogleVertexAI {
                 'inlineData': {
                   'mimeType': content.mimeType ?? 'image/jpeg',
                   'data': content.dataBase64,
-                }
+                },
               });
             }
             break;
@@ -148,7 +150,7 @@ class GoogleVertexAI {
               'inlineData': {
                 'mimeType': img.mimeType ?? 'image/jpeg',
                 'data': img.dataBase64,
-              }
+              },
             });
           }
         }
@@ -181,7 +183,7 @@ class GoogleVertexAI {
               'parameters': tool.parameters,
             };
           }).toList(),
-        }
+        },
       ];
     }
 
@@ -198,36 +200,38 @@ class GoogleVertexAI {
     final candidate = candidates.first as Map<String, dynamic>;
     final content = candidate['content'] as Map<String, dynamic>?;
     final parts = content?['parts'] as List?;
-    
+
     final textParts = <String>[];
     final toolCalls = <AIToolCall>[];
-    
+
     if (parts != null) {
       for (final part in parts) {
         final partMap = part as Map<String, dynamic>;
-        
+
         // Xử lý text
         if (partMap.containsKey('text')) {
           textParts.add(partMap['text'] as String);
         }
-        
+
         // Xử lý function call
         if (partMap.containsKey('functionCall')) {
           final functionCall = partMap['functionCall'] as Map<String, dynamic>;
           final name = functionCall['name'] as String;
           final args = functionCall['args'] as Map<String, dynamic>? ?? {};
-          
-          toolCalls.add(AIToolCall(
-            id: 'call_${DateTime.now().millisecondsSinceEpoch}',
-            name: name,
-            arguments: args,
-          ));
+
+          toolCalls.add(
+            AIToolCall(
+              id: 'call_${DateTime.now().millisecondsSinceEpoch}',
+              name: name,
+              arguments: args,
+            ),
+          );
         }
       }
     }
 
     final usageMetadata = json['usageMetadata'] as Map<String, dynamic>?;
-    
+
     return AIResponse(
       text: textParts.join(''),
       toolCalls: toolCalls,
@@ -250,20 +254,18 @@ class GoogleVertexAI {
 
     try {
       final url = Uri.parse(
-        '$_baseUrl/v1/projects/$_projectId/locations/$_location/publishers/google/models'
+        '$_baseUrl/v1/projects/$_projectId/locations/$_location/publishers/google/models',
       );
-      
+
       final response = await http.get(
         url,
-        headers: {
-          'Authorization': 'Bearer $_accessToken',
-        },
+        headers: {'Authorization': 'Bearer $_accessToken'},
       );
-      
+
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final models = (json['models'] as List? ?? []);
-        
+
         return models
             .map((m) => AIModel.fromJson((m as Map).cast<String, dynamic>()))
             .toList();
@@ -271,68 +273,12 @@ class GoogleVertexAI {
     } catch (e) {
       // Nếu có lỗi, trả về danh sách mặc định
     }
-    
+
     return _getDefaultModels();
   }
 
   /// Danh sách models mặc định
   List<AIModel> _getDefaultModels() {
-    return [
-      AIModel(
-        name: 'gemini-1.5-pro',
-        type: ModelType.textGeneration,
-        input: [ModelIOType.text, ModelIOType.image],
-        output: [ModelIOType.text],
-        tool: true,
-        reasoning: true,
-        builtinWebSearch: true,
-        builtinWebFetch: true,
-        contextWindow: 2097152,
-      ),
-      AIModel(
-        name: 'gemini-1.5-flash',
-        type: ModelType.textGeneration,
-        input: [ModelIOType.text, ModelIOType.image],
-        output: [ModelIOType.text],
-        tool: true,
-        reasoning: false,
-        builtinWebSearch: true,
-        builtinWebFetch: true,
-        contextWindow: 1048576,
-      ),
-      AIModel(
-        name: 'gemini-2.0-flash-exp',
-        type: ModelType.textGeneration,
-        input: [ModelIOType.text, ModelIOType.image],
-        output: [ModelIOType.text],
-        tool: true,
-        reasoning: true,
-        builtinWebSearch: true,
-        builtinWebFetch: true,
-        contextWindow: 1048576,
-      ),
-      AIModel(
-        name: 'gemini-pro-vision',
-        type: ModelType.textGeneration,
-        input: [ModelIOType.text, ModelIOType.image],
-        output: [ModelIOType.text],
-        tool: false,
-        reasoning: false,
-        builtinWebSearch: true,
-        builtinWebFetch: true,
-        contextWindow: 32768,
-      ),
-      AIModel(
-        name: 'text-embedding-004',
-        type: ModelType.embedding,
-        input: [ModelIOType.text],
-        output: [ModelIOType.text],
-        tool: false,
-        reasoning: false,
-        builtinWebSearch: false,
-        builtinWebFetch: false,
-        contextWindow: 2048,
-      ),
-    ];
+    return [];
   }
 }

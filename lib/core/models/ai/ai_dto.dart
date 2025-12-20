@@ -6,6 +6,7 @@ class AIContent {
   final String? uri;
   final String? filePath;
   final String? mimeType;
+  final String? dataBase64;
 
   const AIContent({
     required this.type,
@@ -13,6 +14,7 @@ class AIContent {
     this.uri,
     this.filePath,
     this.mimeType,
+    this.dataBase64,
   });
 
   Map<String, dynamic> toJson() {
@@ -22,6 +24,7 @@ class AIContent {
       'uri': uri,
       'filePath': filePath,
       'mimeType': mimeType,
+      if (dataBase64 != null) 'dataBase64': dataBase64,
     };
   }
 
@@ -35,6 +38,7 @@ class AIContent {
       uri: json['uri'] as String?,
       filePath: json['filePath'] as String?,
       mimeType: json['mimeType'] as String?,
+      dataBase64: json['dataBase64'] as String?,
     );
   }
 }

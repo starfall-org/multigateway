@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ai_gateway/core/services/ai/openai/openai.dart';
 import 'package:ai_gateway/core/services/ai/anthropic.dart';
 import 'package:ai_gateway/core/services/ai/base.dart';
-import 'package:ai_gateway/core/models/ai_model.dart';
+import 'package:ai_gateway/core/models/ai/ai_model.dart';
 
 Future<HttpServer> _startServer(
   FutureOr<void> Function(HttpRequest req) handler,

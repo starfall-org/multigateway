@@ -1,24 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 
-import '../../../core/models/ai_agent.dart';
-import '../../../core/models/ai_model.dart';
+import '../../../core/models/ai/ai_profile.dart';
+import '../../../core/models/ai/ai_model.dart';
 import '../../../core/models/chat/message.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/models/chat/conversation.dart';
-import '../../../core/storage/agent_repository.dart';
+import '../../../core/storage/ai_profile_repository.dart';
 import '../../../core/storage/chat_repository.dart';
 import '../../../core/storage/provider_repository.dart';
 import '../../../core/models/provider.dart';
 import '../../../core/storage/app_preferences_repository.dart';
 import '../../../core/storage/mcp_repository.dart';
 import '../../../core/models/mcp/mcp_server.dart';
+import '../../../core/services/tts_service.dart';
 import '../widgets/edit_message_dialog.dart';
+import 'chat_navigation_interface.dart';
 
 import 'package:uuid/uuid.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'dart:async';
+
+import '../utils/chat_logic_utils.dart';
 
 part 'chat_viewmodel_actions.dart';
 part 'chat_message_actions.dart';
@@ -32,10 +36,17 @@ class ChatViewModel extends ChangeNotifier {
   final TextEditingController textController = TextEditingController();
   final ScrollController scrollController = ScrollController();
 
-  ChatRepository? chatRepository;
+  final ChatNavigationInterface navigator;
+  final ChatRepository chatRepository;
+  final AIProfileRepository aiProfileRepository;
+  final ProviderRepository providerRepository;
+  final AppPreferencesRepository appPreferencesRepository;
+  final MCPRepository mcpRepository;
+  final TTSService ttsService;
+
+  StreamSubscription? _providerSubscription;
   Conversation? currentSession;
-  AgentRepository? agentRepository;
-  AIAgent? selectedAgent;
+  AIProfile? selectedProfile;
   bool isLoading = true;
   bool isGenerating = false;
 
@@ -45,8 +56,8 @@ class ChatViewModel extends ChangeNotifier {
   final List<String> inspectingAttachments = [];
 
   // Providers and model selection state
-  ProviderRepository? providerRepository;
   List<Provider> providers = [];
+  List<MCPServer> mcpServers = [];
   final Map<String, bool> providerCollapsed = {}; // true = collapsed
   String? selectedProviderName;
   String? selectedModelName;
@@ -54,21 +65,33 @@ class ChatViewModel extends ChangeNotifier {
   AIModel? get selectedAIModel {
     if (selectedProviderName == null || selectedModelName == null) return null;
     try {
-      final provider =
-          providers.firstWhere((p) => p.name == selectedProviderName);
+      final provider = providers.firstWhere(
+        (p) => p.name == selectedProviderName,
+      );
       return provider.models.firstWhere((m) => m.name == selectedModelName);
     } catch (e) {
       return null;
     }
   }
 
-  FlutterTts? tts;
+  ChatViewModel({
+    required this.navigator,
+    required this.chatRepository,
+    required this.aiProfileRepository,
+    required this.providerRepository,
+    required this.appPreferencesRepository,
+    required this.mcpRepository,
+    required this.ttsService,
+  }) {
+    _providerSubscription = providerRepository.changes.listen((_) {
+      refreshProviders();
+    });
+  }
 
   void notify() => notifyListeners();
 
   Future<void> initChat() async {
-    chatRepository = await ChatRepository.init();
-    final sessions = chatRepository!.getConversations();
+    final sessions = chatRepository.getConversations();
 
     if (sessions.isNotEmpty) {
       currentSession = sessions.first;
@@ -79,16 +102,25 @@ class ChatViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadSelectedAgent() async {
-    agentRepository ??= await AgentRepository.init();
-    final agent = await agentRepository!.getOrInitSelectedAgent();
-    selectedAgent = agent;
+  Future<void> loadSelectedProfile() async {
+    final profile = await aiProfileRepository.getOrInitSelectedProfile();
+    selectedProfile = profile;
+    notifyListeners();
+  }
+
+  Future<void> updateProfile(AIProfile profile) async {
+    selectedProfile = profile;
+    await aiProfileRepository.updateProfile(profile);
+    notifyListeners();
+  }
+
+  Future<void> loadMCPServers() async {
+    mcpServers = mcpRepository.getItems().whereType<MCPServer>().toList();
     notifyListeners();
   }
 
   Future<void> refreshProviders() async {
-    providerRepository ??= await ProviderRepository.init();
-    providers = providerRepository!.getProviders();
+    providers = providerRepository.getProviders();
     // Initialize collapse map entries for unseen providers
     for (final p in providers) {
       providerCollapsed.putIfAbsent(p.name, () => false);
@@ -102,10 +134,10 @@ class ChatViewModel extends ChangeNotifier {
   }
 
   bool shouldPersistSelections() {
-    final prefs = AppPreferencesRepository.instance.currentPreferences;
-    // If preferAgentSettings is on and agent has an override, use it
-    if (selectedAgent?.persistChatSelection != null) {
-      return selectedAgent!.persistChatSelection!;
+    final prefs = appPreferencesRepository.currentPreferences;
+    // If preferAgentSettings is on and profile has an override, use it
+    if (selectedProfile?.persistChatSelection != null) {
+      return selectedProfile!.persistChatSelection!;
     }
     return prefs.persistChatSelection;
   }
@@ -122,14 +154,14 @@ class ChatViewModel extends ChangeNotifier {
         updatedAt: DateTime.now(),
       );
       // ignore: discarded_futures
-      chatRepository?.saveConversation(currentSession!);
+      chatRepository.saveConversation(currentSession!);
     }
 
     notifyListeners();
   }
 
   Future<void> createNewSession() async {
-    final session = await chatRepository!.createConversation();
+    final session = await chatRepository.createConversation();
     currentSession = session;
     isLoading = false;
     notifyListeners();
@@ -139,7 +171,7 @@ class ChatViewModel extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    final sessions = chatRepository!.getConversations();
+    final sessions = chatRepository.getConversations();
     final session = sessions.firstWhere(
       (s) => s.id == sessionId,
       orElse: () => sessions.first,
@@ -152,9 +184,10 @@ class ChatViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _providerSubscription?.cancel();
     textController.dispose();
     scrollController.dispose();
-    tts?.stop();
+    ttsService.stop();
     super.dispose();
   }
 }

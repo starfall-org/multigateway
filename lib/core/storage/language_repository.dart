@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/language_preferences.dart';
 import 'base_repository.dart';
@@ -93,5 +93,93 @@ class LanguageRepository extends BaseRepository<LanguagePreferences> {
 
   Future<void> resetToDefaults() async {
     await updatePreferences(LanguagePreferences.defaults());
+  }
+  Locale getInitialLocale(Locale deviceLocale) {
+    try {
+      final preferences = currentPreferences;
+
+      if (preferences.autoDetectLanguage || preferences.languageCode == 'auto') {
+        return _getSupportedLocale(deviceLocale);
+      } else {
+        return _getLocaleFromPreferences(preferences);
+      }
+    } catch (e) {
+      debugPrint('Error loading language preferences: $e');
+      return const Locale('en');
+    }
+  }
+
+  Locale _getSupportedLocale(Locale deviceLocale) {
+    try {
+      if (deviceLocale.languageCode.isEmpty) {
+        return const Locale('en');
+      }
+
+      const supportedLocales = [
+        Locale('en'),
+        Locale('vi'),
+        Locale('zh', 'CN'),
+        Locale('zh', 'TW'),
+        Locale('ja'),
+        Locale('fr'),
+        Locale('de'),
+      ];
+
+      // Exact match language + country
+      for (final supportedLocale in supportedLocales) {
+        if (supportedLocale.languageCode == deviceLocale.languageCode &&
+            supportedLocale.countryCode == deviceLocale.countryCode) {
+          return supportedLocale;
+        }
+      }
+
+      // Match language only
+      for (final supportedLocale in supportedLocales) {
+        if (supportedLocale.languageCode == deviceLocale.languageCode) {
+          if (deviceLocale.languageCode == 'zh') {
+            return const Locale('zh', 'CN');
+          }
+          return supportedLocale;
+        }
+      }
+
+      return const Locale('en');
+    } catch (e) {
+      debugPrint('Error getting supported locale: $e');
+      return const Locale('en');
+    }
+  }
+
+  Locale _getLocaleFromPreferences(LanguagePreferences preferences) {
+    try {
+      if (preferences.languageCode.isEmpty) {
+        return const Locale('en');
+      }
+
+      final supportedLanguages = ['en', 'vi', 'zh', 'ja', 'fr', 'de'];
+      if (!supportedLanguages.contains(preferences.languageCode)) {
+        return const Locale('en');
+      }
+
+      if (preferences.languageCode == 'zh') {
+        if (preferences.countryCode != null &&
+            (preferences.countryCode == 'CN' ||
+                preferences.countryCode == 'TW')) {
+          return Locale(preferences.languageCode, preferences.countryCode);
+        } else {
+          return const Locale('zh', 'CN'); // Default to simplified Chinese
+        }
+      }
+
+      if (preferences.countryCode != null &&
+          preferences.countryCode!.isNotEmpty) {
+        return Locale(preferences.languageCode, preferences.countryCode);
+      }
+
+      return Locale(preferences.languageCode);
+    } catch (e) {
+      debugPrint('Error parsing locale from preferences: $e');
+      return const Locale('en');
+    }
   }
 }

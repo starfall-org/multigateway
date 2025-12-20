@@ -48,10 +48,9 @@ class SpeechService {
         orElse: () => TTSServiceType.system,
       ),
       provider: json['provider'] != null
-          ? Provider.values.firstWhere(
-              (e) => e.name == json['provider'],
-          orElse: () => Provider.openai, // Default fallback if needed
-        )
+          ? Provider.getTypeByName(json['provider']) != null
+              ? Provider(type: Provider.getTypeByName(json['provider'])!)
+              : null
           : null,
       model: json['model'] as String?,
       voiceId: json['voiceId'] as String?,

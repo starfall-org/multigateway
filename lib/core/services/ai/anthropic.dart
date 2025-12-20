@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 
 import 'base.dart';
 import 'ai_utils.dart';
-import '../../models/ai_model.dart';
+import '../../models/ai/ai_model.dart';
 
 class Anthropic extends AIBaseApi {
   final String messagesPath;

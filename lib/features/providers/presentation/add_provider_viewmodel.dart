@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../../../core/models/ai_model.dart';
+import '../../../core/models/ai/ai_model.dart';
 import '../../../core/storage/provider_repository.dart';
 import '../../../core/models/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -141,7 +141,12 @@ class AddProviderViewModel extends ChangeNotifier {
       outputTypes = [ModelIOType.audio];
     }
 
-    return AIModel(name: modelId, input: inputTypes, output: outputTypes);
+    return AIModel(
+      name: modelId,
+      displayName: modelId,
+      input: inputTypes,
+      output: outputTypes,
+    );
   }
 
   Future<void> fetchModels(BuildContext context) async {
@@ -274,7 +279,7 @@ class AddProviderViewModel extends ChangeNotifier {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
             duration: const Duration(seconds: 4),
           ),
         );
@@ -400,7 +405,7 @@ class AddProviderViewModel extends ChangeNotifier {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error saving provider: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }

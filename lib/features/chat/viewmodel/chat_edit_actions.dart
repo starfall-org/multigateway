@@ -20,7 +20,7 @@ extension ChatViewModelEditActions on ChatViewModel {
       updatedAt: DateTime.now(),
     );
     notify();
-    await chatRepository!.saveConversation(currentSession!);
+    await chatRepository.saveConversation(currentSession!);
   }
 
   Future<void> openEditMessageDialog(
@@ -72,7 +72,7 @@ extension ChatViewModelEditActions on ChatViewModel {
       updatedAt: DateTime.now(),
     );
     notify();
-    await chatRepository!.saveConversation(currentSession!);
+    await chatRepository.saveConversation(currentSession!);
 
     if (resend && context != null && context.mounted) {
       await regenerateLast(context);

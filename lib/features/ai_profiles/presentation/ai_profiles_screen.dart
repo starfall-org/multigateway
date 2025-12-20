@@ -1,43 +1,43 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import '../../../core/storage/agent_repository.dart';
-import '../../../core/models/ai_agent.dart';
+import '../../../core/storage/ai_profile_repository.dart';
+import '../../../core/models/ai/ai_profile.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/item_card.dart';
-import 'add_agent_screen.dart';
-import 'agent_detailed_screen.dart';
+import 'add_profile_screen.dart';
+import 'view_profile_screen.dart';
 
-class AgentListScreen extends StatefulWidget {
-  const AgentListScreen({super.key});
+class AIProfilesScreen extends StatefulWidget {
+  const AIProfilesScreen({super.key});
 
   @override
-  State<AgentListScreen> createState() => _AgentListScreenState();
+  State<AIProfilesScreen> createState() => _AIProfilesScreenState();
 }
 
-class _AgentListScreenState extends State<AgentListScreen> {
-  List<AIAgent> _agents = [];
+class _AIProfilesScreenState extends State<AIProfilesScreen> {
+  List<AIProfile> _profiles = [];
   bool _isLoading = true;
-  late AgentRepository _repository;
+  late AIProfileRepository _repository;
 
   @override
   void initState() {
     super.initState();
-    _loadAgents();
+    _loadProfiles();
   }
 
-  Future<void> _loadAgents() async {
-    _repository = await AgentRepository.init();
+  Future<void> _loadProfiles() async {
+    _repository = await AIProfileRepository.init();
     if (!mounted) return;
     setState(() {
-      _agents = _repository.getAgents();
+      _profiles = _repository.getProfiles();
       _isLoading = false;
     });
   }
 
-  Future<void> _deleteAgent(String id) async {
-    await _repository.deleteAgent(id);
-    _loadAgents();
+  Future<void> _deleteProfile(String id) async {
+    await _repository.deleteProfile(id);
+    _loadProfiles();
   }
 
   @override
@@ -50,10 +50,12 @@ class _AgentListScreenState extends State<AgentListScreen> {
             onPressed: () async {
               final result = await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const AddAgentScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const AddProfileScreen(),
+                ),
               );
               if (result == true) {
-                _loadAgents();
+                _loadProfiles();
               }
             },
           ),
@@ -61,7 +63,7 @@ class _AgentListScreenState extends State<AgentListScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _agents.isEmpty
+          : _profiles.isEmpty
           ? EmptyState(
               message: 'agents.no_agents'.tr(),
               actionLabel: 'agents.add_new_agent'.tr(),
@@ -69,11 +71,11 @@ class _AgentListScreenState extends State<AgentListScreen> {
                 final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const AddAgentScreen(),
+                    builder: (context) => const AddProfileScreen(),
                   ),
                 );
                 if (result == true) {
-                  _loadAgents();
+                  _loadProfiles();
                 }
               },
             )
@@ -85,70 +87,76 @@ class _AgentListScreenState extends State<AgentListScreen> {
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               ),
-              itemCount: _agents.length,
+              itemCount: _profiles.length,
               itemBuilder: (context, index) {
-                final agent = _agents[index];
+                final profile = _profiles[index];
                 return ItemCard(
-                  title: agent.name,
-                  subtitle: agent.config.systemPrompt,
+                  title: profile.name,
+                  subtitle: profile.config.systemPrompt,
                   icon: CircleAvatar(
                     backgroundColor: Theme.of(
                       context,
                     ).colorScheme.primaryContainer,
                     child: Text(
-                      agent.name.isNotEmpty ? agent.name[0].toUpperCase() : 'A',
+                      profile.name.isNotEmpty
+                          ? profile.name[0].toUpperCase()
+                          : 'A',
                     ),
                   ),
                   onTap: () async {
                     // In "Agent list" selection mode: set as selected and pop
-                    await _repository.setSelectedAgentId(agent.id);
+                    await _repository.setSelectedProfileId(profile.id);
                     if (!context.mounted) return;
                     Navigator.pop(context, true);
                   },
-                  onView: () => _viewAgent(agent),
-                  onEdit: () => _editAgent(agent),
-                  onDelete: () => _confirmDelete(agent),
+                  onView: () => _viewProfile(profile),
+                  onEdit: () => _editProfile(profile),
+                  onDelete: () => _confirmDelete(profile),
                 );
               },
             ),
     );
   }
 
-  void _viewAgent(AIAgent agent) async {
+  void _viewProfile(AIProfile profile) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AgentDetailedScreen(agent: agent),
+        builder: (context) => ViewProfileScreen(profile: profile),
       ),
     );
     if (result == true) {
-      _loadAgents();
+      _loadProfiles();
     }
   }
 
-  void _editAgent(AIAgent agent) async {
+  void _editProfile(AIProfile profile) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => AddAgentScreen(agent: agent)),
+      MaterialPageRoute(
+        builder: (context) => AddProfileScreen(profile: profile),
+      ),
     );
     if (result == true) {
-      _loadAgents();
+      _loadProfiles();
     }
   }
 
-  Future<void> _confirmDelete(AIAgent agent) async {
+  Future<void> _confirmDelete(AIProfile profile) async {
     final confirm = await ConfirmDialog.show(
       context,
       title: 'common.delete'.tr(),
-      content: 'agents.delete_confirm'.tr(args: [agent.name]),
+      content: 'agents.delete_confirm'.tr(args: [profile.name]),
       confirmLabel: 'common.delete'.tr(),
       isDestructive: true,
     );
     if (confirm == true) {
-      await _deleteAgent(agent.id);
+      await _deleteProfile(profile.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('agents.agent_deleted'.tr(args: [agent.name]))),
+        SnackBar(
+          content: Text('agents.agent_deleted'.tr(args: [profile.name])),
+        ),
       );
     }
   }

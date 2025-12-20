@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import '../../../core/models/ai_model.dart';
+import '../../../core/models/ai/ai_model.dart';
 import '../../../core/models/provider.dart';
 import '../../../core/widgets/dropdown.dart';
+import '../../../core/widgets/custom_text_field.dart';
 import '../widgets/add_model_drawer.dart';
 import '../widgets/fetch_models_drawer.dart';
 import '../widgets/model_card.dart';
@@ -142,29 +143,20 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                 controlAffinity: ListTileControlAffinity.leading,
               ),
             const SizedBox(height: 16),
-            TextField(
+            CustomTextField(
               controller: _viewModel.nameController,
-              decoration: InputDecoration(
-                labelText: 'providers.name'.tr(),
-                border: const OutlineInputBorder(),
-              ),
+              label: 'providers.name'.tr(),
             ),
             const SizedBox(height: 16),
-            TextField(
+            CustomTextField(
               controller: _viewModel.apiKeyController,
-              decoration: InputDecoration(
-                labelText: 'providers.api_key'.tr(),
-                border: const OutlineInputBorder(),
-              ),
+              label: 'providers.api_key'.tr(),
               obscureText: true,
             ),
             const SizedBox(height: 16),
-            TextField(
+            CustomTextField(
               controller: _viewModel.baseUrlController,
-              decoration: InputDecoration(
-                labelText: 'providers.base_url'.tr(),
-                border: const OutlineInputBorder(),
-              ),
+              label: 'providers.base_url'.tr(),
             ),
 
             const SizedBox(height: 8),
@@ -218,25 +210,16 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                 child: Row(
                   children: [
                     Expanded(
-                      child: TextField(
+                      child: CustomTextField(
                         controller: header.key,
-                        decoration: InputDecoration(
-                          labelText: 'providers.custom_headers.header_key'.tr(),
-                          border: const OutlineInputBorder(),
-                          isDense: true,
-                        ),
+                        label: 'providers.custom_headers.header_key'.tr(),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: TextField(
+                      child: CustomTextField(
                         controller: header.value,
-                        decoration: InputDecoration(
-                          labelText: 'providers.custom_headers.header_value'
-                              .tr(),
-                          border: const OutlineInputBorder(),
-                          isDense: true,
-                        ),
+                        label: 'providers.custom_headers.header_value'.tr(),
                       ),
                     ),
                     IconButton(
@@ -278,13 +261,9 @@ class _AddProviderScreenState extends State<AddProviderScreen>
   }
 
   Widget _routeField(TextEditingController controller, String label) {
-    return TextField(
+    return CustomTextField(
       controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        isDense: true,
-      ),
+      label: label,
     );
   }
 
@@ -446,7 +425,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                               Icon(Icons.text_fields),
                               Text(
                                 'common.text'.tr(),
-                                style: TextStyle(color: Colors.orange),
+                                style: TextStyle(color: Theme.of(context).colorScheme.tertiary),
                               ),
                             ],
                           )
@@ -457,7 +436,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                               Icon(Icons.image_outlined),
                               Text(
                                 'common.image'.tr(),
-                                style: TextStyle(color: Colors.green),
+                                style: TextStyle(color: Theme.of(context).colorScheme.secondary),
                               ),
                             ],
                           )
@@ -468,7 +447,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                               Icon(Icons.headset_outlined),
                               Text(
                                 'common.audio'.tr(),
-                                style: TextStyle(color: Colors.green),
+                                style: TextStyle(color: Theme.of(context).colorScheme.secondary),
                               ),
                             ],
                           )
@@ -486,7 +465,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                               Icon(Icons.text_fields),
                               Text(
                                 'common.text'.tr(),
-                                style: TextStyle(color: Colors.green),
+                                style: TextStyle(color: Theme.of(context).colorScheme.secondary),
                               ),
                             ],
                           )
@@ -497,7 +476,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                               Icon(Icons.image),
                               Text(
                                 'common.image'.tr(),
-                                style: TextStyle(color: Colors.green),
+                                style: TextStyle(color: Theme.of(context).colorScheme.secondary),
                               ),
                             ],
                           )
@@ -508,7 +487,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                               Icon(Icons.music_note),
                               Text(
                                 'common.audio'.tr(),
-                                style: TextStyle(color: Colors.green),
+                                style: TextStyle(color: Theme.of(context).colorScheme.secondary),
                               ),
                             ],
                           )

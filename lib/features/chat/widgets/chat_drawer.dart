@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/chat/conversation.dart';
 import '../../../core/routes.dart';
-import '../../agents/presentation/agent_list_screen.dart';
+import '../../ai_profiles/presentation/ai_profiles_screen.dart';
 import '../../../core/storage/chat_repository.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -152,7 +152,7 @@ class _ChatDrawerState extends State<ChatDrawer> {
                       final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const AgentListScreen(),
+                          builder: (context) => const AIProfilesScreen(),
                         ),
                       );
                       if (result == true && widget.onAgentChanged != null) {

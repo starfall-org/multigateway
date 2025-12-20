@@ -56,4 +56,7 @@ abstract class BaseRepository<T> {
   Future<void> clear() async {
     await box.clear();
   }
+
+  /// Stream that emits events when the box is modified
+  Stream<void> get changes => box.watch().map((_) {});
 }

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-import '../../../core/models/ai_model.dart';
+import '../../../core/models/ai/ai_model.dart';
 import '../../../core/models/provider.dart';
 import '../../../core/storage/provider_repository.dart';
 import '../../../core/storage/tts_repository.dart';
 import '../../../core/models/speech_service.dart';
 import '../../../core/widgets/dropdown.dart';
+import '../../../core/widgets/custom_text_field.dart';
 
 class AddTTSProfileScreen extends StatefulWidget {
   const AddTTSProfileScreen({super.key});
@@ -124,12 +125,9 @@ class _AddTTSProfileScreenState extends State<AddTTSProfileScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          TextField(
+          CustomTextField(
             controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Profile Name',
-              border: OutlineInputBorder(),
-            ),
+            label: 'Profile Name',
           ),
           const SizedBox(height: 16),
           CommonDropdown<TTSServiceType>(

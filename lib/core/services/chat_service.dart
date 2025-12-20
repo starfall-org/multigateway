@@ -1,29 +1,31 @@
 import '../storage/provider_repository.dart';
-import '../models/ai_agent.dart';
+import '../models/ai/ai_profile.dart';
 import '../models/chat/message.dart';
 import '../models/provider.dart';
 import '../models/ai/ai_dto.dart';
-import '../models/ai_model.dart';
+import '../models/ai/ai_model.dart';
+import '../storage/mcp_repository.dart';
+import '../models/mcp/mcp_server.dart';
 import 'ai/openai/openai.dart';
 import 'ai/anthropic.dart';
 import 'ai/ollama.dart';
 import 'ai/google/aistudio.dart';
 import 'ai/google/vertexai.dart';
-import '../storage/mcp_repository.dart';
 import 'mcp/mcp_service.dart';
-import '../models/mcp/mcp_server.dart';
 
 class ChatService {
   // Thu thập MCP tools ưu tiên cache; cập nhật khi dùng.
-  static Future<List<AIToolFunction>> _collectMcpTools(AIAgent agent) async {
-    if (agent.activeMCPServers.isEmpty) {
+  static Future<List<AIToolFunction>> _collectMcpTools(
+    AIProfile profile,
+  ) async {
+    if (profile.activeMCPServers.isEmpty) {
       return const <AIToolFunction>[];
     }
     try {
       final mcpRepository = await MCPRepository.init();
       final mcpService = MCPService();
 
-      final servers = agent.activeMCPServers
+      final servers = profile.activeMCPServers
           .map((i) => mcpRepository.getItem(i.id))
           .whereType<MCPServer>()
           .toList();
@@ -32,7 +34,7 @@ class ChatService {
 
       // Build a map of allowed tools per server for easy lookup
       final allowedToolsMap = {
-        for (var s in agent.activeMCPServers) s.id: s.activeToolIds.toSet(),
+        for (var s in profile.activeMCPServers) s.id: s.activeToolIds.toSet(),
       };
 
       List<MCPTool> filterTools(List<MCPServer> serversToFilter) {
@@ -90,98 +92,53 @@ class ChatService {
     }
   }
 
-  // Built-in Gemini tools toggling based on AIModel flags or model name
+  // Built-in Gemini tools toggling based on AIProfile and Model capabilities
   static List<AIToolFunction> _collectGeminiBuiltinTools(
     Provider provider,
     String modelName,
+    AIProfile profile,
   ) {
+    // 1. Check model capabilities (if defined)
     final lower = modelName.toLowerCase();
-    bool defaultGemini = lower.contains('gemini');
-
-    bool enableSearch = defaultGemini;
-    bool enableFetch = defaultGemini;
-
-    // If model is defined in provider, use its flags
-    AIModel? selected;
+    AIModel? selectedModel;
     for (final m in provider.models) {
       if (m.name.toLowerCase() == lower) {
-        selected = m;
+        selectedModel = m;
         break;
       }
     }
-    if (selected != null) {
-      enableSearch = selected.builtInTools.search;
-      enableFetch = selected.builtInTools.urlContext;
+
+    // Default capabilities if not explicitly defined
+    bool supportsSearch = lower.contains('gemini');
+    bool supportsCode = lower.contains('gemini');
+
+    if (selectedModel != null && selectedModel.builtInTools != null) {
+      supportsSearch = selectedModel.builtInTools!.googleSearch;
+      supportsCode = selectedModel.builtInTools!.codeExecution;
     }
 
+    // 2. Check profile activation
     final builtin = <AIToolFunction>[];
-    if (enableSearch) {
-      builtin.add(
-        /// TODO
-        const AIToolFunction(
-          name: 'web_search',
-          description:
-              'Search the web for up-to-date information. Provide a specific query.',
-          parameters: {
-            'type': 'object',
-            'properties': {
-              'query': {
-                'type': 'string',
-                'description':
-                    'Search query string describing the information needed.',
-              },
-              'topK': {
-                'type': 'integer',
-                'minimum': 1,
-                'maximum': 50,
-                'description':
-                    'Number of search results to retrieve (default 5).',
-              },
-              'timeRange': {
-                'type': 'string',
-                'enum': ['any', 'day', 'week', 'month', 'year'],
-                'description': 'Limit results to a recent time range.',
-              },
-            },
-            'required': ['query'],
-          },
-        ),
-      );
+
+    if (supportsSearch &&
+        profile.activeBuiltInTools.contains('google_search')) {
+      // Use reserved name for Google Search Grounding
+      builtin.add(const AIToolFunction(name: '__google_search__', description: '', parameters: {}));
     }
-    if (enableFetch) {
-      builtin.add(
-        const AIToolFunction(
-          name: 'web_fetch',
-          description:
-              'Fetch and retrieve the content of one or more web pages to ground your answer.',
-          parameters: {
-            'type': 'object',
-            'properties': {
-              'urls': {
-                'type': 'array',
-                'items': {'type': 'string'},
-                'minItems': 1,
-                'description': 'List of URLs to fetch.',
-              },
-              'maxBytes': {
-                'type': 'integer',
-                'minimum': 1024,
-                'maximum': 10485760,
-                'description': 'Maximum bytes to fetch per URL.',
-              },
-            },
-            'required': ['urls'],
-          },
-        ),
-      );
+
+    if (supportsCode &&
+        profile.activeBuiltInTools.contains('code_execution')) {
+      // Use reserved name for Code Execution
+      builtin.add(const AIToolFunction(name: '__code_execution__', description: '', parameters: {}));
     }
+
     return builtin;
   }
 
   static Stream<String> generateStream({
     required String userText,
     required List<ChatMessage> history,
-    required AIAgent agent,
+    required AIProfile profile,
     required String providerName,
     required String modelName,
     List<String>? allowedToolNames,
@@ -209,24 +166,24 @@ class ChatService {
       ),
     ];
 
-    var mcpTools = await _collectMcpTools(agent);
+    var mcpTools = await _collectMcpTools(profile);
     if (allowedToolNames != null && allowedToolNames.isNotEmpty) {
       mcpTools = mcpTools
           .where((t) => allowedToolNames.contains(t.name))
           .toList();
     }
 
-    final systemInstruction = agent.config.systemPrompt;
+    final systemInstruction = profile.config.systemPrompt;
 
     switch (provider.type) {
       case ProviderType.google:
-        final builtinTools = _collectGeminiBuiltinTools(provider, modelName);
+        final builtinTools = _collectGeminiBuiltinTools(provider, modelName, profile);
         final allTools = [...mcpTools, ...builtinTools];
 
         final aiMessages = messagesWithCurrent
             .map(
               (m) => AIMessage(
-                role: m.role.name,
+                role: _mapRole(m.role, ProviderType.google),
                 content: [AIContent(type: AIContentType.text, text: m.content)],
               ),
             )
@@ -297,7 +254,7 @@ class ChatService {
         final aiMessages = messagesWithCurrent
             .map(
               (m) => AIMessage(
-                role: m.role.name,
+                role: _mapRole(m.role, ProviderType.openai),
                 content: [AIContent(type: AIContentType.text, text: m.content)],
               ),
             )
@@ -338,7 +295,7 @@ class ChatService {
         final aiMessages = messagesWithCurrent
             .map(
               (m) => AIMessage(
-                role: m.role.name,
+                role: _mapRole(m.role, ProviderType.anthropic),
                 content: [AIContent(type: AIContentType.text, text: m.content)],
               ),
             )
@@ -369,7 +326,7 @@ class ChatService {
         final aiMessages = messagesWithCurrent
             .map(
               (m) => AIMessage(
-                role: m.role.name,
+                role: _mapRole(m.role, ProviderType.ollama),
                 content: [AIContent(type: AIContentType.text, text: m.content)],
               ),
             )
@@ -392,7 +349,7 @@ class ChatService {
   static Future<String> generateReply({
     required String userText,
     required List<ChatMessage> history,
-    required AIAgent agent,
+    required AIProfile profile,
     required String providerName,
     required String modelName,
     List<String>? allowedToolNames,
@@ -401,7 +358,7 @@ class ChatService {
     await for (final chunk in generateStream(
       userText: userText,
       history: history,
-      agent: agent,
+      profile: profile,
       providerName: providerName,
       modelName: modelName,
       allowedToolNames: allowedToolNames,
@@ -409,5 +366,21 @@ class ChatService {
       buffer.write(chunk);
     }
     return buffer.toString();
+  }
+
+  static String _mapRole(ChatRole role, ProviderType providerType) {
+    switch (role) {
+      case ChatRole.user:
+        return 'user';
+      case ChatRole.model:
+        if (providerType == ProviderType.google) return 'model';
+        return 'assistant';
+      case ChatRole.system:
+        return 'system';
+      case ChatRole.tool:
+        return 'tool';
+      case ChatRole.developer:
+        return 'developer';
+    }
   }
 }

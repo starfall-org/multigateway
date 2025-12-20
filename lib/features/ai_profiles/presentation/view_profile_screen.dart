@@ -1,13 +1,13 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import '../../../core/models/ai_agent.dart';
-import '../../../core/storage/agent_repository.dart';
-import 'add_agent_screen.dart';
+import '../../../core/models/ai/ai_profile.dart';
+import '../../../core/storage/ai_profile_repository.dart';
+import 'add_profile_screen.dart';
 
-class AgentDetailedScreen extends StatelessWidget {
-  final AIAgent agent;
+class ViewProfileScreen extends StatelessWidget {
+  final AIProfile profile;
 
-  const AgentDetailedScreen({super.key, required this.agent});
+  const ViewProfileScreen({super.key, required this.profile});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +22,7 @@ class AgentDetailedScreen extends StatelessWidget {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => AddAgentScreen(agent: agent),
+                  builder: (context) => AddProfileScreen(profile: profile),
                 ),
               );
             },
@@ -49,7 +49,9 @@ class AgentDetailedScreen extends StatelessWidget {
                     context,
                   ).colorScheme.primaryContainer,
                   child: Text(
-                    agent.name.isNotEmpty ? agent.name[0].toUpperCase() : 'A',
+                    profile.name.isNotEmpty
+                        ? profile.name[0].toUpperCase()
+                        : 'A',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -63,13 +65,13 @@ class AgentDetailedScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        agent.name,
+                        profile.name,
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'ID: ${agent.id.substring(0, 8)}...',
+                        'ID: ${profile.id.substring(0, 8)}...',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
@@ -97,8 +99,8 @@ class AgentDetailedScreen extends StatelessWidget {
                 ),
               ),
               child: Text(
-                agent.config.systemPrompt.isNotEmpty
-                    ? agent.config.systemPrompt
+                profile.config.systemPrompt.isNotEmpty
+                    ? profile.config.systemPrompt
                     : 'No system prompt configured.',
                 style: const TextStyle(height: 1.5),
               ),
@@ -119,32 +121,32 @@ class AgentDetailedScreen extends StatelessWidget {
                 _buildInfoCard(
                   context,
                   'agents.temperature'.tr(),
-                  agent.config.temperature?.toString() ?? 'Default',
+                  profile.config.temperature?.toString() ?? 'Default',
                 ),
                 _buildInfoCard(
                   context,
                   'agents.top_p'.tr(),
-                  agent.config.topP?.toString() ?? 'Default',
+                  profile.config.topP?.toString() ?? 'Default',
                 ),
                 _buildInfoCard(
                   context,
                   'agents.top_k'.tr(),
-                  agent.config.topK?.toString() ?? 'Default',
+                  profile.config.topK?.toString() ?? 'Default',
                 ),
                 _buildInfoCard(
                   context,
                   'Stream',
-                  agent.config.enableStream ? 'ON' : 'OFF',
+                  profile.config.enableStream ? 'ON' : 'OFF',
                 ),
                 _buildInfoCard(
                   context,
                   'agents.context_window'.tr(),
-                  agent.config.contextWindow.toString(),
+                  profile.config.contextWindow.toString(),
                 ),
                 _buildInfoCard(
                   context,
                   'agents.max_tokens'.tr(),
-                  agent.config.maxTokens.toString(),
+                  profile.config.maxTokens.toString(),
                 ),
               ],
             ),
@@ -152,13 +154,13 @@ class AgentDetailedScreen extends StatelessWidget {
             _buildInfoCard(
               context,
               'agents.conversation_length'.tr(),
-              agent.config.conversationLength.toString(),
+              profile.config.conversationLength.toString(),
             ),
 
             const SizedBox(height: 32),
 
             // Persistence
-            if (agent.persistChatSelection != null) ...[
+            if (profile.persistChatSelection != null) ...[
               _buildSectionHeader(
                 context,
                 'agents.persist_section_title'.tr(),
@@ -168,15 +170,15 @@ class AgentDetailedScreen extends StatelessWidget {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(
-                  agent.persistChatSelection!
+                  profile.persistChatSelection!
                       ? Icons.check_circle
                       : Icons.cancel,
-                  color: agent.persistChatSelection!
-                      ? Colors.green
-                      : Colors.red,
+                  color: profile.persistChatSelection!
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.error,
                 ),
                 title: Text(
-                  agent.persistChatSelection!
+                  profile.persistChatSelection!
                       ? 'agents.persist_force_on'.tr()
                       : 'agents.persist_force_off'.tr(),
                 ),
@@ -185,7 +187,7 @@ class AgentDetailedScreen extends StatelessWidget {
             ],
 
             // MCP Servers
-            if (agent.activeMCPServerIds.isNotEmpty) ...[
+            if (profile.activeMCPServerIds.isNotEmpty) ...[
               _buildSectionHeader(
                 context,
                 'agents.active_mcp_servers'.tr(),
@@ -195,7 +197,7 @@ class AgentDetailedScreen extends StatelessWidget {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: agent.activeMCPServerIds
+                children: profile.activeMCPServerIds
                     .map(
                       (id) => Chip(
                         label: Text(
@@ -270,7 +272,7 @@ class AgentDetailedScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('agents.delete'.tr()),
-        content: Text('Are you sure you want to delete ${agent.name}?'),
+        content: Text('Are you sure you want to delete ${profile.name}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -289,8 +291,8 @@ class AgentDetailedScreen extends StatelessWidget {
     );
 
     if (confirmed == true) {
-      final repo = await AgentRepository.init();
-      await repo.deleteAgent(agent.id);
+      final repo = await AIProfileRepository.init();
+      await repo.deleteProfile(profile.id);
       if (context.mounted) {
         Navigator.pop(context, true);
       }

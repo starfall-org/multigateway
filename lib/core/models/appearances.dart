@@ -12,7 +12,7 @@ enum ThemeSelection { system, light, dark, custom }
 /// - on: tinted from secondary color for stronger separation
 enum SecondaryBackgroundMode { off, auto, on }
 
-class ThemeSettings {
+class Appearances {
   final ThemeMode themeMode; // actual brightness control used by MaterialApp
   final ThemeSelection selection; // UI selection: system/light/dark/custom
   final int primaryColor; // ARGB int value
@@ -30,9 +30,9 @@ class ThemeSettings {
   final int chatFontSize;
   final int appFontSize;
   final bool enableAnimation;
-  // WARN: should not add secondaryBackgroundMode
+  final SecondaryBackgroundMode secondaryBackgroundMode;
 
-  const ThemeSettings({
+  const Appearances({
     required this.themeMode,
     required this.selection,
     required this.primaryColor,
@@ -49,10 +49,11 @@ class ThemeSettings {
     required this.chatFontSize,
     required this.appFontSize,
     required this.enableAnimation,
+    required this.secondaryBackgroundMode,
   });
 
-  factory ThemeSettings.defaults() {
-    return ThemeSettings(
+  factory Appearances.defaults() {
+    return Appearances(
       themeMode: ThemeMode.system,
       selection: ThemeSelection.system,
       primaryColor: Colors.blue.toARGB32(),
@@ -69,10 +70,11 @@ class ThemeSettings {
       chatFontSize: 16,
       appFontSize: 16,
       enableAnimation: true,
+      secondaryBackgroundMode: SecondaryBackgroundMode.off,
     );
   }
 
-  ThemeSettings copyWith({
+  Appearances copyWith({
     ThemeMode? themeMode,
     ThemeSelection? selection,
     int? primaryColor,
@@ -91,7 +93,7 @@ class ThemeSettings {
     bool? enableAnimation,
     SecondaryBackgroundMode? secondaryBackgroundMode,
   }) {
-    return ThemeSettings(
+    return Appearances(
       themeMode: themeMode ?? this.themeMode,
       selection: selection ?? this.selection,
       primaryColor: primaryColor ?? this.primaryColor,
@@ -109,6 +111,8 @@ class ThemeSettings {
       chatFontSize: chatFontSize ?? this.chatFontSize,
       appFontSize: appFontSize ?? this.appFontSize,
       enableAnimation: enableAnimation ?? this.enableAnimation,
+      secondaryBackgroundMode:
+          secondaryBackgroundMode ?? this.secondaryBackgroundMode,
     );
   }
 
@@ -130,10 +134,11 @@ class ThemeSettings {
       'chatFontSize': chatFontSize,
       'appFontSize': appFontSize,
       'enableAnimation': enableAnimation,
+      'secondaryBackgroundMode': secondaryBackgroundMode.index,
     };
   }
 
-  factory ThemeSettings.fromJson(Map<String, dynamic> json) {
+  factory Appearances.fromJson(Map<String, dynamic> json) {
     try {
       final int? themeModeIndex = json['themeMode'] as int?;
       final int? selectionIndex = json['selection'] as int?;
@@ -152,6 +157,7 @@ class ThemeSettings {
       final int? appFontSize = json['appFontSize'] as int?;
       final int? oldFontSize = json['fontSize'] as int?;
       final bool enableAnimation = (json['enableAnimation'] as bool?) ?? false;
+      final int? secondaryBgIndex = json['secondaryBackgroundMode'] as int?;
 
       // Backward compatibility with older schema using 'colorValue'
       final int? oldColor = json['colorValue'] as int?;
@@ -170,7 +176,14 @@ class ThemeSettings {
           ? ThemeSelection.values[selectionIndex]
           : ThemeSelection.system;
 
-      return ThemeSettings(
+      final SecondaryBackgroundMode secBg =
+          (secondaryBgIndex != null &&
+              secondaryBgIndex >= 0 &&
+              secondaryBgIndex < SecondaryBackgroundMode.values.length)
+          ? SecondaryBackgroundMode.values[secondaryBgIndex]
+          : SecondaryBackgroundMode.off;
+
+      return Appearances(
         themeMode: mode,
         selection: sel,
         primaryColor: primary ?? oldColor ?? Colors.blue.toARGB32(),
@@ -187,24 +200,25 @@ class ThemeSettings {
         chatFontSize: chatFontSize ?? oldFontSize ?? 16,
         appFontSize: appFontSize ?? oldFontSize ?? 16,
         enableAnimation: enableAnimation,
+        secondaryBackgroundMode: secBg,
       );
     } catch (_) {
-      return ThemeSettings.defaults();
+      return Appearances.defaults();
     }
   }
 
   String toJsonString() => json.encode(toJson());
 
-  factory ThemeSettings.fromJsonString(String jsonString) {
+  factory Appearances.fromJsonString(String jsonString) {
     try {
-      if (jsonString.trim().isEmpty) return ThemeSettings.defaults();
+      if (jsonString.trim().isEmpty) return Appearances.defaults();
       final dynamic data = json.decode(jsonString);
       if (data is Map<String, dynamic>) {
-        return ThemeSettings.fromJson(data);
+        return Appearances.fromJson(data);
       }
-      return ThemeSettings.defaults();
+      return Appearances.defaults();
     } catch (_) {
-      return ThemeSettings.defaults();
+      return Appearances.defaults();
     }
   }
 }

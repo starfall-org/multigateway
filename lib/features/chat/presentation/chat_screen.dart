@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
-import '../../agents/presentation/agent_list_screen.dart';
+import '../../ai_profiles/presentation/ai_profiles_screen.dart';
 import '../widgets/chat_drawer.dart';
+import '../widgets/menu_drawer.dart';
 import '../widgets/chat_input_area.dart';
 import '../widgets/chat_message_list.dart';
 import '../widgets/models_drawer.dart';
+import '../widgets/edit_message_dialog.dart';
 import '../viewmodel/chat_viewmodel.dart';
+import '../viewmodel/chat_navigation_interface.dart';
 import '../../../core/widgets/sidebar_right.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/di/app_services.dart';
 import 'dart:io';
-
 
 /// Màn hình chat chính cho ứng dụng
 class ChatScreen extends StatefulWidget {
@@ -20,17 +23,73 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> implements ChatNavigationInterface {
   late ChatViewModel _viewModel;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Khởi tạo viewModel và tải dữ liệu ban đầu
   @override
   void initState() {
     super.initState();
-    _viewModel = ChatViewModel();
+    final services = AppServices.instance;
+    _viewModel = ChatViewModel(
+      navigator: this,
+      chatRepository: services.chatRepository,
+      aiProfileRepository: services.aiProfileRepository,
+      providerRepository: services.providerRepository,
+      appPreferencesRepository: services.appPreferencesRepository,
+      mcpRepository: services.mcpRepository,
+      ttsService: services.ttsService,
+    );
     _viewModel.initChat();
-    _viewModel.loadSelectedAgent();
+    _viewModel.loadSelectedProfile();
     _viewModel.refreshProviders();
+  }
+
+  @override
+  void showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Future<({String content, List<String> attachments, bool resend})?> showEditMessageDialog({
+    required String initialContent,
+    required List<String> initialAttachments,
+  }) async {
+    if (!mounted) return null;
+    final result = await EditMessageDialog.show(
+      context,
+      initialContent: initialContent,
+      initialAttachments: initialAttachments,
+    );
+    if (result == null) return null;
+    return (
+      content: result.content,
+      attachments: result.attachments,
+      resend: result.resend,
+    );
+  }
+
+  @override
+  void openDrawer() {
+    _scaffoldKey.currentState?.openDrawer();
+  }
+
+  @override
+  void openEndDrawer() {
+    _scaffoldKey.currentState?.openEndDrawer();
+  }
+
+  @override
+  void closeEndDrawer() {
+    _scaffoldKey.currentState?.closeEndDrawer();
+  }
+
+  @override
+  String getTranslatedString(String key, {Map<String, String>? namedArgs}) {
+    if (!mounted) return key;
+    return key.tr(namedArgs: namedArgs);
   }
 
   // Dọn dẹp tài nguyên khi widget bị hủy
@@ -55,7 +114,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
         // Giao diện chính của chat
         return Scaffold(
-          key: _viewModel.scaffoldKey,
+          key: _scaffoldKey,
           appBar: AppBar(
             leading: IconButton(
               icon: Icon(
@@ -78,7 +137,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 Text(
-                  _viewModel.selectedAgent?.name ?? 'Default',
+                  _viewModel.selectedProfile?.name ?? 'Default',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.primary,
                     fontSize: 12,
@@ -89,7 +148,11 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             elevation: 0.5,
-            actions: [_buildAgentAvatar(), _buildPopupMenu()],
+            actions: [
+              _buildToolsButton(),
+              _buildAgentAvatar(),
+              _buildPopupMenu(),
+            ],
           ),
           // Drawer bên trái chứa danh sách cuộc trò chuyện
           drawer: ChatDrawer(
@@ -102,7 +165,7 @@ class _ChatScreenState extends State<ChatScreen> {
               _viewModel.createNewSession();
             },
             onAgentChanged: () {
-              _viewModel.loadSelectedAgent();
+              _viewModel.loadSelectedProfile();
             },
           ),
           // Drawer bên phải hiển thị tệp đính kèm
@@ -136,7 +199,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   isGenerating: _viewModel.isGenerating,
                   onOpenModelPicker: () => _openModelPicker(context),
                   onMicTap: _viewModel.speakLastModelMessage,
-                  onOpenMenu: _viewModel.openDrawer,
+                  onOpenMenu: () => MenuDrawer.showDrawer(context, _viewModel),
                   selectedAIModel: _viewModel.selectedAIModel,
                 ),
               ),
@@ -153,10 +216,10 @@ class _ChatScreenState extends State<ChatScreen> {
       onTap: () async {
         final result = await Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const AgentListScreen()),
+          MaterialPageRoute(builder: (context) => const AIProfilesScreen()),
         );
         if (result == true) {
-          _viewModel.loadSelectedAgent();
+          _viewModel.loadSelectedProfile();
         }
       },
       child: Padding(
@@ -167,8 +230,8 @@ class _ChatScreenState extends State<ChatScreen> {
             context,
           ).colorScheme.primary.withValues(alpha: 0.1),
           child: Text(
-            ((_viewModel.selectedAgent?.name.isNotEmpty == true
-                    ? _viewModel.selectedAgent!.name[0]
+            ((_viewModel.selectedProfile?.name.isNotEmpty == true
+                    ? _viewModel.selectedProfile!.name[0]
                     : 'A'))
                 .toUpperCase(),
             style: TextStyle(
@@ -207,6 +270,19 @@ class _ChatScreenState extends State<ChatScreen> {
         PopupMenuItem(value: 'clear', child: Text('chat.clear'.tr())),
         PopupMenuItem(value: 'copy', child: Text('chat.copy'.tr())),
       ],
+    );
+  }
+
+  Widget _buildToolsButton() {
+    return IconButton(
+      icon: Icon(
+        Icons.extension_outlined,
+        color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.7),
+      ),
+      tooltip: 'Tools',
+      onPressed: () {
+        MenuDrawer.showDrawer(context, _viewModel);
+      },
     );
   }
 

@@ -27,58 +27,45 @@ extension ChatViewModelMessageActions on ChatViewModel {
     notify();
 
     if (currentSession!.messages.length == 1) {
-      final base = text.isNotEmpty
-          ? text
-          : (attachments.isNotEmpty
-                ? 'attachments.title_count'.tr(
-                    namedArgs: {'count': attachments.length.toString()},
-                  )
-                : 'drawer.new_chat'.tr());
-      final title = base.length > 30 ? '${base.substring(0, 30)}...' : base;
+      final title = ChatLogicUtils.generateTitle(text, attachments);
       currentSession = currentSession!.copyWith(title: title);
     }
 
-    await chatRepository!.saveConversation(currentSession!);
+    await chatRepository.saveConversation(currentSession!);
     scrollToBottom();
 
-    String modelInput = text;
-    if (attachments.isNotEmpty) {
-      final names = attachments.map((p) => p.split('/').last).join(', ');
-      modelInput =
-          '${modelInput.isEmpty ? '' : '$modelInput\n'}[Attachments: $names]';
-    }
+    String modelInput = ChatLogicUtils.formatAttachmentsForPrompt(
+      text,
+      attachments,
+    );
 
     // Select provider/model based on preferences
     final providerRepo = await ProviderRepository.init();
     final providersList = providerRepo.getProviders();
-
     final persist = shouldPersistSelections();
-    String providerName;
-    String modelName;
 
-    if (persist &&
-        currentSession?.providerName != null &&
-        currentSession?.modelName != null) {
-      providerName = currentSession!.providerName!;
-      modelName = currentSession!.modelName!;
-    } else {
-      providerName =
-          selectedProviderName ??
-          (providersList.isNotEmpty ? providersList.first.name : '');
-      modelName =
-          selectedModelName ??
-          ((providersList.isNotEmpty && providersList.first.models.isNotEmpty)
-              ? providersList.first.models.first.name
-              : '');
-      // If persistence is enabled, store selection on the conversation
-      if (currentSession != null && persist) {
-        currentSession = currentSession!.copyWith(
-          providerName: providerName,
-          modelName: modelName,
-          updatedAt: DateTime.now(),
-        );
-        await chatRepository!.saveConversation(currentSession!);
-      }
+    final selection = ChatLogicUtils.resolveProviderAndModel(
+      currentSession: currentSession,
+      persistSelection: persist,
+      selectedProvider: selectedProviderName,
+      selectedModel: selectedModelName,
+      providers: providersList,
+    );
+
+    final providerName = selection.provider;
+    final modelName = selection.model;
+
+    // If persistence is enabled and not loaded from session, store selection
+    if (currentSession != null &&
+        persist &&
+        (currentSession!.providerName == null ||
+            currentSession!.modelName == null)) {
+      currentSession = currentSession!.copyWith(
+        providerName: providerName,
+        modelName: modelName,
+        updatedAt: DateTime.now(),
+      );
+      await chatRepository.saveConversation(currentSession!);
     }
 
     // Prepare allowed tool names if persistence is enabled
@@ -86,35 +73,35 @@ extension ChatViewModelMessageActions on ChatViewModel {
     if (persist) {
       if (currentSession!.enabledToolNames == null) {
         // Snapshot currently enabled MCP tools from agent for this conversation
-        final agent =
-            selectedAgent ??
-            AIAgent(
+        final profile =
+            selectedProfile ??
+            AIProfile(
               id: const Uuid().v4(),
-              name: 'Default Agent',
+              name: 'Default Profile',
               config: RequestConfig(systemPrompt: '', enableStream: true),
             );
-        final names = await _snapshotEnabledToolNames(agent);
+        final names = await _snapshotEnabledToolNames(profile);
         currentSession = currentSession!.copyWith(
           enabledToolNames: names,
           updatedAt: DateTime.now(),
         );
-        await chatRepository!.saveConversation(currentSession!);
+        await chatRepository.saveConversation(currentSession!);
       }
       allowedToolNames = currentSession!.enabledToolNames;
     }
 
-    final doStream = selectedAgent?.config.enableStream ?? true;
+    final doStream = selectedProfile?.config.enableStream ?? true;
     if (doStream) {
       final stream = ChatService.generateStream(
         userText: modelInput,
         history: currentSession!.messages
             .take(currentSession!.messages.length - 1)
             .toList(),
-        agent:
-            selectedAgent ??
-            AIAgent(
+        profile:
+            selectedProfile ??
+            AIProfile(
               id: const Uuid().v4(),
-              name: 'Default Agent',
+              name: 'Default Profile',
               config: RequestConfig(systemPrompt: '', enableStream: true),
             ),
         providerName: providerName,
@@ -138,9 +125,23 @@ extension ChatViewModelMessageActions on ChatViewModel {
       notify();
 
       try {
+        // Track the last time we updated the UI to avoid flickering (throttling)
+        DateTime lastUpdate = DateTime.now();
+        const throttleDuration = Duration(milliseconds: 100);
+
         await for (final chunk in stream) {
           if (chunk.isEmpty) continue;
           acc += chunk;
+          
+          final now = DateTime.now();
+          if (now.difference(lastUpdate) < throttleDuration) {
+            // Just accumulate the text, don't update UI yet unless it's a large chunk?
+            // For smoother typing effect, we might want consistent updates, but 100ms is ~10fps which is good for reading.
+            continue;
+          }
+
+          final wasAtBottom = isNearBottom();
+          
           final msgs = List<ChatMessage>.from(currentSession!.messages);
           final idx = msgs.indexWhere((m) => m.id == modelId);
           if (idx != -1) {
@@ -159,13 +160,45 @@ extension ChatViewModelMessageActions on ChatViewModel {
               updatedAt: DateTime.now(),
             );
             notify();
-            scrollToBottom();
+            
+            if (wasAtBottom) {
+              scrollToBottom();
+            }
+            lastUpdate = now;
           }
         }
+
+        // Final update after stream ends to ensure all text is shown
+        final msgs = List<ChatMessage>.from(currentSession!.messages);
+        final idx = msgs.indexWhere((m) => m.id == modelId);
+        if (idx != -1) {
+          final old = msgs[idx];
+          // Update one last time if acc has more content than currently shown
+          if (old.content != acc) {
+             msgs[idx] = ChatMessage(
+              id: old.id,
+              role: old.role,
+              content: acc,
+              timestamp: old.timestamp,
+              attachments: old.attachments,
+              reasoningContent: old.reasoningContent,
+              aiMedia: old.aiMedia,
+            );
+            currentSession = currentSession!.copyWith(
+              messages: msgs,
+              updatedAt: DateTime.now(),
+            );
+          }
+        }
+
       } finally {
         isGenerating = false;
         notify();
-        await chatRepository!.saveConversation(currentSession!);
+        // Force scroll to bottom when done if the user was following along
+        if (isNearBottom()) {
+          scrollToBottom();
+        }
+        await chatRepository.saveConversation(currentSession!);
       }
     } else {
       final reply = await ChatService.generateReply(
@@ -173,11 +206,11 @@ extension ChatViewModelMessageActions on ChatViewModel {
         history: currentSession!.messages
             .take(currentSession!.messages.length - 1)
             .toList(),
-        agent:
-            selectedAgent ??
-            AIAgent(
+        profile:
+            selectedProfile ??
+            AIProfile(
               id: const Uuid().v4(),
-              name: 'Default Agent',
+              name: 'Default Profile',
               config: RequestConfig(systemPrompt: '', enableStream: true),
             ),
         providerName: providerName,
@@ -199,7 +232,7 @@ extension ChatViewModelMessageActions on ChatViewModel {
       isGenerating = false;
       notify();
 
-      await chatRepository!.saveConversation(currentSession!);
+      await chatRepository.saveConversation(currentSession!);
       scrollToBottom();
     }
   }
@@ -232,65 +265,61 @@ extension ChatViewModelMessageActions on ChatViewModel {
 
     final providerRepo = await ProviderRepository.init();
     final providersList = providerRepo.getProviders();
-
     final persist = shouldPersistSelections();
-    String providerName;
-    String modelName;
 
-    if (persist &&
-        currentSession?.providerName != null &&
-        currentSession?.modelName != null) {
-      providerName = currentSession!.providerName!;
-      modelName = currentSession!.modelName!;
-    } else {
-      providerName =
-          selectedProviderName ??
-          (providersList.isNotEmpty ? providersList.first.name : '');
-      modelName =
-          selectedModelName ??
-          ((providersList.isNotEmpty && providersList.first.models.isNotEmpty)
-              ? providersList.first.models.first.name
-              : '');
-      if (currentSession != null && persist) {
-        currentSession = currentSession!.copyWith(
-          providerName: providerName,
-          modelName: modelName,
-          updatedAt: DateTime.now(),
-        );
-        await chatRepository!.saveConversation(currentSession!);
-      }
+    final selection = ChatLogicUtils.resolveProviderAndModel(
+      currentSession: currentSession,
+      persistSelection: persist,
+      selectedProvider: selectedProviderName,
+      selectedModel: selectedModelName,
+      providers: providersList,
+    );
+
+    final providerName = selection.provider;
+    final modelName = selection.model;
+
+    if (currentSession != null &&
+        persist &&
+        (currentSession!.providerName == null ||
+            currentSession!.modelName == null)) {
+      currentSession = currentSession!.copyWith(
+        providerName: providerName,
+        modelName: modelName,
+        updatedAt: DateTime.now(),
+      );
+      await chatRepository.saveConversation(currentSession!);
     }
 
     List<String>? allowedToolNames;
     if (persist) {
       if (currentSession!.enabledToolNames == null) {
-        final agent =
-            selectedAgent ??
-            AIAgent(
+        final profile =
+            selectedProfile ??
+            AIProfile(
               id: const Uuid().v4(),
-              name: 'Default Agent',
+              name: 'Default Profile',
               config: RequestConfig(systemPrompt: '', enableStream: true),
             );
-        final names = await _snapshotEnabledToolNames(agent);
+        final names = await _snapshotEnabledToolNames(profile);
         currentSession = currentSession!.copyWith(
           enabledToolNames: names,
           updatedAt: DateTime.now(),
         );
-        await chatRepository!.saveConversation(currentSession!);
+        await chatRepository.saveConversation(currentSession!);
       }
       allowedToolNames = currentSession!.enabledToolNames;
     }
 
-    final doStream = selectedAgent?.config.enableStream ?? true;
+    final doStream = selectedProfile?.config.enableStream ?? true;
     if (doStream) {
       final stream = ChatService.generateStream(
         userText: userText,
         history: history,
-        agent:
-            selectedAgent ??
-            AIAgent(
+        profile:
+            selectedProfile ??
+            AIProfile(
               id: const Uuid().v4(),
-              name: 'Default Agent',
+              name: 'Default Profile',
               config: RequestConfig(systemPrompt: '', enableStream: true),
             ),
         providerName: providerName,
@@ -315,9 +344,20 @@ extension ChatViewModelMessageActions on ChatViewModel {
       notify();
 
       try {
+        DateTime lastUpdate = DateTime.now();
+        const throttleDuration = Duration(milliseconds: 100);
+
         await for (final chunk in stream) {
           if (chunk.isEmpty) continue;
           acc += chunk;
+
+          final now = DateTime.now();
+          if (now.difference(lastUpdate) < throttleDuration) {
+            continue;
+          }
+
+          final wasAtBottom = isNearBottom();
+
           final msgs2 = List<ChatMessage>.from(currentSession!.messages);
           final idx = msgs2.indexWhere((m) => m.id == modelId);
           if (idx != -1) {
@@ -336,23 +376,53 @@ extension ChatViewModelMessageActions on ChatViewModel {
               updatedAt: DateTime.now(),
             );
             notify();
-            scrollToBottom();
+            
+            if (wasAtBottom) {
+              scrollToBottom();
+            }
+            lastUpdate = now;
           }
         }
+        
+        // Final update
+        final msgs2 = List<ChatMessage>.from(currentSession!.messages);
+        final idx = msgs2.indexWhere((m) => m.id == modelId);
+        if (idx != -1) {
+          final old = msgs2[idx];
+          if (old.content != acc) {
+             msgs2[idx] = ChatMessage(
+              id: old.id,
+              role: old.role,
+              content: acc,
+              timestamp: old.timestamp,
+              attachments: old.attachments,
+              reasoningContent: old.reasoningContent,
+              aiMedia: old.aiMedia,
+            );
+            currentSession = currentSession!.copyWith(
+              messages: msgs2,
+              updatedAt: DateTime.now(),
+            );
+          }
+        }
+
       } finally {
         isGenerating = false;
         notify();
-        await chatRepository!.saveConversation(currentSession!);
+        if (isNearBottom()) {
+          scrollToBottom();
+        }
+        await chatRepository.saveConversation(currentSession!);
       }
     } else {
       final reply = await ChatService.generateReply(
         userText: userText,
         history: history,
-        agent:
-            selectedAgent ??
-            AIAgent(
+        profile:
+            selectedProfile ??
+            AIProfile(
               id: const Uuid().v4(),
-              name: 'Default Agent',
+              name: 'Default Profile',
               config: RequestConfig(systemPrompt: '', enableStream: true),
             ),
         providerName: providerName,
@@ -376,7 +446,7 @@ extension ChatViewModelMessageActions on ChatViewModel {
       isGenerating = false;
       notify();
 
-      await chatRepository!.saveConversation(currentSession!);
+      await chatRepository.saveConversation(currentSession!);
       scrollToBottom();
     }
   }

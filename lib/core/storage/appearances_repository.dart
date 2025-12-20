@@ -1,17 +1,17 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../models/theme.dart';
+import '../models/appearances.dart';
 import 'base_repository.dart';
 
-class ThemeRepository extends BaseRepository<ThemeSettings> {
+class AppearancesRepository extends BaseRepository<Appearances> {
   static const String _boxName = 'theme_settings';
 
   // Expose a notifier for valid reactive UI updates
-  final ValueNotifier<ThemeSettings> themeNotifier = ValueNotifier(
-    ThemeSettings.defaults(),
+  final ValueNotifier<Appearances> themeNotifier = ValueNotifier(
+    Appearances.defaults(),
   );
 
-  ThemeRepository(super.box) {
+  AppearancesRepository(super.box) {
     _loadInitialTheme();
   }
 
@@ -22,20 +22,20 @@ class ThemeRepository extends BaseRepository<ThemeSettings> {
     }
   }
 
-  static ThemeRepository? _instance;
+  static AppearancesRepository? _instance;
 
-  static Future<ThemeRepository> init() async {
+  static Future<AppearancesRepository> init() async {
     if (_instance != null) {
       return _instance!;
     }
     final box = await Hive.openBox<String>(_boxName);
-    _instance = ThemeRepository(box);
+    _instance = AppearancesRepository(box);
     return _instance!;
   }
 
-  static ThemeRepository get instance {
+  static AppearancesRepository get instance {
     if (_instance == null) {
-      throw Exception('ThemeRepository not initialized. Call init() first.');
+      throw Exception('AppearancesRepository not initialized. Call init() first.');
     }
     return _instance!;
   }
@@ -44,21 +44,21 @@ class ThemeRepository extends BaseRepository<ThemeSettings> {
   String get boxName => _boxName;
 
   @override
-  ThemeSettings deserializeItem(String json) =>
-      ThemeSettings.fromJsonString(json);
+  Appearances deserializeItem(String json) =>
+      Appearances.fromJsonString(json);
 
   @override
-  String serializeItem(ThemeSettings item) => item.toJsonString();
+  String serializeItem(Appearances item) => item.toJsonString();
 
   // Single settings object, so ID is constant
   @override
-  String getItemId(ThemeSettings item) => 'settings';
+  String getItemId(Appearances item) => 'settings';
 
-  Future<void> updateSettings(ThemeSettings settings) async {
+  Future<void> updateSettings(Appearances settings) async {
     // We only ever store one item for settings
     await saveItem(settings);
     themeNotifier.value = settings;
   }
 
-  ThemeSettings get currentTheme => themeNotifier.value;
+  Appearances get currentTheme => themeNotifier.value;
 }

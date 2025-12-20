@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'ai_model.dart';
+import 'ai/ai_model.dart';
 
 enum ProviderType {
   openai("OpenAI"),
@@ -67,6 +67,15 @@ class Provider {
         return 'https://ollama.com';
       case ProviderType.google:
         return 'https://generativelanguage.googleapis.com/v1beta';
+    }
+  }
+
+  // Helper method to get provider enum from string name
+  static ProviderType? getTypeByName(String name) {
+    try {
+      return ProviderType.values.firstWhere((e) => e.name == name);
+    } catch (_) {
+      return null;
     }
   }
 

@@ -2,49 +2,54 @@ import 'dart:convert';
 
 enum ThinkingLevel { none, low, medium, high, auto, custom }
 
-class AIAgent {
+class AIProfile {
   final String id;
   final String name;
   final RequestConfig config;
-  final bool agentConversations;
+  final bool profileConversations;
   final List<String?> conversationIds;
 
-  /// List of active MCP servers for this agent
+  /// List of active MCP servers for this profile
   final List<ActiveMCPServer> activeMCPServers;
 
-  // Convenience getter for active MCP server IDs
-  List<String> get activeMCPServerIds => activeMCPServers.map((e) => e.id).toList();
+  /// List of active built-in tools (e.g. 'google_search', 'code_execution')
+  final List<String> activeBuiltInTools;
 
-  /// Optional per-agent preference override:
+  /// Optional per-profile preference override:
   /// - null: follow global preferences
-  /// - true/false: override global preference for this agent
+  /// - true/false: override global preference for this profile
   final bool? persistChatSelection;
 
-  AIAgent({
+  AIProfile({
     required this.id,
     required this.name,
     required this.config,
-    this.agentConversations = false,
+    this.profileConversations = false,
     this.conversationIds = const [],
     this.activeMCPServers = const [],
+    this.activeBuiltInTools = const [],
     this.persistChatSelection,
   });
+  // Convenience getter for active MCP server IDs
+  List<String> get activeMCPServerIds =>
+      activeMCPServers.map((e) => e.id).toList();
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
       ...config.toJson(),
-      'agentConversations': agentConversations,
+      'profileConversations': profileConversations,
       'conversationIds': conversationIds,
       'activeMCPServers': activeMCPServers.map((e) => e.toJson()).toList(),
+      'activeBuiltInTools': activeBuiltInTools,
       if (persistChatSelection != null)
         'persistChatSelection': persistChatSelection,
     };
   }
 
-  factory AIAgent.fromJson(Map<String, dynamic> json) {
-    return AIAgent(
+  factory AIProfile.fromJson(Map<String, dynamic> json) {
+    return AIProfile(
       id: json['id'] as String,
       name: json['name'] as String,
       config: RequestConfig(
@@ -64,18 +69,21 @@ class AIAgent {
       ),
       conversationIds:
           (json['conversationIds'] as List?)?.cast<String>() ?? const [],
-      activeMCPServers: (json['activeMCPServers'] as List?)
+      activeMCPServers:
+          (json['activeMCPServers'] as List?)
               ?.map((e) => ActiveMCPServer.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      activeBuiltInTools:
+          (json['activeBuiltInTools'] as List?)?.cast<String>() ?? const [],
       persistChatSelection: json['persistChatSelection'] as bool?,
     );
   }
 
   String toJsonString() => json.encode(toJson());
 
-  factory AIAgent.fromJsonString(String jsonString) =>
-      AIAgent.fromJson(json.decode(jsonString));
+  factory AIProfile.fromJsonString(String jsonString) =>
+      AIProfile.fromJson(json.decode(jsonString));
 }
 
 class RequestConfig {
@@ -103,7 +111,6 @@ class RequestConfig {
     this.thinkingLevel = ThinkingLevel.auto,
   });
 
-
   Map<String, dynamic> toJson() {
     return {
       'systemPrompt': systemPrompt,
@@ -118,9 +125,6 @@ class RequestConfig {
       'thinkingLevel': thinkingLevel.name,
     };
   }
-
-
-
 }
 
 class ActiveMCPServer {

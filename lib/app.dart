@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:dynamic_color/dynamic_color.dart';
-import 'core/storage/theme_repository.dart';
-import 'core/models/theme.dart';
+import 'core/storage/appearances_repository.dart';
+import 'core/models/appearances.dart';
 import 'core/theme_extensions.dart';
 import 'core/routes.dart';
 import 'app_routes.dart';
@@ -12,14 +13,14 @@ class AIGatewayApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final repository = ThemeRepository.instance;
+    final repository = AppearancesRepository.instance;
 
     return ValueListenableBuilder(
       valueListenable: repository.themeNotifier,
       builder: (context, settings, _) {
         return DynamicColorBuilder(
           builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-            final bool useDynamic = settings.materialYou;
+            final bool useDynamic = settings.dynamicColor;
 
             final ColorScheme lightScheme = (useDynamic && lightDynamic != null)
                 ? lightDynamic.harmonized()
@@ -42,7 +43,7 @@ class AIGatewayApp extends StatelessWidget {
             // Main background colors
             final Color lightMainBg = Colors.white;
             final Color darkMainBg =
-                settings.pureDark ? Colors.black : const Color(0xFF121212);
+                settings.superDarkMode ? Colors.black : const Color(0xFF121212);
 
             // Utilities for secondary background calculation
             Color autoSecondary(Color base, Brightness br) {
@@ -97,6 +98,15 @@ class AIGatewayApp extends StatelessWidget {
                 colorScheme: lightScheme,
                 useMaterial3: true,
                 scaffoldBackgroundColor: lightMainBg,
+                appBarTheme: const AppBarTheme(
+                  systemOverlayStyle: SystemUiOverlayStyle(
+                    statusBarColor: Colors.transparent,
+                    statusBarIconBrightness: Brightness.dark,
+                    systemNavigationBarColor: Colors.transparent,
+                    systemNavigationBarDividerColor: Colors.transparent,
+                    systemNavigationBarIconBrightness: Brightness.dark,
+                  ),
+                ),
                 dialogTheme: DialogThemeData(
                   backgroundColor: lightSecondaryBg,
                   shape: RoundedRectangleBorder(
@@ -125,6 +135,15 @@ class AIGatewayApp extends StatelessWidget {
                 colorScheme: darkScheme,
                 useMaterial3: true,
                 scaffoldBackgroundColor: darkMainBg,
+                appBarTheme: const AppBarTheme(
+                  systemOverlayStyle: SystemUiOverlayStyle(
+                    statusBarColor: Colors.transparent,
+                    statusBarIconBrightness: Brightness.light,
+                    systemNavigationBarColor: Colors.transparent,
+                    systemNavigationBarDividerColor: Colors.transparent,
+                    systemNavigationBarIconBrightness: Brightness.light,
+                  ),
+                ),
                 dialogTheme: DialogThemeData(
                   backgroundColor: darkSecondaryBg,
                   shape: RoundedRectangleBorder(

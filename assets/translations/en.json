@@ -15,7 +15,7 @@
     "new_chat": "New Chat",
     "help_activity": "Help & Activity",
     "settings": "Settings",
-    "change_agent": "Change Agent",
+    "change_agent": "Change AI Profile",
     "no_history": "No history"
   },
   "input": {
@@ -90,16 +90,16 @@
       "secondary_color": "Secondary Color",
       "color_presets": "Color Presets",
       "custom_color": "Custom Color",
-      "pure_dark": "SuperDark Mode",
-      "pure_dark_desc": "Use deep black for AMOLED displays",
-      "material_you": "Dynamic Colors",
-      "material_you_desc": "Use system dynamic colors",
+      "dynamic_colors": "Dynamic Colors",
+      "dynamic_colors_desc": "Use system dynamic colors",
       "primary_background": "Primary Background Color",
       "secondary_background": "Secondary Background Color",
       "secondary_bg_mode": "Background Color Mode",
       "secondary_bg_on": "Dual",
       "secondary_bg_off": "Single",
       "secondary_bg_auto": "Auto",
+      "super_dark_mode": "Super Dark Mode",
+      "super_dark_mode_desc": "Use deep black for AMOLED displays",
       "preview_title": "Preview Title",
       "preview_subtitle": "Subtitle goes here",
       "preview_button": "Primary Button"
@@ -115,7 +115,7 @@
       "auto_detect_error": "Failed to toggle auto",
       "chat_settings": "Chat Settings",
       "persist_chat_selection": "Persist selections",
-      "prefer_agent_settings": "Prefer agent settings"
+      "prefer_agent_settings": "Prefer AI Profile settings"
     }
   },
   "providers": {
@@ -160,14 +160,14 @@
     "tap_to_fetch_models": "Tap to fetch models"
   },
   "agents": {
-    "title": "Agents",
-    "no_agents": "No agents found",
+    "title": "AI Profiles",
+    "no_agents": "No AI Profiles found",
     "delete_confirm": "Are you sure you want to delete {}?",
-    "agent_deleted": "Agent {} deleted",
-    "add_new_agent": "Add Agent",
-    "edit_agent": "Edit Agent",
-    "agent_details": "Agent Details",
-    "name": "Agent Name",
+    "agent_deleted": "AI Profile {} deleted",
+    "add_new_agent": "Add AI Profile",
+    "edit_agent": "Edit AI Profile",
+    "agent_details": "AI Profile Details",
+    "name": "AI Profile Name",
     "system_prompt": "System Prompt",
     "parameters": "Parameters",
     "stream": "Stream",
@@ -179,6 +179,7 @@
     "conversation_length": "Conversation Length",
     "max_tokens": "Max Tokens",
     "mcp_servers": "MCP Servers",
+    "no_mcp_servers": "No MCP servers available",
     "persist_selection": "Persist Selection",
     "persist_disable": "Follow Global",
     "persist_on": "Always On",

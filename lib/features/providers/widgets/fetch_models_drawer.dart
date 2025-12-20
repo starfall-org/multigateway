@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import '../../../core/models/ai_model.dart';
+import '../../../core/models/ai/ai_model.dart';
 import '../presentation/add_provider_viewmodel.dart';
+import '../../settings/widgets/settings_card.dart';
 import 'model_card.dart';
 
 class FetchModelsDrawer extends StatelessWidget {
@@ -76,16 +77,10 @@ class FetchModelsDrawer extends StatelessWidget {
               // Fetch Button Section
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                child: SettingsCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                         if (isFetchingModels)
                           const LinearProgressIndicator()
                         else
@@ -98,8 +93,8 @@ class FetchModelsDrawer extends StatelessWidget {
                                       : '${availableModels.length} ${'providers.models_available'.tr()}',
                                   style: TextStyle(
                                     color: availableModels.isEmpty
-                                        ? Colors.grey
-                                        : Colors.green[600],
+                                        ? Theme.of(context).colorScheme.onSurfaceVariant
+                                        : Theme.of(context).colorScheme.primary,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -113,7 +108,6 @@ class FetchModelsDrawer extends StatelessWidget {
                           ),
                       ],
                     ),
-                  ),
                 ),
               ),
 

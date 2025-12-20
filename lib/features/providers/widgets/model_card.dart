@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../core/models/ai_model.dart';
+import '../../../core/models/ai/ai_model.dart';
 import '../../../core/utils.dart';
+import '../../../core/widgets/item_card.dart';
 
 class ModelCard extends StatelessWidget {
   final AIModel model;
@@ -11,55 +12,34 @@ class ModelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                child: _getModelIcon(),
+    return ItemCard(
+      layout: ItemCardLayout.list,
+      title: model.name,
+      icon: CircleAvatar(
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        child: _getModelIcon(),
+      ),
+      subtitleWidget: Padding(
+        padding: const EdgeInsets.only(top: 4.0),
+        child: Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: [
+            _buildTag(context, _getModelTypeLabel(),
+                Theme.of(context).colorScheme.primary),
+            ..._buildIOTags(context),
+            if (model.parameters != null)
+              _buildTextTag(
+                context,
+                _formatParameters(model.parameters!),
+                Theme.of(context).colorScheme.tertiary,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      model.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: [
-                        _buildTag(context, _getModelTypeLabel(), Colors.purple),
-                        ..._buildIOTags(context),
-                        if (model.parameters != null)
-                          _buildTextTag(
-                            context,
-                            _formatParameters(model.parameters!),
-                            Colors.orange,
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              if (trailing != null) trailing!,
-            ],
-          ),
+          ],
         ),
       ),
+      trailing: trailing,
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     );
   }
 
@@ -94,7 +74,7 @@ class ModelCard extends StatelessWidget {
         _buildTag(
           context,
           Row(mainAxisSize: MainAxisSize.min, children: inputList),
-          Colors.orange,
+          Theme.of(context).colorScheme.tertiary,
         ),
       );
     }
@@ -106,7 +86,7 @@ class ModelCard extends StatelessWidget {
         _buildTag(
           context,
           Row(mainAxisSize: MainAxisSize.min, children: outputList),
-          Colors.green,
+          Theme.of(context).colorScheme.secondary,
         ),
       );
     }
@@ -139,10 +119,13 @@ class ModelCard extends StatelessWidget {
   }
 
   Widget _buildTag(BuildContext context, Widget label, Color color) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    // Sử dụng color scheme để tạo boxColor thay vì hardcode white/black
     final boxColor = isDark
-        ? Color.lerp(color, Colors.white, 0.7)!
-        : Color.lerp(color, Colors.black, 0.5)!;
+        ? Color.lerp(color, theme.colorScheme.surface, 0.7)!
+        : Color.lerp(color, theme.colorScheme.onSurface, 0.5)!;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -151,7 +134,7 @@ class ModelCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: color.withValues(alpha: isDark ? 0.4 : 0.3)),
       ),
-      color: color,
+      // color: color, // Bỏ thuộc tính color bị thừa ở đây nếu Container đã có decoration
       child: label,
     );
   }
