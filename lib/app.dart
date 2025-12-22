@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dynamic_color/dynamic_color.dart';
-import 'core/storage/appearances_repository.dart';
-import 'core/models/appearances.dart';
-import 'core/theme_extensions.dart';
-import 'core/routes.dart';
+import 'core/storage/AppearanceSetting_repository.dart';
+import 'core/models/AppearanceSetting.dart';
+import 'sys/theme_extensions.dart';
+import 'sys/routes.dart';
 import 'app_routes.dart';
 
 class AIGatewayApp extends StatelessWidget {
@@ -12,7 +12,7 @@ class AIGatewayApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final repository = AppearancesRepository.instance;
+    final repository = AppearanceSettingRepository.instance;
 
     return ValueListenableBuilder(
       valueListenable: repository.themeNotifier,

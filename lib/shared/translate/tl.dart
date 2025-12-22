@@ -1,0 +1,71 @@
+import 'dart:async';
+import 'package:flutter/widgets.dart';
+
+import '../shared/utils/storage/language_repository.dart';
+import '../shared/utils/storage/translation_cache_repository.dart';
+import '../shared/utils/services/translation_service.dart';
+
+/// Dịch text từ English sang ngôn ngữ được cài đặt trong language preferences
+/// Input is always English
+/// Output is the language have set in language preference
+/// if no translate model is set or error or the default language is set to English, return the text as it is
+String tl(String text) {
+  try {
+    // Lấy language preferences hiện tại
+    final languageRepo = LanguageSp.instance;
+    final preferences = languageRepo.currentPreferences;
+
+    // Xác định target language
+    String targetLanguage;
+    if (preferences.autoDetectLanguage || preferences.languageCode == 'auto') {
+      final locale = WidgetsBinding.instance.platformDispatcher.locale;
+      if (locale.languageCode.toLowerCase() == 'zh') {
+        final country = (locale.countryCode ?? '').toUpperCase();
+        targetLanguage = country == 'TW' ? 'zh-TW' : 'zh-CN';
+      } else {
+        targetLanguage = locale.languageCode.toLowerCase();
+      }
+    } else {
+      targetLanguage = preferences.languageCode.toLowerCase();
+    }
+
+    // Nếu target là English (giống source), return text gốc
+    if (targetLanguage == 'en') {
+      return text;
+    }
+
+    // Kiểm tra cached translation trước
+    try {
+      final translationCacheRepo = TranslationCacheRepository.instance;
+      final cached = translationCacheRepo.getCachedTranslation(
+        originalText: text,
+        sourceLanguage: 'en',
+        targetLanguage: targetLanguage,
+      );
+      if (cached != null) {
+        return cached.translatedText;
+      }
+    } catch (e) {
+      debugPrint('Translation cache not available: $e');
+    }
+
+    // Giữ logic async nhưng bọc trong hàm sync: chạy nền để dịch và populate cache
+    scheduleMicrotask(() async {
+      try {
+        await TranslationService.instance.translate(
+          text: text,
+          sourceLanguage: 'en',
+          targetLanguage: targetLanguage,
+        );
+      } catch (e) {
+        debugPrint('Background translation failed: $e');
+      }
+    });
+
+    // Trả về text gốc ngay lập tức
+    return text;
+  } catch (e) {
+    debugPrint('Translation failed: $e');
+    return text;
+  }
+}
