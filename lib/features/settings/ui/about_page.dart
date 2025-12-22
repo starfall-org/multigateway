@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
 import '../../../shared/translate/tl.dart';
-
+import '../../../shared/utils/app_version.dart';
 
 /// Màn hình thông tin về ứng dụng
 class AboutPage extends StatefulWidget {
@@ -13,6 +12,17 @@ class AboutPage extends StatefulWidget {
 
 class _AboutPageState extends State<AboutPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  String _version = '';
+
+  @override
+  void initState() {
+    super.initState();
+    getAppVersion().then((version) {
+      setState(() {
+        _version = version;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +100,7 @@ class _AboutPageState extends State<AboutPage> {
                 color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(Icons.smart_toy, size: 40, color: Colors.white),
+              child: Icon(Icons.token, size: 40, color: Colors.white),
             ),
             const SizedBox(height: 16),
             Text(
@@ -108,9 +118,7 @@ class _AboutPageState extends State<AboutPage> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            _buildInfoRow('Version', '1.0.0 (1)'),
-            const SizedBox(height: 8),
-            _buildInfoRow('Build Date', _getBuildDate()),
+            _buildInfoRow('Version', _version),
           ],
         ),
       ),
@@ -167,7 +175,7 @@ class _AboutPageState extends State<AboutPage> {
               const Divider(height: 1),
               _buildFeatureItem(
                 icon: Icons.cloud_outlined,
-                title: 'Providers',
+                title: 'AI Providers',
                 description: 'Multi-provider AI support',
               ),
               const Divider(height: 1),
@@ -214,10 +222,9 @@ class _AboutPageState extends State<AboutPage> {
             child: Column(
               children: [
                 _buildDeveloperItem(
-                  name: 'Starfall Team',
-                  role: 'Development Team',
-                  description:
-                      'Professional team with passion for AI technology',
+                  name: 'Starfall Organization',
+                  role: 'Developer',
+                  description: 'Organization with passion for AI technology',
                 ),
               ],
             ),
@@ -307,8 +314,8 @@ class _AboutPageState extends State<AboutPage> {
               const Divider(height: 1),
               _buildControlTile(
                 icon: Icons.info_outline,
-                title: 'Open Source',
-                subtitle: 'Open source license information',
+                title: 'Public Limit License',
+                subtitle: 'Public source license information',
                 onTap: () => _openOpenSource(),
               ),
             ],
@@ -373,11 +380,6 @@ class _AboutPageState extends State<AboutPage> {
       subtitle: Text(subtitle),
       onTap: onTap,
     );
-  }
-
-  /// Lấy ngày build (placeholder)
-  String _getBuildDate() {
-    return '2024-12-21';
   }
 
   /// Handlers cho các hành động
