@@ -27,10 +27,8 @@ extension ChatViewModelAttachmentActions on ChatViewModel {
 
   Future<void> pickAttachmentsFromGallery(BuildContext context) async {
     try {
-      final result = await ImagePicker().pickMultiMedia(
-        source: ImageSource.gallery
-      );
-      final paths = result?.paths.whereType<String>().toList() ?? const [];
+      final result = await ImagePicker().pickMultiImage();
+      final paths = result?.map((e) => e.path).toList() ?? const [];
       if (paths.isEmpty) return;
 
       for (final p in paths) {
