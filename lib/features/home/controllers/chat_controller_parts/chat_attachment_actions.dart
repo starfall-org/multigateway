@@ -1,6 +1,6 @@
 part of '../chat_controller.dart';
 
-extension ChatViewModelAttachmentActions on ChatViewModel {
+extension ChatViewModelAttachmentActions on ChatController {
   Future<void> pickAttachments(BuildContext context) async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -28,7 +28,7 @@ extension ChatViewModelAttachmentActions on ChatViewModel {
   Future<void> pickAttachmentsFromGallery(BuildContext context) async {
     try {
       final result = await ImagePicker().pickMultiImage();
-      final paths = result.map((e) => e.path).toList() ?? const [];
+      final paths = result.map((e) => e.path).toList();
       if (paths.isEmpty) return;
 
       for (final p in paths) {

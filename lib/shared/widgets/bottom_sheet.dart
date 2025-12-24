@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-class AppBottomSheet extends StatelessWidget {
+class CustomBottomSheet extends StatelessWidget {
   final Widget? header;
   final List<Widget> items;
   final Widget? footer;
 
-  const AppBottomSheet({
+  const CustomBottomSheet({
     super.key,
     this.header,
     required this.items,

@@ -1,6 +1,6 @@
 part of '../chat_controller.dart';
 
-extension ChatViewModelMessageActions on ChatViewModel {
+extension ChatViewModelMessageActions on ChatController {
   Future<void> handleSubmitted(String text, BuildContext context) async {
     if (((text.trim().isEmpty) && pendingAttachments.isEmpty) ||
         currentSession == null) {

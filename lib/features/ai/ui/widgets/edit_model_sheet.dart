@@ -5,12 +5,12 @@ import '../../../../shared/widgets/common_dropdown.dart';
 import '../../controllers/edit_provider_controller.dart';
 import '../../../../shared/widgets/custom_text_field.dart';
 
-class AddModelDrawer extends StatefulWidget {
+class EditModelSheet extends StatefulWidget {
   final AddProviderViewModel viewModel;
   final Function(AIModel) onShowCapabilities;
   final AIModel? modelToEdit;
 
-  const AddModelDrawer({
+  const EditModelSheet({
     super.key,
     required this.viewModel,
     required this.onShowCapabilities,
@@ -18,10 +18,10 @@ class AddModelDrawer extends StatefulWidget {
   });
 
   @override
-  State<AddModelDrawer> createState() => _AddModelDrawerState();
+  State<EditModelSheet> createState() => _EditModelSheetState();
 }
 
-class _AddModelDrawerState extends State<AddModelDrawer> {
+class _EditModelSheetState extends State<EditModelSheet> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _displayNameController;

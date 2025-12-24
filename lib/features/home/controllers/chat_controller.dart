@@ -30,7 +30,7 @@ part 'chat_controller_parts/chat_operations.dart';
 part 'chat_controller_parts/chat_edit_actions.dart';
 part 'chat_controller_parts/chat_ui_actions.dart';
 
-class ChatViewModel extends ChangeNotifier {
+class ChatController extends ChangeNotifier {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController textController = TextEditingController();
   final ScrollController scrollController = ScrollController();
@@ -73,7 +73,7 @@ class ChatViewModel extends ChangeNotifier {
     }
   }
 
-  ChatViewModel({
+  ChatController({
     required this.navigator,
     required this.chatRepository,
     required this.aiProfileRepository,

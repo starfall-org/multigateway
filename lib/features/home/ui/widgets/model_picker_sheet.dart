@@ -4,7 +4,7 @@ import '../../../../core/models/ai/provider.dart';
 import '../../../../shared/translate/tl.dart';
 
 
-class ModelsPickerSheet extends StatelessWidget {
+class ModelPickerSheet extends StatelessWidget {
   final List<Provider> providers;
   final Map<String, bool> providerCollapsed;
   final String? selectedProviderName;
@@ -12,7 +12,7 @@ class ModelsPickerSheet extends StatelessWidget {
   final Function(String providerName, bool collapsed) onToggleProvider;
   final Function(String providerName, String modelName) onSelectModel;
 
-  const ModelsPickerSheet({
+  const ModelPickerSheet({
     super.key,
     required this.providers,
     required this.providerCollapsed,
@@ -169,7 +169,7 @@ class ModelsPickerSheet extends StatelessWidget {
       ),
       builder: (ctx) => SizedBox(
         height: MediaQuery.of(context).size.height * 0.6,
-        child: ModelsPickerSheet(
+        child: ModelPickerSheet(
           providers: providers,
           providerCollapsed: providerCollapsed,
           selectedProviderName: selectedProviderName,

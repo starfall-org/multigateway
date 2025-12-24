@@ -27,7 +27,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage>
     implements ChatNavigationInterface {
-  late ChatViewModel _viewModel;
+  late ChatController _viewModel;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Khởi tạo viewModel và tải dữ liệu ban đầu
@@ -35,7 +35,7 @@ class _ChatPageState extends State<ChatPage>
   void initState() {
     super.initState();
     final services = AppServices.instance;
-    _viewModel = ChatViewModel(
+    _viewModel = ChatController(
       navigator: this,
       chatRepository: services.chatRepository,
       aiProfileRepository: services.aiProfileRepository,
@@ -77,7 +77,7 @@ class _ChatPageState extends State<ChatPage>
     required List<String> initialAttachments,
   }) async {
     if (!mounted) return null;
-    final result = await EditMessageDialog.show(
+    final result = await EditMessageSheet.show(
       context,
       initialContent: initialContent,
       initialAttachments: initialAttachments,
@@ -170,7 +170,7 @@ class _ChatPageState extends State<ChatPage>
             actions: [_buildAgentAvatar(context)],
           ),
           // Drawer bên trái chứa danh sách cuộc trò chuyện
-          drawer: ChatDrawer(
+          drawer: ConversationsDrawer(
             onSessionSelected: (sessionId) {
               Navigator.pop(context);
               _viewModel.loadSession(sessionId);
@@ -206,7 +206,7 @@ class _ChatPageState extends State<ChatPage>
               // Khu vực nhập liệu
               SafeArea(
                 top: false,
-                child: ChatInputArea(
+                child: UserInputArea(
                   controller: _viewModel.textController,
                   onSubmitted: (text) =>
                       _viewModel.handleSubmitted(text, context),
@@ -217,7 +217,7 @@ class _ChatPageState extends State<ChatPage>
                   onRemoveAttachment: _viewModel.removeAttachmentAt,
                   isGenerating: _viewModel.isGenerating,
                   onOpenModelPicker: () => _openModelPicker(context),
-                  onOpenMenu: () => MenuDrawer.showDrawer(context, _viewModel),
+                  onOpenMenu: () => QuickActionsSheet.show(context, _viewModel),
                   selectedAIModel: _viewModel.selectedAIModel,
                 ),
               ),
@@ -257,22 +257,9 @@ class _ChatPageState extends State<ChatPage>
     );
   }
 
-  Widget _buildToolsButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.extension_outlined,
-        color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.7),
-      ),
-      tooltip: tl('Tools'),
-      onPressed: () {
-        MenuDrawer.showDrawer(context, _viewModel);
-      },
-    );
-  }
-
   // Mở drawer chọn model AI
   void _openModelPicker(BuildContext context) {
-    ModelsPickerSheet.show(
+    ModelPickerSheet.show(
       context,
       providers: _viewModel.providers,
       providerCollapsed: _viewModel.providerCollapsed,
@@ -296,7 +283,7 @@ class _ChatPageState extends State<ChatPage>
       );
     }
 
-    return ChatMessageList(
+    return ChatMessagesDisplay(
       messages: _viewModel.currentSession!.messages,
       scrollController: _viewModel.scrollController,
       onCopy: (m) => _viewModel.copyMessage(context, m),

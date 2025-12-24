@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-class AttachmentOptionsDrawer extends StatelessWidget {
+class FilesActionSheet extends StatelessWidget {
   final VoidCallback onPickAttachments;
   final VoidCallback? onPickFromGallery;
 
-  const AttachmentOptionsDrawer({
+  const FilesActionSheet({
     super.key,
     required this.onPickAttachments,
     this.onPickFromGallery,
@@ -112,7 +112,7 @@ class AttachmentOptionsDrawer extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => AttachmentOptionsDrawer(
+      builder: (ctx) => FilesActionSheet(
         onPickAttachments: onPickAttachments,
         onPickFromGallery: onPickFromGallery,
       ),

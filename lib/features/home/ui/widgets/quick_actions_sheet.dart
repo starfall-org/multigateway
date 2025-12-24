@@ -6,16 +6,16 @@ import '../../../../shared/translate/tl.dart';
 import '../../controllers/chat_controller.dart';
 
 
-class MenuDrawer extends StatefulWidget {
-  final ChatViewModel viewModel;
+class QuickActionsSheet extends StatefulWidget {
+  final ChatController viewModel;
 
-  const MenuDrawer({super.key, required this.viewModel});
+  const QuickActionsSheet({super.key, required this.viewModel});
 
   @override
-  State<MenuDrawer> createState() => _MenuDrawerState();
+  State<QuickActionsSheet> createState() => _QuickActionsSheetState();
 
   /// Static method to show the drawer as a modal bottom sheet
-  static void showDrawer(BuildContext context, ChatViewModel viewModel) {
+  static void show(BuildContext context, ChatController viewModel) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -23,12 +23,12 @@ class MenuDrawer extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => MenuDrawer(viewModel: viewModel),
+      builder: (ctx) => QuickActionsSheet(viewModel: viewModel),
     );
   }
 }
 
-class _MenuDrawerState extends State<MenuDrawer> {
+class _QuickActionsSheetState extends State<QuickActionsSheet> {
   late AIProfile _profile;
 
   @override

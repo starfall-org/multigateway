@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config/routes.dart';
 import '../../../shared/translate/tl.dart';
-import '../../../shared/widgets/empty_state.dart';
 import '../../ai/ui/profiles_page.dart';
-import '../../ai/ui/providers_page.dart';
-import '../../ai/ui/speechsevices_page.dart';
 import '../../settings/ui/settings_page.dart';
 import 'chat_screen.dart';
-
+import 'widgets/home_drawer.dart';
+import 'widgets/home_body.dart';
 
 /// Màn hình chủ hiển thị dashboard chính của ứng dụng
 class HomePage extends StatefulWidget {
@@ -65,268 +64,25 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      drawer: _buildDrawer(),
-      body: SafeArea(top: false, bottom: true, child: _buildBody()),
-    );
-  }
-
-  /// Xây dựng drawer menu
-  Widget _buildDrawer() {
-    return Drawer(
-      child: SafeArea(
-        top: true,
+      drawer: HomeDrawer(
+        onNavigateToChat: _navigateToChat,
+        onNavigateToAIProfiles: _navigateToAIProfiles,
+        onNavigateToProviders: _navigateToProviders,
+        onNavigateToMCPServers: _navigateToMCPServers,
+        onNavigateToSpeechServices: _navigateToSpeechServices,
+        onNavigateToSettings: _navigateToSettings,
+      ),
+      body: SafeArea(
+        top: false,
         bottom: true,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    tl('AI Gateway'),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    tl('App Navigation'),
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-            _buildDrawerItem(
-              icon: Icons.chat_bubble_outline,
-              title: 'Chat',
-              onTap: () => _navigateToChat(),
-            ),
-            _buildDrawerItem(
-              icon: Icons.person_outline,
-              title: 'AI Profiles',
-              onTap: () => _navigateToAIProfiles(),
-            ),
-            _buildDrawerItem(
-              icon: Icons.cloud_outlined,
-              title: 'Providers',
-              onTap: () => _navigateToProviders(),
-            ),
-            _buildDrawerItem(
-              icon: Icons.extension_outlined,
-              title: 'MCP Servers',
-              onTap: () => _navigateToMCP(),
-            ),
-            _buildDrawerItem(
-              icon: Icons.record_voice_over,
-              title: 'Speech Services',
-              onTap: () => _navigateToTTS(),
-            ),
-            const Divider(),
-            _buildDrawerItem(
-              icon: Icons.settings_outlined,
-              title: 'Settings',
-              onTap: () => _navigateToSettings(),
-            ),
-          ],
+        child: HomeBody(
+          onNavigateToChat: _navigateToChat,
+          onNavigateToAIProfiles: _navigateToAIProfiles,
+          onNavigateToProviders: _navigateToProviders,
+          onNavigateToMCPServers: _navigateToMCPServers,
+          onNavigateToSpeechServices: _navigateToSpeechServices,
         ),
       ),
-    );
-  }
-
-  /// Xây dựng item trong drawer
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      onTap: () {
-        Navigator.pop(context);
-        onTap();
-      },
-    );
-  }
-
-  /// Xây dựng nội dung chính của màn hình
-  Widget _buildBody() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildWelcomeCard(),
-          const SizedBox(height: 24),
-          _buildQuickActions(),
-          const SizedBox(height: 24),
-          _buildRecentActivity(),
-        ],
-      ),
-    );
-  }
-
-  /// Xây dựng card chào mừng
-  Widget _buildWelcomeCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.waving_hand,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 32,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tl('Welcome to AI Gateway'),
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        tl('Comprehensive AI chat platform'),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => _navigateToChat(),
-              icon: const Icon(Icons.chat_bubble_outline),
-              label: Text(tl('Start Chatting')),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Xây dựng các hành động nhanh
-  Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          tl('Quick Actions'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.2,
-          children: [
-            _buildActionCard(
-              icon: Icons.person_outline,
-              title: 'AI Profiles',
-              onTap: () => _navigateToAIProfiles(),
-            ),
-            _buildActionCard(
-              icon: Icons.cloud_outlined,
-              title: 'Providers',
-              onTap: () => _navigateToProviders(),
-            ),
-            _buildActionCard(
-              icon: Icons.extension_outlined,
-              title: 'MCP Servers',
-              onTap: () => _navigateToMCP(),
-            ),
-            _buildActionCard(
-              icon: Icons.record_voice_over,
-              title: 'Speech Services',
-              onTap: () => _navigateToTTS(),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  /// Xây dựng card hành động
-  Widget _buildActionCard({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 32,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Xây dựng phần hoạt động gần đây
-  Widget _buildRecentActivity() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          tl('Recent Activity'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: EmptyState(
-              icon: Icons.history,
-              message: 'No recent activity',
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -346,24 +102,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _navigateToProviders() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AiProvidersPage()),
-    );
+    Navigator.pushNamed(context, AppRoutes.aiProviders);
   }
 
-  void _navigateToMCP() {
-    // TODO: Implement MCP navigation when MCPScreen is created
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(tl('MCP feature coming soon'))));
+  void _navigateToMCPServers() {
+    Navigator.pushNamed(context, AppRoutes.mcpServers);
   }
 
-  void _navigateToTTS() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SpeechServicesPage()),
-    );
+  void _navigateToSpeechServices() {
+    Navigator.pushNamed(context, AppRoutes.aiSpeechServices);
   }
 
   void _navigateToSettings() {

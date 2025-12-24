@@ -6,14 +6,14 @@ import '../../../../shared/translate/tl.dart';
 import '../../../../shared/utils/icon_builder.dart';
 import '../../../ai/ui/profiles_page.dart';
 
-class ChatDrawer extends StatefulWidget {
+class ConversationsDrawer extends StatefulWidget {
   final Function(String) onSessionSelected;
   final VoidCallback onNewChat;
   final VoidCallback? onAgentChanged;
   final String? selectedProviderName;
   final String? selectedModelName;
 
-  const ChatDrawer({
+  const ConversationsDrawer({
     super.key,
     required this.onSessionSelected,
     required this.onNewChat,
@@ -23,10 +23,10 @@ class ChatDrawer extends StatefulWidget {
   });
 
   @override
-  State<ChatDrawer> createState() => _ChatDrawerState();
+  State<ConversationsDrawer> createState() => _ConversationsDrawerState();
 }
 
-class _ChatDrawerState extends State<ChatDrawer> {
+class _ConversationsDrawerState extends State<ConversationsDrawer> {
   List<Conversation> _sessions = [];
   ChatRepository? _chatRepository;
 

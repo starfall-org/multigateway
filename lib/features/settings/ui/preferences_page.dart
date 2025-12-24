@@ -8,7 +8,7 @@ import 'widgets/settings_card.dart';
 import 'widgets/settings_section_header.dart';
 import 'widgets/settings_tile.dart';
 
-// TODO: move logic to viewmodel
+// TODO: move logic to controller
 class PreferencesPage extends StatefulWidget {
   const PreferencesPage({super.key});
 

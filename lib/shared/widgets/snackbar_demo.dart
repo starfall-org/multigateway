@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'app_snackbar.dart';
 
 /// Demo page để minh họa cách sử dụng AppSnackBar
-class SnackBarDemoPage extends StatelessWidget {
-  const SnackBarDemoPage({super.key});
+class SnackbarDemo extends StatelessWidget {
+  const SnackbarDemo({super.key});
 
   @override
   Widget build(BuildContext context) {

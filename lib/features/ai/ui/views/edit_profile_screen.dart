@@ -70,7 +70,7 @@ class _AddProfileScreenState extends State<AddProfileScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (context) =>
-                          ViewProfileScreen(profile: widget.profile!),
+                          ViewProfileDialog(profile: widget.profile!),
                     ),
                   );
                 },

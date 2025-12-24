@@ -7,7 +7,7 @@ import '../../../../core/models/chat/message.dart';
 import '../../../../shared/translate/tl.dart';
 
 
-class ChatMessageList extends StatelessWidget {
+class ChatMessagesDisplay extends StatelessWidget {
   final List<ChatMessage> messages;
   final ScrollController scrollController;
 
@@ -19,7 +19,7 @@ class ChatMessageList extends StatelessWidget {
   final VoidCallback? onRegenerate;
   final void Function(ChatMessage message)? onRead;
 
-  const ChatMessageList({
+  const ChatMessagesDisplay({
     super.key,
     required this.messages,
     required this.scrollController,

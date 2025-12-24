@@ -1,6 +1,6 @@
 part of '../chat_controller.dart';
 
-extension ChatViewModelUIActions on ChatViewModel {
+extension ChatViewModelUIActions on ChatController {
   void scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (scrollController.hasClients) {

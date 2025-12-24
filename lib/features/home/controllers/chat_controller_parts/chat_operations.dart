@@ -1,6 +1,6 @@
 part of '../chat_controller.dart';
 
-extension ChatViewModelOperations on ChatViewModel {
+extension ChatViewModelOperations on ChatController {
   String getTranscript() {
     if (currentSession == null) return '';
     return currentSession!.messages

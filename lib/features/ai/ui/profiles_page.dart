@@ -127,7 +127,7 @@ class _AIProfilesScreenState extends State<AIProfilesScreen> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ViewProfileScreen(profile: profile),
+        builder: (context) => ViewProfileDialog(profile: profile),
       ),
     );
     if (result == true) {

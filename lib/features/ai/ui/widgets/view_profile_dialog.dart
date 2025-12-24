@@ -4,10 +4,10 @@ import '../../../../core/data/ai_profile_store.dart';
 import '../../../../shared/translate/tl.dart';
 import '../views/edit_profile_screen.dart';
 
-class ViewProfileScreen extends StatelessWidget {
+class ViewProfileDialog extends StatelessWidget {
   final AIProfile profile;
 
-  const ViewProfileScreen({super.key, required this.profile});
+  const ViewProfileDialog({super.key, required this.profile});
 
   @override
   Widget build(BuildContext context) {

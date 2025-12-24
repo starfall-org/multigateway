@@ -30,7 +30,7 @@ class MenuView extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    return AppSidebarRight(
+    return RightDrawer(
       width: screenWidth,
       backgroundColor: colorScheme.surface,
       child: Scaffold(

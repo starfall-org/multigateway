@@ -1,6 +1,6 @@
 part of '../chat_controller.dart';
 
-extension ChatViewModelEditActions on ChatViewModel {
+extension ChatViewModelEditActions on ChatController {
   Future<void> copyMessage(BuildContext context, ChatMessage message) async {
     if (message.content.trim().isEmpty) return;
     await Clipboard.setData(ClipboardData(text: message.content));
@@ -27,7 +27,7 @@ extension ChatViewModelEditActions on ChatViewModel {
     BuildContext context,
     ChatMessage message,
   ) async {
-    final result = await EditMessageDialog.show(
+    final result = await EditMessageSheet.show(
       context,
       initialContent: message.content,
       initialAttachments: message.attachments,

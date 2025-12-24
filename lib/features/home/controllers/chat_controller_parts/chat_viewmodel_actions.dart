@@ -1,6 +1,6 @@
 part of '../chat_controller.dart';
 
-extension ChatViewModelActions on ChatViewModel {
+extension ChatViewModelActions on ChatController {
   Future<List<String>> _snapshotEnabledToolNames(AIProfile profile) async {
     try {
       final mcpRepo = await MCPRepository.init();

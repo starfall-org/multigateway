@@ -361,7 +361,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => AddModelDrawer(
+      builder: (context) => EditModelSheet(
         viewModel: _viewModel,
         onShowCapabilities: _showModelCapabilities,
       ),

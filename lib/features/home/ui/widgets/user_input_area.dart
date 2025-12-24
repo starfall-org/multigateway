@@ -4,7 +4,7 @@ import '../../../../core/models/ai/model.dart';
 import '../../../../shared/translate/tl.dart';
 import 'files_action_sheet.dart';
 
-class ChatInputArea extends StatelessWidget {
+class UserInputArea extends StatelessWidget {
   final TextEditingController controller;
   final Function(String) onSubmitted;
 
@@ -23,7 +23,7 @@ class ChatInputArea extends StatelessWidget {
   // Nút mở drawer menu
   final VoidCallback? onOpenMenu;
 
-  const ChatInputArea({
+  const UserInputArea({
     super.key,
     required this.controller,
     required this.onSubmitted,
@@ -123,7 +123,7 @@ class ChatInputArea extends StatelessWidget {
                           color: Theme.of(context).iconTheme.color,
                         ),
                         onPressed: () {
-                          AttachmentOptionsDrawer.show(
+                          FilesActionSheet.show(
                             context,
                             onPickAttachments: onPickAttachments,
                             onPickFromGallery: onPickFromGallery,

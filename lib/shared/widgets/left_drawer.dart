@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'app_sidebar.dart';
 
-class AppSidebarLeft extends StatelessWidget {
+class LeftDrawer extends StatelessWidget {
   final Widget child;
   final double width;
   final Color? backgroundColor;
   final BorderSide? borderSide;
 
-  const AppSidebarLeft({
+  const LeftDrawer({
     super.key,
     required this.child,
     this.width = 300,

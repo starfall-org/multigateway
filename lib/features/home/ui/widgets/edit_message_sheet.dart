@@ -19,11 +19,11 @@ class EditMessageResult {
   });
 }
 
-class EditMessageDialog extends StatefulWidget {
+class EditMessageSheet extends StatefulWidget {
   final String initialContent;
   final List<String> initialAttachments;
 
-  const EditMessageDialog({
+  const EditMessageSheet({
     super.key,
     required this.initialContent,
     required this.initialAttachments,
@@ -36,7 +36,7 @@ class EditMessageDialog extends StatefulWidget {
   }) {
     return showDialog<EditMessageResult?>(
       context: context,
-      builder: (ctx) => EditMessageDialog(
+      builder: (ctx) => EditMessageSheet(
         initialContent: initialContent,
         initialAttachments: initialAttachments,
       ),
@@ -44,10 +44,10 @@ class EditMessageDialog extends StatefulWidget {
   }
 
   @override
-  State<EditMessageDialog> createState() => _EditMessageDialogState();
+  State<EditMessageSheet> createState() => _EditMessageSheetState();
 }
 
-class _EditMessageDialogState extends State<EditMessageDialog> {
+class _EditMessageSheetState extends State<EditMessageSheet> {
   late final TextEditingController _controller;
   late final List<String> _attachments;
 
