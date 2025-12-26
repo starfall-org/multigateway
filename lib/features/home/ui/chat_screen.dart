@@ -62,6 +62,17 @@ class _ChatPageState extends State<ChatPage>
         showSnackBar('Error initializing chat: $e');
       }
     }
+
+    // Restore sidebar state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final activeSidebar = _viewModel.preferencesSp.currentPreferences.activeSidebar;
+      if (activeSidebar == 'left') {
+        _scaffoldKey.currentState?.openDrawer();
+      } else if (activeSidebar == 'right') {
+        _scaffoldKey.currentState?.openEndDrawer();
+      }
+    });
   }
 
   @override
@@ -134,6 +145,26 @@ class _ChatPageState extends State<ChatPage>
         // Giao diện chính của chat
         return Scaffold(
           key: _scaffoldKey,
+          onDrawerChanged: (isOpen) {
+            if (isOpen) {
+              _viewModel.preferencesSp.setActiveSidebar('left');
+            } else {
+              if (_viewModel.preferencesSp.currentPreferences.activeSidebar ==
+                  'left') {
+                _viewModel.preferencesSp.setActiveSidebar(null);
+              }
+            }
+          },
+          onEndDrawerChanged: (isOpen) {
+            if (isOpen) {
+              _viewModel.preferencesSp.setActiveSidebar('right');
+            } else {
+              if (_viewModel.preferencesSp.currentPreferences.activeSidebar ==
+                  'right') {
+                _viewModel.preferencesSp.setActiveSidebar(null);
+              }
+            }
+          },
           appBar: AppBar(
             leading: IconButton(
               icon: Icon(

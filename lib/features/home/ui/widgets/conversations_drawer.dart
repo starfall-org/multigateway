@@ -144,7 +144,6 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
                     Icons.settings_outlined,
                     'Settings',
                     onTap: () {
-                      Navigator.pop(context); // Close drawer
                       Navigator.pushNamed(context, AppRoutes.settings);
                     },
                   ),
@@ -153,7 +152,6 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
                     Icons.swap_horiz_outlined,
                     'Change AI Profile',
                     onTap: () async {
-                      Navigator.pop(context); // Close drawer
                       final result = await Navigator.push(
                         context,
                         MaterialPageRoute(

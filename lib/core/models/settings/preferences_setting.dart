@@ -10,6 +10,7 @@ class PreferencesSetting {
   final bool hideNavigationBar;
   final bool debugMode;
   final bool hasInitializedIcons;
+  final String? activeSidebar;
 
   const PreferencesSetting({
     required this.persistChatSelection,
@@ -18,6 +19,7 @@ class PreferencesSetting {
     this.hideNavigationBar = false,
     this.debugMode = false,
     this.hasInitializedIcons = false,
+    this.activeSidebar,
   });
 
   factory PreferencesSetting.defaults() {
@@ -28,6 +30,7 @@ class PreferencesSetting {
       hideNavigationBar: false,
       debugMode: false,
       hasInitializedIcons: false,
+      activeSidebar: null,
     );
   }
 
@@ -38,6 +41,7 @@ class PreferencesSetting {
     bool? hideNavigationBar,
     bool? debugMode,
     bool? hasInitializedIcons,
+    String? activeSidebar,
   }) {
     return PreferencesSetting(
       persistChatSelection: persistChatSelection ?? this.persistChatSelection,
@@ -46,6 +50,7 @@ class PreferencesSetting {
       hideNavigationBar: hideNavigationBar ?? this.hideNavigationBar,
       debugMode: debugMode ?? this.debugMode,
       hasInitializedIcons: hasInitializedIcons ?? this.hasInitializedIcons,
+      activeSidebar: activeSidebar ?? this.activeSidebar,
     );
   }
 
@@ -57,6 +62,7 @@ class PreferencesSetting {
       'hideNavigationBar': hideNavigationBar,
       'debugMode': debugMode,
       'hasInitializedIcons': hasInitializedIcons,
+      'activeSidebar': activeSidebar,
     };
   }
 
@@ -68,6 +74,7 @@ class PreferencesSetting {
       hideNavigationBar: (json['hideNavigationBar'] as bool?) ?? false,
       debugMode: (json['debugMode'] as bool?) ?? false,
       hasInitializedIcons: (json['hasInitializedIcons'] as bool?) ?? false,
+      activeSidebar: json['activeSidebar'] as String?,
     );
   }
 

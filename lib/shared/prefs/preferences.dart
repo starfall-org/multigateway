@@ -61,6 +61,7 @@ class PreferencesSp extends SharedPreferencesBase<PreferencesSetting> {
       'hideNavigationBar': item.hideNavigationBar,
       'debugMode': item.debugMode,
       'hasInitializedIcons': item.hasInitializedIcons,
+      'activeSidebar': item.activeSidebar,
       'vibrationSettings': {
         'enable': item.vibrationSettings.enable,
         'onHoldChatConversation': item.vibrationSettings.onHoldChatConversation,
@@ -85,6 +86,7 @@ class PreferencesSp extends SharedPreferencesBase<PreferencesSetting> {
       hideNavigationBar: fields['hideNavigationBar'] as bool? ?? false,
       debugMode: fields['debugMode'] as bool? ?? false,
       hasInitializedIcons: fields['hasInitializedIcons'] as bool? ?? false,
+      activeSidebar: fields['activeSidebar'] as String?,
       vibrationSettings: VibrationSettings(
         enable: vibrationSettingsMap['enable'] as bool? ?? false,
         onHoldChatConversation:
@@ -127,5 +129,10 @@ class PreferencesSp extends SharedPreferencesBase<PreferencesSetting> {
   Future<void> setInitializedIcons(bool initialized) async {
     final current = currentPreferences;
     await updatePreferences(current.copyWith(hasInitializedIcons: initialized));
+  }
+
+  Future<void> setActiveSidebar(String? sidebar) async {
+    final current = currentPreferences;
+    await updatePreferences(current.copyWith(activeSidebar: sidebar));
   }
 }

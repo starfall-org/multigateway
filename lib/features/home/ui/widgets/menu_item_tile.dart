@@ -35,7 +35,6 @@ class MenuItemTile extends StatelessWidget {
           if (onTap != null) {
             onTap!();
           } else if (route != null) {
-            Navigator.pop(context); // Đóng menu
             Navigator.pushNamed(context, route!);
           }
         },
