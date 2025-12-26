@@ -115,38 +115,48 @@ class AIModel {
 
     switch (type) {
       case ModelType.image:
-        if (!input!.text) {
+        input ??= AIModelIO(text: true, image: true);
+        output ??= AIModelIO(image: true);
+        if (!input.text) {
           input.text = true;
         }
-        if (!output!.image) {
+        if (!output.image) {
           output.image = true;
         }
         break;
       case ModelType.video:
-        if (!input!.text) {
+        input ??= AIModelIO(text: true, video: true);
+        output ??= AIModelIO(video: true);
+        if (!input.text) {
           input.text = true;
         }
-        if (!output!.video) {
+        if (!output.video) {
           output.video = true;
         }
         break;
       case ModelType.audio:
-        if (!input!.text) {
+        input ??= AIModelIO(text: true, audio: true);
+        output ??= AIModelIO(audio: true, text: true);
+        if (!input.text) {
           input.text = true;
         }
-        if (!output!.audio) {
+        if (!output.audio) {
           output.audio = true;
         }
         break;
       case ModelType.chat:
-        if (!input!.text) {
+        input ??= AIModelIO(text: true);
+        output ??= AIModelIO(text: true);
+        if (!input.text) {
           input.text = true;
         }
-        if (!output!.text) {
+        if (!output.text) {
           output.text = true;
         }
         break;
       default:
+        input ??= AIModelIO();
+        output ??= AIModelIO();
         break;
     }
 
