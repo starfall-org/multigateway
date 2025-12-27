@@ -233,6 +233,7 @@ class _ChatPageState extends State<ChatPage>
             },
             selectedProviderName: _viewModel.selectedProviderName,
             selectedModelName: _viewModel.selectedModelName,
+            selectedProfile: _viewModel.selectedProfile,
           ),
           // Drawer bên phải hiển thị tệp đính kèm
           endDrawer: MenuView(),
