@@ -75,12 +75,12 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
     }
   }
 
-  Future<void> _deleteProvider(String name) async {
+  Future<void> _deleteProvider(String id) async {
     try {
-      await _repository.deleteProvider(name);
+      await _repository.deleteProvider(id);
       await _loadProviders(); // Use await to ensure proper sequencing
       if (mounted) {
-        context.showSuccessSnackBar(tl('Provider $name has been deleted'));
+        context.showSuccessSnackBar(tl('Provider has been deleted'));
       }
     } catch (e) {
       if (mounted) {
@@ -191,12 +191,12 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
       final Provider item = _providers.removeAt(oldIndex);
       _providers.insert(newIndex, item);
     });
-    _repository.saveOrder(_providers.map((e) => e.name).toList());
+    _repository.saveOrder(_providers.map((e) => e.id).toList());
   }
 
   Widget _buildProviderTile(Provider provider, int index) {
     return ResourceTile(
-      key: ValueKey(provider.name),
+      key: ValueKey(provider.id),
       title: provider.name,
       subtitle: '${provider.models.length} models',
       leadingIcon: buildIcon(provider.name),
@@ -269,8 +269,8 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
 
     if (confirm == true) {
       _deleteProvider(
-        provider.name,
-      ); // Using name as ID based on repo implementation
+        provider.id,
+      );
     }
   }
 }

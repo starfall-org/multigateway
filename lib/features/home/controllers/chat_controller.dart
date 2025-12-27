@@ -124,13 +124,14 @@ class ChatController extends ChangeNotifier {
     return prefs.persistChatSelection;
   }
 
-  void selectModel(String providerName, String modelName) {
-    modelSelectionController.selectModel(providerName, modelName);
+  void selectModel(String providerId, String modelName) {
+    modelSelectionController.selectModel(providerId, modelName);
 
     // Persist selection into current conversation if preference allows
     if (currentSession != null && shouldPersistSelections()) {
+      final provider = providers.firstWhere((p) => p.id == providerId);
       final updatedSession = currentSession!.copyWith(
-        providerName: providerName,
+        providerName: provider.name,
         modelName: modelName,
         updatedAt: DateTime.now(),
       );

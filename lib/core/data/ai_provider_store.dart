@@ -17,7 +17,7 @@ class ProviderRepository extends SharedPreferencesBaseRepository<Provider> {
   String get prefix => _prefix;
 
   @override
-  String getItemId(Provider item) => item.name;
+  String getItemId(Provider item) => item.id;
 
   @override
   Map<String, dynamic> serializeToFields(Provider item) {
@@ -38,5 +38,5 @@ class ProviderRepository extends SharedPreferencesBaseRepository<Provider> {
 
   Future<void> updateProvider(Provider provider) => saveItem(provider);
 
-  Future<void> deleteProvider(String name) => deleteItem(name);
+  Future<void> deleteProvider(String id) => deleteItem(id);
 }
