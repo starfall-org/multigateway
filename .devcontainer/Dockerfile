@@ -19,6 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xz-utils \
     libglu1-mesa \
     libpulse0 \
+    nodejs \
+    python3 \
+    python3-pip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 2. Cài đặt Android SDK Command-line Tools
