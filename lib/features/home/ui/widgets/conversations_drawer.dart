@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../core/config/routes.dart';
-import '../../../../core/config/theme.dart';
-import '../../../../core/data/ai_profile_store.dart';
 import '../../../../core/data/chat_store.dart';
+import '../../../../core/models/ai_features/profile.dart';
 import '../../../../core/models/chat/conversation.dart';
 import '../../../../shared/translate/tl.dart';
 import '../../../ai/ui/profiles_page.dart';
@@ -105,9 +103,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
         child: Column(
           children: [
             _buildHeader(context, theme, colorScheme),
-            Expanded(
-              child: _buildContent(context, theme, colorScheme),
-            ),
+            Expanded(child: _buildContent(context, theme, colorScheme)),
             _buildFooter(context, theme, colorScheme),
           ],
         ),
@@ -115,16 +111,16 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, ThemeData theme, ColorScheme colorScheme) {
-
+  Widget _buildHeader(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 56, 20, 16),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: colorScheme.outlineVariant,
-            width: 1,
-          ),
+          bottom: BorderSide(color: colorScheme.outlineVariant, width: 1),
         ),
       ),
       child: Container(
@@ -134,10 +130,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
         ),
         child: TextField(
           controller: _searchController,
-          style: TextStyle(
-            color: colorScheme.onSurface,
-            fontSize: 14,
-          ),
+          style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
           decoration: InputDecoration(
             hintText: tl('Search history...'),
             hintStyle: TextStyle(
@@ -187,10 +180,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
         icon: const Icon(Icons.chat_bubble_outline, size: 20),
         label: Text(
           tl('New Chat'),
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: colorScheme.primary,
@@ -239,8 +229,9 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
             ),
           )
         else
-          ..._filteredSessions.map((session) =>
-              _buildHistoryItem(session, theme, colorScheme)),
+          ..._filteredSessions.map(
+            (session) => _buildHistoryItem(session, theme, colorScheme),
+          ),
       ],
     );
   }
@@ -256,11 +247,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
         color: colorScheme.error,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
-        child: Icon(
-          Icons.delete,
-          color: colorScheme.onError,
-          size: 20,
-        ),
+        child: Icon(Icons.delete, color: colorScheme.onError, size: 20),
       ),
       direction: DismissDirection.endToStart,
       onDismissed: (direction) {
@@ -298,7 +285,9 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
                       _formatTimeAgo(session.updatedAt),
                       style: TextStyle(
                         fontSize: 12,
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.7,
+                        ),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -322,10 +311,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(
-            color: colorScheme.outlineVariant,
-            width: 1,
-          ),
+          top: BorderSide(color: colorScheme.outlineVariant, width: 1),
         ),
       ),
       child: Column(
@@ -349,9 +335,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
       onTap: () async {
         final result = await Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const AIProfilesScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const AIProfilesScreen()),
         );
         if (result == true) {
           widget.onAgentChanged?.call();
@@ -362,10 +346,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerLow,
-          border: Border.all(
-            color: colorScheme.outlineVariant,
-            width: 1,
-          ),
+          border: Border.all(color: colorScheme.outlineVariant, width: 1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -407,7 +388,9 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.7,
+                      ),
                     ),
                   ),
                   Text(
@@ -440,8 +423,8 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
     ColorScheme colorScheme,
   ) {
     // TODO: Replace with actual user data from a user repository/service.
-    final userName = tl('User');
-    final userEmail = tl('user@example.com');
+    final userName = tl('Preview Feature');
+    final userEmail = tl('bosuutap@alwaysdata.net');
 
     return Row(
       children: [
@@ -452,11 +435,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
             color: colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(18),
           ),
-          child: Icon(
-            Icons.person,
-            size: 20,
-            color: colorScheme.onSurface,
-          ),
+          child: Icon(Icons.person, size: 20, color: colorScheme.onSurface),
         ),
         const SizedBox(width: 12),
         Expanded(

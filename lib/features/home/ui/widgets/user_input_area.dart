@@ -186,7 +186,7 @@ class _UserInputAreaState extends State<UserInputArea> {
                       _unfocusTextField();
                     }
                   },
-                  onTabOutside: (_) {
+                  onTapOutside: (_) {
                     FocusManager.instance.primaryFocus?.unfocus();
                   },
                   // Ngăn tự động hiển thị keyboard khi không cần thiết
