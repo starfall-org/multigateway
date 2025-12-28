@@ -52,3 +52,4 @@ app.*.map.json
 /lib/firebase_options.dart
 wget-log
 android/build/reports/problems/problems-report.html
+**/firebase.json
