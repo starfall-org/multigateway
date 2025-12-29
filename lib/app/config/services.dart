@@ -4,7 +4,7 @@ import '../storage/language.dart';
 import '../storage/preferences.dart';
 import '../../core/profile/storage/ai_profile_store.dart';
 import '../../features/home/domain/storage/chat_store.dart';
-import '../storage/default_options_store.dart';
+import '../storage/default_options.dart';
 import '../../core/mcp/storage/mcpserver_store.dart';
 import '../../core/llm/storage/ai_provider_store.dart';
 import '../../core/speechservice/storage/speechservice_store.dart';

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
-import '../../core/llm/base.dart';
-import '../storage/translation_cache_store.dart';
+import '../../core/llm/provider/base.dart';
+import '../storage/translation_cache.dart';
 
 class TranslationService {
   static TranslationService? _instance;

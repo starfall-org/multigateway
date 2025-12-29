@@ -1,15 +1,16 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/translation_cache_entry.dart';
-import '../../core/storage/base.dart';
+import 'shared_prefs_base.dart';
 
 class TranslationCacheRepository
-    extends SharedPreferencesBaseRepository<TranslationCacheEntry> {
+    extends SharedPreferencesBase<TranslationCacheEntry> {
   static const String _prefix = 'translation_cache';
   static const int _maxCacheSize = 1000;
   static const Duration _cacheExpiration = Duration(days: 7);
 
-  TranslationCacheRepository();
+  TranslationCacheRepository(super.prefs);
 
   /// Reactive stream of cache entries; emits immediately and on each change.
   Stream<List<TranslationCacheEntry>> get entriesStream => itemsStream;
@@ -20,7 +21,8 @@ class TranslationCacheRepository
     if (_instance != null) {
       return _instance!;
     }
-    _instance = TranslationCacheRepository();
+    final prefs = await SharedPreferences.getInstance();
+    _instance = TranslationCacheRepository(prefs);
     return _instance!;
   }
 

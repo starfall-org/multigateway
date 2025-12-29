@@ -1,12 +1,11 @@
 import 'package:flutter/foundation.dart';
-import '../../core/storage/base.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/default_options.dart';
-
+import 'shared_prefs_base.dart';
 
 /// Repository for managing default AI models configuration.
-class DefaultOptionsRepository
-    extends SharedPreferencesBaseRepository<DefaultOptions> {
+class DefaultOptionsRepository extends SharedPreferencesBase<DefaultOptions> {
   static const String _prefix = 'default_models';
   static const String _itemId = 'default_models_config';
 
@@ -20,7 +19,7 @@ class DefaultOptionsRepository
         ),
       );
 
-  DefaultOptionsRepository() {
+  DefaultOptionsRepository(super.prefs) {
     _loadInitial();
     // Auto-refresh notifier on any storage change (no restart needed)
     changes.listen((_) {
@@ -38,7 +37,8 @@ class DefaultOptionsRepository
 
   static Future<DefaultOptionsRepository> init() async {
     if (_instance != null) return _instance!;
-    _instance = DefaultOptionsRepository();
+    final prefs = await SharedPreferences.getInstance();
+    _instance = DefaultOptionsRepository(prefs);
     return _instance!;
   }
 

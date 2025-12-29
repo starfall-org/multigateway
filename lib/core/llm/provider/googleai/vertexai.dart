@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../base.dart';
+import '../base.dart';
 import '../../models/ai_features/provider.dart';
 
 /// Google Vertex AI service sử dụng REST API

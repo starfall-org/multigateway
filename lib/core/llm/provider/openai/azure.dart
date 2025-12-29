@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../../base.dart';
+import '../base.dart';
 import '../../utils.dart';
 
 /// Azure OpenAI Service

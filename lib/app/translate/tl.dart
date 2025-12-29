@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:translator/translator.dart';
 
-import '../storage/translation_cache_store.dart';
+import '../storage/translation_cache.dart';
 import '../storage/language.dart';
 // import 'service.dart';
 
