@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../../core/llm/storage/ai_provider_store.dart';
-import '../../../../core/speechservice/storage/speechservice_store.dart';
-import '../../../../core/llm/models/ai_features/provider.dart';
+import '../../../../core/llm/data/provider_info_storage.dart';
+import '../../../../core/speechservice/data/speechservice_store.dart';
+import '../../../../core/llm/models/llm_provider/provider_info.dart';
 import '../../../../core/speechservice/models/speechservice.dart';
 import '../../../../app/translate/tl.dart';
 import '../../../../shared/widgets/common_dropdown.dart';
@@ -51,7 +51,7 @@ class _AddTTSProfileScreenState extends State<AddTTSProfileScreen>
   }
 
   Future<void> _loadProviders() async {
-    final repository = await ProviderRepository.init();
+    final repository = await ProviderInfoStorage.init();
     final providers = repository.getProviders();
     setState(() {
       // Filter providers that have TTS capability
@@ -163,10 +163,7 @@ class _AddTTSProfileScreenState extends State<AddTTSProfileScreen>
         bottom: true,
         child: TabBarView(
           controller: _tabController,
-          children: [
-            _buildTTSTab(),
-            _buildSTTTab(),
-          ],
+          children: [_buildTTSTab(), _buildSTTTab()],
         ),
       ),
     );
@@ -176,10 +173,7 @@ class _AddTTSProfileScreenState extends State<AddTTSProfileScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        CustomTextField(
-          controller: _nameController,
-          label: tl('Profile Name'),
-        ),
+        CustomTextField(controller: _nameController, label: tl('Profile Name')),
         const SizedBox(height: 16),
         CommonDropdown<ServiceType>(
           value: _selectedType,
@@ -271,9 +265,9 @@ class _AddTTSProfileScreenState extends State<AddTTSProfileScreen>
       children: [
         Text(
           tl('Speech to Text Configuration'),
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Container(
@@ -287,10 +281,7 @@ class _AddTTSProfileScreenState extends State<AddTTSProfileScreen>
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.mic,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                  Icon(Icons.mic, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 12),
                   Text(
                     tl('System Speech Recognition'),
@@ -302,7 +293,9 @@ class _AddTTSProfileScreenState extends State<AddTTSProfileScreen>
               ),
               const SizedBox(height: 12),
               Text(
-                tl('Currently using system default speech recognition service.'),
+                tl(
+                  'Currently using system default speech recognition service.',
+                ),
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 14,

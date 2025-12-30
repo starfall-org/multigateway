@@ -3,13 +3,13 @@ import '../../../../core/llm/provider/googleai/aistudio.dart';
 import '../../../../core/llm/provider/googleai/vertexai.dart';
 import '../../../../core/llm/provider/ollama/ollama.dart';
 import '../../../../core/mcp/mcp_client.dart';
-import '../../../../core/llm/storage/ai_provider_store.dart';
-import '../../../../core/llm/models/ai_features/api.dart';
-import '../../../../core/llm/models/ai_model/base.dart';
+import '../../../../core/llm/data/provider_info_storage.dart';
+import '../../../../core/llm/models/api/api.dart';
+import '../../../../core/llm/models/llm_model/base.dart';
 import '../../../../core/profile/models/profile.dart';
-import '../../../../core/llm/models/ai_features/provider.dart';
+import '../../../../core/llm/models/llm_provider/provider_info.dart';
 import '../models/message.dart';
-import '../../../../core/mcp/storage/mcpserver_store.dart';
+import '../../../../core/mcp/data/mcpserver_store.dart';
 import '../../../../core/mcp/models/mcp_server.dart';
 import '../../../../core/llm/provider/openai/openai.dart';
 
@@ -168,7 +168,7 @@ class ChatService {
     required String modelName,
     List<String>? allowedToolNames,
   }) async* {
-    final providerRepo = await ProviderRepository.init();
+    final providerRepo = await ProviderInfoStorage.init();
     final providers = providerRepo.getProviders();
     if (providers.isEmpty) {
       throw Exception(

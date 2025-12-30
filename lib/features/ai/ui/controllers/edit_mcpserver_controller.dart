@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/mcp/storage/mcpserver_store.dart';
+import '../../../../core/mcp/data/mcpserver_store.dart';
 import '../../../../core/mcp/models/mcp_server.dart';
 import '../../../../app/translate/tl.dart';
 import '../../../../shared/widgets/app_snackbar.dart';

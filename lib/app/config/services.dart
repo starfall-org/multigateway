@@ -1,13 +1,13 @@
 import '../../features/home/domain/services/tts_service.dart';
-import '../storage/appearance.dart';
-import '../storage/language.dart';
-import '../storage/preferences.dart';
-import '../../core/profile/storage/ai_profile_store.dart';
-import '../../features/home/domain/storage/chat_store.dart';
-import '../storage/default_options.dart';
-import '../../core/mcp/storage/mcpserver_store.dart';
-import '../../core/llm/storage/ai_provider_store.dart';
-import '../../core/speechservice/storage/speechservice_store.dart';
+import '../data/appearance.dart';
+import '../data/language.dart';
+import '../data/preferences.dart';
+import '../../core/profile/data/ai_profile_store.dart';
+import '../../features/home/domain/data/chat_store.dart';
+import '../data/default_options.dart';
+import '../../core/mcp/data/mcpserver_store.dart';
+import '../../core/llm/data/provider_info_storage.dart';
+import '../../core/speechservice/data/speechservice_store.dart';
 
 /// Centralized service locator for application repositories and services.
 /// Handles initialization and dependency management without external libraries.
@@ -24,7 +24,7 @@ class AppServices {
   late final PreferencesSp preferencesSp;
   late final ChatRepository chatRepository;
   late final AIProfileRepository aiProfileRepository;
-  late final ProviderRepository providerRepository;
+  late final ProviderInfoStorage pInfStorage;
   late final DefaultOptionsRepository defaultOptionsRepository;
   late final MCPRepository mcpRepository;
   late final TTSRepository ttsRepository;
@@ -41,7 +41,7 @@ class AppServices {
     _instance.preferencesSp = await PreferencesSp.init();
 
     // Feature repositories
-    _instance.providerRepository = await ProviderRepository.init();
+    _instance.pInfStorage = await ProviderInfoStorage.init();
     _instance.defaultOptionsRepository = await DefaultOptionsRepository.init();
     _instance.chatRepository = await ChatRepository.init();
     _instance.aiProfileRepository = await AIProfileRepository.init();

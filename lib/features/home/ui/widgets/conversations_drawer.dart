@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../domain/storage/chat_store.dart';
+import '../../domain/data/chat_store.dart';
 import '../../../../core/profile/models/profile.dart';
 import '../../domain/models/conversation.dart';
 import '../../../../app/translate/tl.dart';
-import '../../../ai/ui/profiles_page.dart';
+import '../../../ai/ui/pages/profiles_page.dart';
 
 class ConversationsDrawer extends StatefulWidget {
   final Function(String) onSessionSelected;

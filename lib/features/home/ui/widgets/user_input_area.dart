@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/llm/models/ai_model/base.dart';
+import '../../../../core/llm/models/llm_model/base.dart';
 import '../../../../app/translate/tl.dart';
 import 'files_action_sheet.dart';
 

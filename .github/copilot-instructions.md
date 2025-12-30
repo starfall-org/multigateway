@@ -9,6 +9,7 @@ This project is a Flutter application providing a unified interface for multiple
 - **State Management**: MVC-style with controllers extending `ChangeNotifier`. Main ChatController orchestrates sub-controllers (MessageController, SessionController, etc.) and calls `notifyListeners()` for UI updates.
 
 - **Data Storage**:
+
   - Hive for models (@HiveType classes in core/models), persisted conversations/messages
   - SharedPreferences for app settings (appearance, preferences)
   - Firebase optional for remote services
@@ -23,7 +24,7 @@ This project is a Flutter application providing a unified interface for multiple
 
 - Controllers extend `ChangeNotifier`, call `notifyListeners()` after state changes
 
-- Model classes use `@HiveType` for persistence, extend `SharedPreferencesBaseRepository` for storage
+- Model classes use `@HiveType` for persistence, extend `HiveBaseStorage` for storage
 
 - Async operations with `Future<void>`, error handling with `try-catch` showing `ScaffoldMessenger.of(context).showSnackBar()`
 

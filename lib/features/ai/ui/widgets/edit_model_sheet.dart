@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/llm/models/ai_model/base.dart';
+import '../../../../core/llm/models/llm_model/base.dart';
 import '../../../../app/translate/tl.dart';
 import '../../../../shared/widgets/common_dropdown.dart';
 import '../controllers/edit_provider_controller.dart';

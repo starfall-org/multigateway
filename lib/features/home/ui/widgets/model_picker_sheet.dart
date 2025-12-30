@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/llm/models/ai_features/provider.dart';
+import '../../../../core/llm/models/llm_provider/provider_info.dart';
 import '../../../../app/translate/tl.dart';
 
 class ModelPickerSheet extends StatelessWidget {

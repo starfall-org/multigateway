@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../base.dart';
-import '../../models/ai_features/provider.dart';
+import '../../models/llm_provider/provider_info.dart';
 
 /// Google Vertex AI service sử dụng REST API
 /// Chỉ chia sẻ AIModel và DTO models, không chia sẻ các đối tượng nội bộ với providers khác

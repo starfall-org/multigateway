@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../features/ai/ui/mcpservers_page.dart';
-import '../features/ai/ui/profiles_page.dart';
-import '../features/ai/ui/providers_page.dart';
-import '../features/ai/ui/speechsevices_page.dart';
-import '../features/home/ui/chat_screen.dart';
-import '../features/settings/ui/about_page.dart';
-import '../features/settings/ui/appearance_page.dart';
-import '../features/settings/ui/preferences_page.dart';
-import '../features/settings/ui/settings_page.dart';
-import '../features/settings/ui/update_page.dart';
-import '../features/settings/ui/userdata_page.dart';
+import '../features/ai/ui/pages/mcpservers_page.dart';
+import '../features/ai/ui/pages/profiles_page.dart';
+import '../features/ai/ui/pages/providers_page.dart';
+import '../features/ai/ui/pages/speechsevices_page.dart';
+import '../features/home/ui/pages/chat_screen.dart';
+import '../features/settings/ui/pages/about_page.dart';
+import '../features/settings/ui/pages/appearance_page.dart';
+import '../features/settings/ui/pages/preferences_page.dart';
+import '../features/settings/ui/pages/settings_page.dart';
+import '../features/settings/ui/pages/update_page.dart';
+import '../features/settings/ui/pages/userdata_page.dart';
 import 'translate/tl.dart';
 import 'config/routes.dart';
 

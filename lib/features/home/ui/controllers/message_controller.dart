@@ -9,7 +9,7 @@ import '../../../../app/translate/tl.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../domain/services/chat_service.dart';
 import '../../domain/utils/chat_logic_utils.dart';
-import '../../../../app/storage/preferences.dart';
+import '../../../../app/data/preferences.dart';
 import '../../../../shared/widgets/error_debug_dialog.dart';
 import '../widgets/edit_message_sheet.dart';
 

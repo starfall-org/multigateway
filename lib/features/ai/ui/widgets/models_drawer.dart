@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/llm/models/ai_model/base.dart';
+import '../../../../core/llm/models/llm_model/base.dart';
 import '../../../../shared/widgets/common_dropdown.dart';
 import '../../../settings/ui/widgets/settings_card.dart';
 import '../../../../shared/widgets/item_card.dart';

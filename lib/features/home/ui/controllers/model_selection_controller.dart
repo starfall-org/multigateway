@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-import '../../../../core/llm/storage/ai_provider_store.dart';
-import '../../../../core/llm/models/ai_features/provider.dart';
-import '../../../../core/llm/models/ai_model/base.dart';
+import '../../../../core/llm/data/provider_info_storage.dart';
+import '../../../../core/llm/models/llm_provider/provider_info.dart';
+import '../../../../core/llm/models/llm_model/base.dart';
 
 /// Controller responsible for provider and model selection
 class ModelSelectionController extends ChangeNotifier {
-  final ProviderRepository providerRepository;
+  final ProviderInfoStorage pInfStorage;
 
   StreamSubscription? _providerSubscription;
   List<Provider> providers = [];
@@ -15,10 +15,8 @@ class ModelSelectionController extends ChangeNotifier {
   String? selectedProviderName;
   String? selectedModelName;
 
-  ModelSelectionController({
-    required this.providerRepository,
-  }) {
-    _providerSubscription = providerRepository.changes.listen((_) {
+  ModelSelectionController({required this.pInfStorage}) {
+    _providerSubscription = pInfStorage.changes.listen((_) {
       refreshProviders();
     });
   }
@@ -36,7 +34,7 @@ class ModelSelectionController extends ChangeNotifier {
   }
 
   Future<void> refreshProviders() async {
-    providers = providerRepository.getProviders();
+    providers = pInfStorage.getProviders();
     // Initialize collapse map entries for unseen providers
     for (final p in providers) {
       providerCollapsed.putIfAbsent(p.name, () => false);
@@ -55,10 +53,7 @@ class ModelSelectionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void loadSelectionFromSession({
-    String? providerName,
-    String? modelName,
-  }) {
+  void loadSelectionFromSession({String? providerName, String? modelName}) {
     if (providerName != null && modelName != null) {
       selectedProviderName = providerName;
       selectedModelName = modelName;

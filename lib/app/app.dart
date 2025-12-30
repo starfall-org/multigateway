@@ -4,7 +4,7 @@ import 'package:dynamic_color/dynamic_color.dart';
 
 import 'app_routes.dart';
 import 'config/theme.dart';
-import 'storage/appearance.dart';
+import 'data/appearance.dart';
 
 class MetaloreApp extends StatelessWidget {
   const MetaloreApp({super.key});

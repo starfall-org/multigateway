@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../../core/profile/storage/ai_profile_store.dart';
-import '../../domain/storage/chat_store.dart';
-import '../../../../core/mcp/storage/mcpserver_store.dart';
-import '../../../../core/llm/storage/ai_provider_store.dart';
+import '../../../../core/profile/data/ai_profile_store.dart';
+import '../../domain/data/chat_store.dart';
+import '../../../../core/mcp/data/mcpserver_store.dart';
+import '../../../../core/llm/data/provider_info_storage.dart';
 import '../../../../core/profile/models/profile.dart';
-import '../../../../core/llm/models/ai_features/provider.dart';
+import '../../../../core/llm/models/llm_provider/provider_info.dart';
 import '../../domain/models/conversation.dart';
 import '../../domain/models/message.dart';
 import '../../../../core/mcp/models/mcp_server.dart';
-import '../../../../app/storage/preferences.dart';
+import '../../../../app/data/preferences.dart';
 import '../../../../app/translate/tl.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../domain/services/tts_service.dart';
@@ -46,7 +46,7 @@ class ChatController extends ChangeNotifier {
     required this.navigator,
     required ChatRepository chatRepository,
     required AIProfileRepository aiProfileRepository,
-    required ProviderRepository providerRepository,
+    required ProviderInfoStorage pInfStorage,
     required this.preferencesSp,
     required MCPRepository mcpRepository,
     required this.ttsService,
@@ -56,7 +56,7 @@ class ChatController extends ChangeNotifier {
     messageController = MessageController();
     attachmentController = AttachmentController();
     modelSelectionController = ModelSelectionController(
-      providerRepository: providerRepository,
+      pInfStorage: pInfStorage,
     );
     profileController = ProfileController(
       aiProfileRepository: aiProfileRepository,
@@ -151,7 +151,7 @@ class ChatController extends ChangeNotifier {
     attachmentController.clearPendingAttachments();
 
     // Resolve provider and model
-    final providerRepo = await ProviderRepository.init();
+    final providerRepo = await ProviderInfoStorage.init();
     if (!context.mounted) return;
 
     final providersList = providerRepo.getProviders();
@@ -245,7 +245,7 @@ class ChatController extends ChangeNotifier {
   Future<void> regenerateLast(BuildContext context) async {
     if (currentSession == null) return;
 
-    final providerRepo = await ProviderRepository.init();
+    final providerRepo = await ProviderInfoStorage.init();
     if (!context.mounted) return;
 
     final providersList = providerRepo.getProviders();

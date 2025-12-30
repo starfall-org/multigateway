@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../domain/storage/chat_store.dart';
+import '../../domain/data/chat_store.dart';
 import '../../domain/models/conversation.dart';
 import '../../domain/models/message.dart';
 

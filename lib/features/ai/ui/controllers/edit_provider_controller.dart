@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../../../../core/llm/storage/ai_provider_store.dart';
-import '../../../../core/llm/models/ai_model/base.dart';
-import '../../../../core/llm/models/ai_features/provider.dart';
+import '../../../../core/llm/data/provider_info_storage.dart';
+import '../../../../core/llm/models/llm_model/base.dart';
+import '../../../../core/llm/models/llm_provider/provider_info.dart';
 import '../../../../app/translate/tl.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 
@@ -354,7 +354,7 @@ class AddProviderViewModel extends ChangeNotifier {
     }
 
     try {
-      final repository = await ProviderRepository.init();
+      final repository = await ProviderInfoStorage.init();
 
       final Map<String, String> headersMap = {};
       for (var entry in _headers) {
