@@ -2,12 +2,10 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'basic_model.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class BasicModel {
   final String id;
-  @JsonKey(name: 'display_name')
   final String displayName;
-  @JsonKey(name: 'owned_by')
   final String ownedBy;
 
   BasicModel({

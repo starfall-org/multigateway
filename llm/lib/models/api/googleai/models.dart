@@ -3,10 +3,9 @@ import 'package:json_annotation/json_annotation.dart';
 part 'models.g.dart';
 
 // Response Models for listModels endpoint
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiModelsResponse {
   final List<GeminiModel>? models;
-  @JsonKey(name: 'next_page_token')
   final int? nextPageToken;
 
   GeminiModelsResponse({
@@ -20,14 +19,12 @@ class GeminiModelsResponse {
   Map<String, dynamic> toJson() => _$GeminiModelsResponseToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiModel {
   final String? name;
-  @JsonKey(name: 'display_name')
   final String? displayName;
   final String? description;
   final String? version;
-  @JsonKey(name: 'base_model_id')
   final String? baseModelId;
   final GeminiModelCapabilities? capabilities;
   final GeminiModelInput? input;
@@ -50,7 +47,7 @@ class GeminiModel {
   Map<String, dynamic> toJson() => _$GeminiModelToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiModelCapabilities {
   final bool? mediaUnderstanding;
   final bool? codeExecution;
@@ -72,7 +69,7 @@ class GeminiModelCapabilities {
   Map<String, dynamic> toJson() => _$GeminiModelCapabilitiesToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiModelInput {
   final String? type;
   final List<String>? mimeType;
@@ -88,7 +85,7 @@ class GeminiModelInput {
   Map<String, dynamic> toJson() => _$GeminiModelInputToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiModelOutput {
   final String? type;
   final List<String>? mimeType;

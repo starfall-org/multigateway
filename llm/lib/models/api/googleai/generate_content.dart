@@ -3,18 +3,13 @@ import 'package:json_annotation/json_annotation.dart';
 part 'generate_content.g.dart';
 
 // Request Models for generateContent endpoint
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiGenerateContentRequest {
   final List<GeminiContent> contents;
-  
-  @JsonKey(name: 'generation_config')
   final GeminiGenerationConfig? generationConfig;
   final List<GeminiTool>? tools;
-  @JsonKey(name: 'tool_config')
   final GeminiToolConfig? toolConfig;
-  @JsonKey(name: 'safety_settings')
   final List<GeminiSafetySetting>? safetySettings;
-  @JsonKey(name: 'system_instruction')
   final dynamic systemInstruction; // Can be string or GeminiContent
 
   GeminiGenerateContentRequest({
@@ -32,7 +27,7 @@ class GeminiGenerateContentRequest {
   Map<String, dynamic> toJson() => _$GeminiGenerateContentRequestToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiContent {
   final List<GeminiPart>? parts;
   final String? role;
@@ -45,20 +40,14 @@ class GeminiContent {
   Map<String, dynamic> toJson() => _$GeminiContentToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiPart {
   final String? text;
-  @JsonKey(name: 'inline_data')
   final GeminiInlineData? inlineData;
-  @JsonKey(name: 'file_data')
   final GeminiFileData? fileData;
-  @JsonKey(name: 'function_call')
   final GeminiFunctionCall? functionCall;
-  @JsonKey(name: 'function_response')
   final GeminiFunctionResponse? functionResponse;
-  @JsonKey(name: 'executable_code')
   final GeminiExecutableCode? executableCode;
-  @JsonKey(name: 'code_execution_result')
   final GeminiCodeExecutionResult? codeExecutionResult;
 
   GeminiPart({
@@ -77,7 +66,7 @@ class GeminiPart {
   Map<String, dynamic> toJson() => _$GeminiPartToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiInlineData {
   final String? mimeType;
   final String? data;
@@ -90,7 +79,7 @@ class GeminiInlineData {
   Map<String, dynamic> toJson() => _$GeminiInlineDataToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiFileData {
   final String? mimeType;
   final String? fileUri;
@@ -103,7 +92,7 @@ class GeminiFileData {
   Map<String, dynamic> toJson() => _$GeminiFileDataToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiFunctionCall {
   final String? name;
   final Map<String, dynamic>? args;
@@ -116,7 +105,7 @@ class GeminiFunctionCall {
   Map<String, dynamic> toJson() => _$GeminiFunctionCallToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiFunctionResponse {
   final String? name;
   final Map<String, dynamic>? response;
@@ -129,7 +118,7 @@ class GeminiFunctionResponse {
   Map<String, dynamic> toJson() => _$GeminiFunctionResponseToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiExecutableCode {
   final String? language;
   final String? code;
@@ -142,7 +131,7 @@ class GeminiExecutableCode {
   Map<String, dynamic> toJson() => _$GeminiExecutableCodeToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiCodeExecutionResult {
   final String? outcome;
   final String? output;
@@ -155,21 +144,15 @@ class GeminiCodeExecutionResult {
   Map<String, dynamic> toJson() => _$GeminiCodeExecutionResultToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiGenerationConfig {
   final double? temperature;
-  @JsonKey(name: 'max_output_tokens')
   final int? maxOutputTokens;
   final double? topP;
-  @JsonKey(name: 'top_k')
   final int? topK;
-  @JsonKey(name: 'stop_sequences')
   final List<String>? stopSequences;
-  @JsonKey(name: 'response_mime_type')
   final String? responseMimeType;
-  @JsonKey(name: 'response_schema')
   final Map<String, dynamic>? responseSchema;
-  @JsonKey(name: 'candidate_count')
   final int? candidateCount;
 
   GeminiGenerationConfig({
@@ -189,11 +172,9 @@ class GeminiGenerationConfig {
   Map<String, dynamic> toJson() => _$GeminiGenerationConfigToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiTool {
-  @JsonKey(name: 'function_declarations')
   final List<GeminiFunctionDeclaration>? functionDeclarations;
-  @JsonKey(name: 'code_execution')
   final GeminiCodeExecution? codeExecution;
 
   GeminiTool({
@@ -207,7 +188,7 @@ class GeminiTool {
   Map<String, dynamic> toJson() => _$GeminiToolToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiFunctionDeclaration {
   final String? name;
   final String? description;
@@ -225,7 +206,7 @@ class GeminiFunctionDeclaration {
   Map<String, dynamic> toJson() => _$GeminiFunctionDeclarationToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiCodeExecution {
   const GeminiCodeExecution();
 
@@ -235,7 +216,7 @@ class GeminiCodeExecution {
   Map<String, dynamic> toJson() => _$GeminiCodeExecutionToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiToolConfig {
   final GeminiFunctionCallingConfig? functionCallingConfig;
 
@@ -247,10 +228,9 @@ class GeminiToolConfig {
   Map<String, dynamic> toJson() => _$GeminiToolConfigToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiFunctionCallingConfig {
   final String? mode;
-  @JsonKey(name: 'allowed_function_names')
   final List<String>? allowedFunctionNames;
 
   GeminiFunctionCallingConfig({
@@ -264,7 +244,7 @@ class GeminiFunctionCallingConfig {
   Map<String, dynamic> toJson() => _$GeminiFunctionCallingConfigToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiSafetySetting {
   final String? category;
   final String? threshold;
@@ -278,7 +258,7 @@ class GeminiSafetySetting {
 }
 
 // Response Models for generateContent endpoint
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiGenerateContentResponse {
   final List<GeminiCandidate>? candidates;
   final GeminiUsageMetadata? usageMetadata;
@@ -298,21 +278,15 @@ class GeminiGenerateContentResponse {
   Map<String, dynamic> toJson() => _$GeminiGenerateContentResponseToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiCandidate {
   final GeminiContent? content;
-  @JsonKey(name: 'finish_reason')
   final String? finishReason;
-  @JsonKey(name: 'avg_logprobs')
   final double? avgLogprobs;
   final int? index;
-  @JsonKey(name: 'safety_ratings')
   final List<GeminiSafetyRating>? safetyRatings;
-  @JsonKey(name: 'citation_metadata')
   final GeminiCitationMetadata? citationMetadata;
-  @JsonKey(name: 'grounding_metadata')
   final GeminiGroundingMetadata? groundingMetadata;
-  @JsonKey(name: 'logprobs_result')
   final GeminiLogprobsResult? logprobsResult;
 
   GeminiCandidate({
@@ -332,7 +306,7 @@ class GeminiCandidate {
   Map<String, dynamic> toJson() => _$GeminiCandidateToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiSafetyRating {
   final String? category;
   final String? probability;
@@ -350,7 +324,7 @@ class GeminiSafetyRating {
   Map<String, dynamic> toJson() => _$GeminiSafetyRatingToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiCitationMetadata {
   final List<GeminiCitationSource>? citationSources;
 
@@ -362,7 +336,7 @@ class GeminiCitationMetadata {
   Map<String, dynamic> toJson() => _$GeminiCitationMetadataToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiCitationSource {
   final int? startIndex;
   final int? endIndex;
@@ -382,7 +356,7 @@ class GeminiCitationSource {
   Map<String, dynamic> toJson() => _$GeminiCitationSourceToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiGroundingMetadata {
   final List<GeminiGroundingChunk>? groundingChunks;
   final List<GeminiGroundingPassage>? groundingPassages;
@@ -400,7 +374,7 @@ class GeminiGroundingMetadata {
   Map<String, dynamic> toJson() => _$GeminiGroundingMetadataToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiGroundingChunk {
   final GeminiGroundingSegment? web;
   final int? index;
@@ -416,7 +390,7 @@ class GeminiGroundingChunk {
   Map<String, dynamic> toJson() => _$GeminiGroundingChunkToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiGroundingSegment {
   final String? uri;
   final int? startIndex;
@@ -436,7 +410,7 @@ class GeminiGroundingSegment {
   Map<String, dynamic> toJson() => _$GeminiGroundingSegmentToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiGroundingPassage {
   final int? id;
   final String? passageText;
@@ -454,7 +428,7 @@ class GeminiGroundingPassage {
   Map<String, dynamic> toJson() => _$GeminiGroundingPassageToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiSearchEntryPoint {
   final String? renderedContent;
   final List<GeminiSearchEntry>? entries;
@@ -470,7 +444,7 @@ class GeminiSearchEntryPoint {
   Map<String, dynamic> toJson() => _$GeminiSearchEntryPointToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiSearchEntry {
   final String? title;
   final String? uri;
@@ -486,7 +460,7 @@ class GeminiSearchEntry {
   Map<String, dynamic> toJson() => _$GeminiSearchEntryToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiLogprobsResult {
   final List<GeminiCandidateLogprobs>? chosenCandidates;
 
@@ -498,7 +472,7 @@ class GeminiLogprobsResult {
   Map<String, dynamic> toJson() => _$GeminiLogprobsResultToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiCandidateLogprobs {
   final List<GeminiLogprobsCandidates>? candidates;
 
@@ -510,7 +484,7 @@ class GeminiCandidateLogprobs {
   Map<String, dynamic> toJson() => _$GeminiCandidateLogprobsToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiLogprobsCandidates {
   final List<GeminiTopCandidate>? topCandidates;
   final int? tokenPosition;
@@ -526,7 +500,7 @@ class GeminiLogprobsCandidates {
   Map<String, dynamic> toJson() => _$GeminiLogprobsCandidatesToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiTopCandidate {
   final String? token;
   final double? logProbability;
@@ -542,15 +516,11 @@ class GeminiTopCandidate {
   Map<String, dynamic> toJson() => _$GeminiTopCandidateToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiUsageMetadata {
-  @JsonKey(name: 'prompt_token_count')
   final int? promptTokenCount;
-  @JsonKey(name: 'candidates_token_count')
   final int? candidatesTokenCount;
-  @JsonKey(name: 'total_token_count')
   final int? totalTokenCount;
-  @JsonKey(name: 'cached_content_token_count')
   final GeminiCachedContentTokenCount? cachedContentTokenCount;
 
   GeminiUsageMetadata({
@@ -566,7 +536,7 @@ class GeminiUsageMetadata {
   Map<String, dynamic> toJson() => _$GeminiUsageMetadataToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiCachedContentTokenCount {
   final int? totalTokens;
 
@@ -578,7 +548,7 @@ class GeminiCachedContentTokenCount {
   Map<String, dynamic> toJson() => _$GeminiCachedContentTokenCountToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class GeminiPromptFeedback {
   final List<GeminiSafetyRating>? safetyRatings;
   final String? blockReason;

@@ -3,57 +3,40 @@ import 'package:json_annotation/json_annotation.dart';
 part 'chat_completions.g.dart';
 
 // Request Models
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class OpenAiChatCompletionsRequest {
   final String model;
   final List<RequestMessage> messages;
   final Map<String, String>? metadata;
-  @JsonKey(name: 'top_logprobs')
   final int? topLogprobs;
   final double? temperature;
-  @JsonKey(name: 'top_p')
   final double? topP;
   final String? user;
-  @JsonKey(name: 'safety_identifier')
   final String? safetyIdentifier;
-  @JsonKey(name: 'prompt_cache_key')
   final String? promptCacheKey;
-  @JsonKey(name: 'service_tier')
   final String? serviceTier;
   final List<String>? modalities;
   final String? verbosity;
-  @JsonKey(name: 'reasoning_effort')
   final String? reasoningEffort;
-  @JsonKey(name: 'max_completion_tokens')
   final int? maxCompletionTokens;
-  @JsonKey(name: 'frequency_penalty')
   final double? frequencyPenalty;
-  @JsonKey(name: 'presence_penalty')
   final double? presencePenalty;
-  @JsonKey(name: 'web_search_options')
   final WebSearchOptions? webSearchOptions;
-  @JsonKey(name: 'response_format')
   final ResponseFormat? responseFormat;
   final AudioConfig? audio;
   final bool? store;
   final bool? stream;
   final String? stop;
-  @JsonKey(name: 'logit_bias')
   final Map<String, dynamic>? logitBias;
   final bool? logprobs;
-  @JsonKey(name: 'max_tokens')
   final int? maxTokens;
   final int? n;
   final Prediction? prediction;
   final int? seed;
-  @JsonKey(name: 'stream_options')
   final StreamOptions? streamOptions;
   final List<Tool>? tools;
-  @JsonKey(name: 'tool_choice')
   final String? toolChoice;
-  @JsonKey(name: 'parallel_tool_calls')
   final bool? parallelToolCalls;
-  @JsonKey(name: 'function_call')
   final String? functionCall;
   final List<FunctionDefinition>? functions;
 
@@ -100,7 +83,7 @@ class OpenAiChatCompletionsRequest {
   Map<String, dynamic> toJson() => _$OpenAiChatCompletionsRequestToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class RequestMessage {
   final String role;
   final dynamic content;
@@ -114,11 +97,9 @@ class RequestMessage {
   Map<String, dynamic> toJson() => _$RequestMessageToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class WebSearchOptions {
-  @JsonKey(name: 'user_location')
   final UserLocation? userLocation;
-  @JsonKey(name: 'search_context_size')
   final String? searchContextSize;
 
   WebSearchOptions({this.userLocation, this.searchContextSize});
@@ -129,7 +110,7 @@ class WebSearchOptions {
   Map<String, dynamic> toJson() => _$WebSearchOptionsToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class UserLocation {
   final String type;
   final ApproximateLocation approximate;
@@ -142,7 +123,7 @@ class UserLocation {
   Map<String, dynamic> toJson() => _$UserLocationToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class ApproximateLocation {
   final String? country;
   final String? region;
@@ -157,7 +138,7 @@ class ApproximateLocation {
   Map<String, dynamic> toJson() => _$ApproximateLocationToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class ResponseFormat {
   final String type;
 
@@ -169,7 +150,7 @@ class ResponseFormat {
   Map<String, dynamic> toJson() => _$ResponseFormatToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class AudioConfig {
   final String voice;
   final String format;
@@ -182,7 +163,7 @@ class AudioConfig {
   Map<String, dynamic> toJson() => _$AudioConfigToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Prediction {
   final String type;
   final String content;
@@ -195,11 +176,9 @@ class Prediction {
   Map<String, dynamic> toJson() => _$PredictionToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class StreamOptions {
-  @JsonKey(name: 'include_usage')
   final bool? includeUsage;
-  @JsonKey(name: 'include_obfuscation')
   final bool? includeObfuscation;
 
   StreamOptions({this.includeUsage, this.includeObfuscation});
@@ -210,7 +189,7 @@ class StreamOptions {
   Map<String, dynamic> toJson() => _$StreamOptionsToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Tool {
   final String type;
   final FunctionDefinition function;
@@ -222,7 +201,7 @@ class Tool {
   Map<String, dynamic> toJson() => _$ToolToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class FunctionDefinition {
   final String? description;
   final String name;
@@ -243,7 +222,7 @@ class FunctionDefinition {
 }
 
 // Response Models
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class OpenAiChatCompletions {
   final String? id;
   final String? object;
@@ -251,9 +230,7 @@ class OpenAiChatCompletions {
   final String? model;
   final List<Choice>? choices;
   final ChatCompletionUsage? usage;
-  @JsonKey(name: 'system_fingerprint')
   final String? systemFingerprint;
-  @JsonKey(name: 'service_tier')
   final String? serviceTier;
 
   OpenAiChatCompletions({
@@ -278,12 +255,11 @@ class OpenAiChatCompletions {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Choice {
   final int? index;
   final Message? message;
   final Delta? delta;
-  @JsonKey(name: 'finish_reason')
   final String? finishReason;
   final Logprobs? logprobs;
 
@@ -305,18 +281,15 @@ class Choice {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Message {
   final String? content;
   final String? refusal;
   final String role;
-  @JsonKey(name: 'function_call')
   final FunctionCall? functionCall;
-  @JsonKey(name: 'tool_calls')
   final List<ToolCall>? toolCalls;
   final List<Annotation>? annotations;
   final Audio? audio;
-  @JsonKey(name: 'reasoning_content')
   final String? reasoningContent;
 
   Message({
@@ -341,17 +314,14 @@ class Message {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Delta {
   final String? content;
   final String? role;
   final String? refusal;
-  @JsonKey(name: 'function_call')
   final FunctionCall? functionCall;
-  @JsonKey(name: 'tool_calls')
   final List<ToolCall>? toolCalls;
   final Audio? audio;
-  @JsonKey(name: 'reasoning_content')
   final String? reasoningContent;
 
   Delta({
@@ -374,7 +344,7 @@ class Delta {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class ToolCall {
   final String? id;
   final String? type;
@@ -393,7 +363,7 @@ class ToolCall {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class FunctionCall {
   final String? name;
   final String? arguments;
@@ -411,7 +381,7 @@ class FunctionCall {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Annotation {
   final String? type;
   final UrlCitation? urlCitation;
@@ -429,7 +399,7 @@ class Annotation {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class UrlCitation {
   final int? endIndex;
   final int? startIndex;
@@ -449,7 +419,7 @@ class UrlCitation {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Audio {
   final String? id;
   final int? expiresAt;
@@ -468,7 +438,7 @@ class Audio {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Logprobs {
   final List<Token>? content;
   final List<Token>? refusal;
@@ -486,7 +456,7 @@ class Logprobs {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Token {
   final String? token;
   final double? logprob;
@@ -505,7 +475,7 @@ class Token {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class TopLogprob {
   final String? token;
   final double? logprob;
@@ -524,17 +494,12 @@ class TopLogprob {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class ChatCompletionUsage {
-  @JsonKey(name: 'prompt_tokens')
   final int? promptTokens;
-  @JsonKey(name: 'completion_tokens')
   final int? completionTokens;
-  @JsonKey(name: 'total_tokens')
   final int? totalTokens;
-  @JsonKey(name: 'completion_tokens_details')
   final CompletionTokenDetails? completionTokensDetails;
-  @JsonKey(name: 'prompt_tokens_details')
   final PromptTokenDetails? promptTokensDetails;
 
   ChatCompletionUsage({
@@ -551,7 +516,7 @@ class ChatCompletionUsage {
   Map<String, dynamic> toJson() => _$ChatCompletionUsageToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class PromptTokenDetails {
   final int? cachedTokens;
   final int? audioTokens;
@@ -564,7 +529,7 @@ class PromptTokenDetails {
   Map<String, dynamic> toJson() => _$PromptTokenDetailsToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class CompletionTokenDetails {
   final int? reasoningTokens;
   final int? audioTokens;
@@ -584,7 +549,7 @@ class CompletionTokenDetails {
   Map<String, dynamic> toJson() => _$CompletionTokenDetailsToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Custom {
   final String input;
   final String name;

@@ -10,14 +10,13 @@ enum MCPTransportType { streamable, sse, stdio }
 
 /// JSON Schema representation for MCP Tool input validation
 /// Follows JSON Schema specification (https://json-schema.org/)
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class JsonSchema {
   final String type;
   @JsonKey(fromJson: _propertiesFromJson, toJson: _propertiesToJson)
   final Map<String, JsonSchemaProperty>? properties;
   final List<String>? required;
   final String? description;
-  @JsonKey(name: 'additional_properties')
   final dynamic additionalProperties;
 
   const JsonSchema({
@@ -45,7 +44,7 @@ class JsonSchema {
 }
 
 /// Property definition within a JSON Schema
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class JsonSchemaProperty {
   final String type;
   final String? description;
@@ -70,7 +69,7 @@ class JsonSchemaProperty {
 /// MCP Tool Definition
 /// Tools enable LLMs to perform actions through the MCP server
 /// Spec: https://spec.modelcontextprotocol.io/specification/server/tools/
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MCPTool {
   /// Unique identifier for the tool
   final String name;
@@ -79,7 +78,6 @@ class MCPTool {
   final String? description;
 
   /// JSON Schema defining the expected parameters for the tool
-  @JsonKey(name: 'input_schema')
   final JsonSchema inputSchema;
 
   /// Whether this tool is enabled
@@ -100,7 +98,7 @@ class MCPTool {
 /// MCP Resource Definition
 /// Resources represent data that an MCP server makes available to clients
 /// Spec: https://spec.modelcontextprotocol.io/specification/server/resources/
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MCPResource {
   /// Unique identifier for the resource (URI format)
   final String uri;
@@ -112,7 +110,6 @@ class MCPResource {
   final String? description;
 
   /// MIME type of the resource content
-  @JsonKey(name: 'mime_type')
   final String? mimeType;
 
   const MCPResource({
@@ -128,7 +125,7 @@ class MCPResource {
 
 /// MCP Prompt Argument Definition
 /// Arguments that can be passed to a prompt template
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MCPPromptArgument {
   /// Argument name
   final String name;
@@ -153,7 +150,7 @@ class MCPPromptArgument {
 /// MCP Prompt Definition
 /// Prompts are reusable templates that can be invoked by clients
 /// Spec: https://spec.modelcontextprotocol.io/specification/server/prompts/
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MCPPrompt {
   /// Unique identifier for the prompt
   final String name;
@@ -172,7 +169,7 @@ class MCPPrompt {
 
 /// MCP Server Capabilities
 /// Describes what features the server supports
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MCPServerCapabilities {
   /// Server supports tools
   @JsonKey(defaultValue: false)
@@ -218,7 +215,7 @@ class MCPServerCapabilities {
 }
 
 /// Information about an MCP implementation (client or server)
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MCPImplementation {
   final String name;
   final String version;
@@ -251,7 +248,7 @@ abstract class MCPContent {
 }
 
 /// Textual content
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MCPTextContent extends MCPContent {
   final String text;
   const MCPTextContent(this.text) : super('text');
@@ -263,10 +260,9 @@ class MCPTextContent extends MCPContent {
 }
 
 /// Image content
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MCPImageContent extends MCPContent {
   final String data;
-  @JsonKey(name: 'mime_type')
   final String mimeType;
   const MCPImageContent({required this.data, required this.mimeType})
     : super('image');
@@ -278,10 +274,9 @@ class MCPImageContent extends MCPContent {
 }
 
 /// Content representing a resource
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MCPResourceContent extends MCPContent {
   final String uri;
-  @JsonKey(name: 'mime_type')
   final String? mimeType;
   final String? text;
   final String? blob;
@@ -300,7 +295,7 @@ class MCPResourceContent extends MCPContent {
 }
 
 /// A message in a prompt or sampling context
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MCPPromptMessage {
   final String role; // 'user' or 'assistant'
   @JsonKey(fromJson: _contentFromJson, toJson: _contentToJson)

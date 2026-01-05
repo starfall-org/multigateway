@@ -26,7 +26,7 @@ enum OpenAIAudioResponseFormat {
 
 /// Request model cho API /v1/audio/speech
 @immutable
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class OpenAiAudioSpeechRequest {
   final String model;
   final String input;
@@ -67,9 +67,8 @@ class OpenAiAudioSpeechRequest {
 
 /// Response model cho API /v1/audio/speech
 @immutable
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class OpenAiAudioSpeech {
-  @JsonKey(name: 'audio_content')
   final String audioContent;
 
   const OpenAiAudioSpeech({required this.audioContent});

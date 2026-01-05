@@ -2,16 +2,14 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'messages.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class AnthropicMessagesRequest {
   final String model;
   final List<AnthropicMessage> messages;
-  @JsonKey(name: 'max_tokens')
   final int maxTokens;
   final String? system;
   final double? temperature;
   final List<AnthropicTool>? tools;
-  @JsonKey(name: 'tool_choice')
   final dynamic toolChoice;
   final bool? stream;
 
@@ -32,7 +30,7 @@ class AnthropicMessagesRequest {
   Map<String, dynamic> toJson() => _$AnthropicMessagesRequestToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class AnthropicMessage {
   final String role;
   final dynamic content; // String or List<AnthropicContent>
@@ -48,12 +46,11 @@ class AnthropicMessage {
   Map<String, dynamic> toJson() => _$AnthropicMessageToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class AnthropicContent {
   final String type;
   final String? text;
   final String? source;
-  @JsonKey(name: 'media_type')
   final String? mediaType;
   final String? data;
 
@@ -71,11 +68,10 @@ class AnthropicContent {
   Map<String, dynamic> toJson() => _$AnthropicContentToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class AnthropicTool {
   final String name;
   final String? description;
-  @JsonKey(name: 'input_schema')
   final Map<String, dynamic> inputSchema;
 
   AnthropicTool({
@@ -90,16 +86,14 @@ class AnthropicTool {
   Map<String, dynamic> toJson() => _$AnthropicToolToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class AnthropicMessagesResponse {
   final String id;
   final String type;
   final String role;
   final List<AnthropicContent> content;
   final String model;
-  @JsonKey(name: 'stop_reason')
   final String? stopReason;
-  @JsonKey(name: 'stop_sequence')
   final String? stopSequence;
   final AnthropicUsage usage;
 
@@ -120,11 +114,9 @@ class AnthropicMessagesResponse {
   Map<String, dynamic> toJson() => _$AnthropicMessagesResponseToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class AnthropicUsage {
-  @JsonKey(name: 'input_tokens')
   final int inputTokens;
-  @JsonKey(name: 'output_tokens')
   final int outputTokens;
 
   AnthropicUsage({

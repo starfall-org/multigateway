@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'responses.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class RequestMessage {
   final String role;
   final dynamic content;
@@ -16,7 +16,7 @@ class RequestMessage {
   Map<String, dynamic> toJson() => _$RequestMessageToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Tool {
   final String type;
   final FunctionDefinition function;
@@ -28,7 +28,7 @@ class Tool {
   Map<String, dynamic> toJson() => _$ToolToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class FunctionDefinition {
   final String? description;
   final String name;
@@ -49,16 +49,14 @@ class FunctionDefinition {
 }
 
 // Response-related classes
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class OpenAiResponses {
   final String id;
   final String object;
-  @JsonKey(name: 'created_at')
   final int createdAt;
   final String model;
   final String status;
   final ErrorInfo? error;
-  @JsonKey(name: 'incomplete_details')
   final IncompleteDetails? incompleteDetails;
   final List<ResponseItem> output;
   final ResponsesUsage usage;
@@ -86,7 +84,7 @@ class OpenAiResponses {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class ResponseItem {
   final String id;
   final String type;
@@ -113,7 +111,7 @@ class ResponseItem {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class MessageContent {
   final String type;
   final String text;
@@ -138,15 +136,12 @@ class MessageContent {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Annotation {
   final String type;
   final String text;
-  @JsonKey(name: 'start_index')
   final int startIndex;
-  @JsonKey(name: 'end_index')
   final int endIndex;
-  @JsonKey(name: 'file_id')
   final String? fileId;
   final String? title;
 
@@ -170,12 +165,11 @@ class Annotation {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Logprobs {
   final String token;
   final double logprob;
   final List<int> bytes;
-  @JsonKey(name: 'top_logprobs')
   final List<TopLogprob> topLogprobs;
 
   Logprobs({
@@ -196,7 +190,7 @@ class Logprobs {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class TopLogprob {
   final String token;
   final double logprob;
@@ -215,7 +209,7 @@ class TopLogprob {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class ErrorInfo {
   final String code;
   final String message;
@@ -233,7 +227,7 @@ class ErrorInfo {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class IncompleteDetails {
   final String reason;
   final String type;
@@ -251,17 +245,12 @@ class IncompleteDetails {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class ResponsesUsage {
-  @JsonKey(name: 'input_tokens')
   final int inputTokens;
-  @JsonKey(name: 'output_tokens')
   final int outputTokens;
-  @JsonKey(name: 'total_tokens')
   final int totalTokens;
-  @JsonKey(name: 'input_tokens_details')
   final UsageDetails inputTokensDetails;
-  @JsonKey(name: 'output_tokens_details')
   final UsageDetails outputTokensDetails;
 
   ResponsesUsage({
@@ -283,17 +272,12 @@ class ResponsesUsage {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class UsageDetails {
-  @JsonKey(name: 'cached_tokens')
   final int? cachedTokens;
-  @JsonKey(name: 'text_tokens')
   final int? textTokens;
-  @JsonKey(name: 'image_tokens')
   final int? imageTokens;
-  @JsonKey(name: 'audio_tokens')
   final int? audioTokens;
-  @JsonKey(name: 'reasoning_tokens')
   final int? reasoningTokens;
 
   UsageDetails({
@@ -315,30 +299,22 @@ class UsageDetails {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class OpenAiResponsesRequest {
   final String model;
   final List<RequestMessage> input;
   final String? instructions;
-  @JsonKey(name: 'max_output_tokens')
   final int? maxOutputTokens;
   final List<String>? include;
-  @JsonKey(name: 'previous_response_id')
   final String? previousResponseId;
   final bool? store;
   final Map<String, String>? metadata;
-  @JsonKey(name: 'service_tier')
   final String? serviceTier;
   final bool? background;
-  @JsonKey(name: 'prompt_cache_key')
   final String? promptCacheKey;
-  @JsonKey(name: 'prompt_cache_retention')
   final String? promptCacheRetention;
-  @JsonKey(name: 'safety_identifier')
   final String? safetyIdentifier;
-  @JsonKey(name: 'parallel_tool_calls')
   final bool? parallelToolCalls;
-  @JsonKey(name: 'max_tool_calls')
   final int? maxToolCalls;
   final ReasoningConfig? reasoning;
   final List<Tool>? tools;
@@ -369,7 +345,7 @@ class OpenAiResponsesRequest {
   Map<String, dynamic> toJson() => _$OpenAiResponsesRequestToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class ReasoningConfig {
   final String effort;
 

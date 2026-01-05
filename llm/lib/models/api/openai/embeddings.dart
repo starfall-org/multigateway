@@ -3,7 +3,7 @@ import 'package:json_annotation/json_annotation.dart';
 part 'embeddings.g.dart';
 
 // Request Models
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class OpenAiEmbeddingsRequest {
   /// Input text to embed, encoded as a string or array of tokens.
   /// To embed multiple inputs, pass an array of strings or array of token arrays.
@@ -17,7 +17,6 @@ class OpenAiEmbeddingsRequest {
   final int? dimensions;
 
   /// The format to return the embeddings in. Can be `float` or `base64`.
-  @JsonKey(name: 'encoding_format')
   final String? encodingFormat;
 
   /// A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
@@ -38,7 +37,7 @@ class OpenAiEmbeddingsRequest {
 }
 
 // Response Models
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class OpenAiEmbeddings {
   /// The object type, which is always "list".
   final String object;
@@ -65,7 +64,7 @@ class OpenAiEmbeddings {
   Map<String, dynamic> toJson() => _$OpenAiEmbeddingsToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class EmbeddingData {
   /// The object type, which is always "embedding".
   final String object;
@@ -89,14 +88,12 @@ class EmbeddingData {
   Map<String, dynamic> toJson() => _$EmbeddingDataToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class EmbeddingUsage {
   /// The number of tokens used for the prompt.
-  @JsonKey(name: 'prompt_tokens')
   final int promptTokens;
 
   /// The total number of tokens used.
-  @JsonKey(name: 'total_tokens')
   final int totalTokens;
 
   EmbeddingUsage({required this.promptTokens, required this.totalTokens});

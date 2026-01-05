@@ -5,11 +5,8 @@ part 'llm_provider_config.g.dart';
 @JsonSerializable(fieldRename: FieldRename.snake)
 class LlmProviderConfig {
   final String providerId;
-  @JsonKey(name: 'http_proxy')
   final Map<String, dynamic> httpProxy;
-  @JsonKey(name: 'custom_chat_completion_url')
   final String? customChatCompletionUrl;
-  @JsonKey(name: 'custom_list_models_url')
   final String? customListModelsUrl;
 
   LlmProviderConfig({
