@@ -1,5 +1,9 @@
 import 'dart:ui';
+import 'package:json_annotation/json_annotation.dart';
 
+part 'language_setting.g.dart';
+
+@JsonSerializable(fieldRename: FieldRename.snake)
 class LanguageSetting {
   final String languageCode;
   final String? countryCode;
@@ -18,21 +22,10 @@ class LanguageSetting {
     );
   }
 
-  factory LanguageSetting.fromJson(Map<String, dynamic> json) {
-    return LanguageSetting(
-      languageCode: json['languageCode'] ?? 'auto',
-      countryCode: json['countryCode'],
-      autoDetectLanguage: json['autoDetectLanguage'] ?? true,
-    );
-  }
+  factory LanguageSetting.fromJson(Map<String, dynamic> json) =>
+      _$LanguageSettingFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'languageCode': languageCode,
-      'countryCode': countryCode,
-      'autoDetectLanguage': autoDetectLanguage,
-    };
-  }
+  Map<String, dynamic> toJson() => _$LanguageSettingToJson(this);
 
   String toJsonString() {
     return toString();
@@ -40,33 +33,26 @@ class LanguageSetting {
 
   factory LanguageSetting.fromJsonString(String json) {
     try {
-      // Use proper JSON parsing for reliability
       if (json.trim().isEmpty) {
         return LanguageSetting.defaults();
       }
 
-      // Handle both proper JSON and the old string format
       if (json.trim().startsWith('{')) {
-        // Try to parse as proper JSON first
         final Map<String, dynamic> data = _parseJsonSafely(json);
         return LanguageSetting.fromJson(data);
       } else {
-        // Fallback to the old string format parsing
         return _parseLegacyFormat(json);
       }
     } catch (e) {
-      // If all parsing fails, return defaults
       return LanguageSetting.defaults();
     }
   }
 
   static Map<String, dynamic> _parseJsonSafely(String json) {
     try {
-      // Simple JSON parser for our specific format
       final Map<String, dynamic> data = {};
       final cleanJson = json.trim();
 
-      // Extract values using regex for more reliable parsing
       final languageCodeMatch = RegExp(
         r'"languageCode":"([^"]*)"',
       ).firstMatch(cleanJson);
@@ -94,7 +80,6 @@ class LanguageSetting {
   }
 
   static LanguageSetting _parseLegacyFormat(String json) {
-    // Fallback to the old string format parsing
     final parts = json.split(',');
     final Map<String, dynamic> data = {};
 
@@ -115,7 +100,7 @@ class LanguageSetting {
 
   Locale? getLocale() {
     if (autoDetectLanguage || languageCode == 'auto') {
-      return null; // Use auto-detection
+      return null;
     }
 
     if (countryCode != null) {

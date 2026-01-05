@@ -1,3 +1,8 @@
+import 'package:json_annotation/json_annotation.dart';
+
+part 'translation_cache_entry.g.dart';
+
+@JsonSerializable(fieldRename: FieldRename.snake)
 class TranslationCacheEntry {
   final String originalText;
   final String translatedText;
@@ -16,25 +21,10 @@ class TranslationCacheEntry {
   String get cacheKey =>
       '${sourceLanguage}_${targetLanguage}_${originalText.hashCode}';
 
-  Map<String, dynamic> toJson() {
-    return {
-      'originalText': originalText,
-      'translatedText': translatedText,
-      'sourceLanguage': sourceLanguage,
-      'targetLanguage': targetLanguage,
-      'timestamp': timestamp.toIso8601String(),
-    };
-  }
+  factory TranslationCacheEntry.fromJson(Map<String, dynamic> json) =>
+      _$TranslationCacheEntryFromJson(json);
 
-  factory TranslationCacheEntry.fromJson(Map<String, dynamic> json) {
-    return TranslationCacheEntry(
-      originalText: json['originalText'] as String,
-      translatedText: json['translatedText'] as String,
-      sourceLanguage: json['sourceLanguage'] as String,
-      targetLanguage: json['targetLanguage'] as String,
-      timestamp: DateTime.parse(json['timestamp'] as String),
-    );
-  }
+  Map<String, dynamic> toJson() => _$TranslationCacheEntryToJson(this);
 
   TranslationCacheEntry copyWith({
     String? originalText,

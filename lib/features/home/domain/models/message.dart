@@ -1,11 +1,16 @@
+import 'package:json_annotation/json_annotation.dart';
+
+part 'message.g.dart';
+
 enum ChatRole {
   user,
   model,
   system,
   tool,
   developer,
-} // developer is replacement for system role in OpenAI's official API
+}
 
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MessageContent {
   final String content;
   final DateTime timestamp;
@@ -21,46 +26,17 @@ class MessageContent {
     this.aiMedia = const [],
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      'content': content,
-      'timestamp': timestamp.toIso8601String(),
-      'attachments': attachments,
-      'reasoningContent': reasoningContent,
-      'aiMedia': aiMedia,
-    };
-  }
+  factory MessageContent.fromJson(Map<String, dynamic> json) =>
+      _$MessageContentFromJson(json);
 
-  factory MessageContent.fromJson(Map<String, dynamic> json) {
-    return MessageContent(
-      content: (json['content'] ?? '') as String,
-      timestamp: DateTime.parse(json['timestamp'] as String),
-      attachments:
-          (json['attachments'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          const [],
-      reasoningContent: json['reasoningContent'] as String?,
-      aiMedia:
-          (json['aiMedia'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          const [],
-    );
-  }
+  Map<String, dynamic> toJson() => _$MessageContentToJson(this);
 }
 
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class ChatMessage {
-  /// auto-generated unique ID
   final String id;
-
-  /// Role of the message
   final ChatRole role;
-
-  /// All versions of this message (for regenerations or edits)
   final List<MessageContent> versions;
-
-  /// Index of the currently active version
   final int currentVersionIndex;
 
   ChatMessage({
@@ -68,25 +44,23 @@ class ChatMessage {
     required this.role,
     List<MessageContent>? versions,
     this.currentVersionIndex = 0,
-    // Parameters for convenience when creating a message with a single version
     String content = '',
     DateTime? timestamp,
     List<String> attachments = const [],
     String? reasoningContent,
     List<String> aiMedia = const [],
   }) : versions =
-          versions ??
-          [
-            MessageContent(
-              content: content,
-              timestamp: timestamp ?? DateTime.now(),
-              attachments: attachments,
-              reasoningContent: reasoningContent,
-              aiMedia: aiMedia,
-            ),
-          ];
+            versions ??
+            [
+              MessageContent(
+                content: content,
+                timestamp: timestamp ?? DateTime.now(),
+                attachments: attachments,
+                reasoningContent: reasoningContent,
+                aiMedia: aiMedia,
+              ),
+            ];
 
-  /// Getters for current version data (backward compatibility & convenience)
   MessageContent get current => versions[currentVersionIndex];
   String get content => current.content;
   DateTime get timestamp => current.timestamp;
@@ -108,7 +82,6 @@ class ChatMessage {
     );
   }
 
-  /// Creates a copy of the message with a new version added and set as active
   ChatMessage addVersion(MessageContent content) {
     return copyWith(
       versions: [...versions, content],
@@ -116,7 +89,6 @@ class ChatMessage {
     );
   }
 
-  /// Creates a copy of the message with the content of the current version updated
   ChatMessage updateActiveContent(String newContent) {
     final updatedVersions = List<MessageContent>.from(versions);
     final currentV = updatedVersions[currentVersionIndex];
@@ -130,57 +102,13 @@ class ChatMessage {
     return copyWith(versions: updatedVersions);
   }
 
-  /// Switches to a specific version index
   ChatMessage switchVersion(int index) {
     if (index < 0 || index >= versions.length) return this;
     return copyWith(currentVersionIndex: index);
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'role': role.name,
-      'versions': versions.map((v) => v.toJson()).toList(),
-      'currentVersionIndex': currentVersionIndex,
-      // Include deprecated fields at top level for backward compatibility with older parsers
-      'content': content,
-      'timestamp': timestamp.toIso8601String(),
-    };
-  }
+  factory ChatMessage.fromJson(Map<String, dynamic> json) =>
+      _$ChatMessageFromJson(json);
 
-  factory ChatMessage.fromJson(Map<String, dynamic> json) {
-    final versionsJson = json['versions'] as List<dynamic>?;
-    final List<MessageContent> versions;
-
-    if (versionsJson != null) {
-      versions = versionsJson.map((v) => MessageContent.fromJson(v)).toList();
-    } else {
-      // Fallback for old format
-      versions = [
-        MessageContent(
-          content: (json['content'] ?? '') as String,
-          timestamp: DateTime.parse(json['timestamp'] as String),
-          attachments:
-              (json['attachments'] as List<dynamic>?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              const [],
-          reasoningContent: json['reasoningContent'] as String?,
-          aiMedia:
-              (json['aiMedia'] as List<dynamic>?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              const [],
-        )
-      ];
-    }
-
-    return ChatMessage(
-      id: json['id'] as String,
-      role: ChatRole.values.firstWhere((e) => e.name == json['role']),
-      versions: versions,
-      currentVersionIndex: json['currentVersionIndex'] as int? ?? 0,
-    );
-  }
+  Map<String, dynamic> toJson() => _$ChatMessageToJson(this);
 }
-

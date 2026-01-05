@@ -1,7 +1,11 @@
+import 'package:json_annotation/json_annotation.dart';
 import 'dart:convert';
 
 import 'message.dart';
 
+part 'conversation.g.dart';
+
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class Conversation {
   final String id;
   final String title;
@@ -10,11 +14,9 @@ class Conversation {
   final List<ChatMessage> messages;
   final int? tokenCount;
   final bool isAgentConversation;
-
-  // Optional persisted selections per conversation
   final String? providerName;
   final String? modelName;
-  final List<String>? enabledToolNames; // Persisted MCP tool names
+  final List<String>? enabledToolNames;
 
   Conversation({
     required this.id,
@@ -53,41 +55,10 @@ class Conversation {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'messages': messages.map((m) => m.toJson()).toList(),
-      'tokenCount': tokenCount,
-      'isAgentConversation': isAgentConversation,
-      if (providerName != null) 'providerName': providerName,
-      if (modelName != null) 'modelName': modelName,
-      if (enabledToolNames != null) 'enabledToolNames': enabledToolNames,
-    };
-  }
+  factory Conversation.fromJson(Map<String, dynamic> json) =>
+      _$ConversationFromJson(json);
 
-  factory Conversation.fromJson(Map<String, dynamic> json) {
-    return Conversation(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      messages:
-          (json['messages'] as List<dynamic>?)
-              ?.map((e) => ChatMessage.fromJson(e))
-              .toList() ??
-          [],
-      tokenCount: json['tokenCount'] as int?,
-      isAgentConversation: json['isAgentConversation'] == true,
-      providerName: json['providerName'] as String?,
-      modelName: json['modelName'] as String?,
-      enabledToolNames: (json['enabledToolNames'] as List?)
-          ?.map((e) => e.toString())
-          .toList(),
-    );
-  }
+  Map<String, dynamic> toJson() => _$ConversationToJson(this);
 
   String toJsonString() => json.encode(toJson());
 

@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 import 'mcp_core.dart';
 import 'mcp_http.dart';
@@ -6,33 +7,20 @@ import 'mcp_http.dart';
 export 'mcp_core.dart';
 export 'mcp_http.dart';
 
-/// MCP Server Definition
-/// Represents a complete MCP server configuration
-/// Spec: https://spec.modelcontextprotocol.io/specification/
+part 'mcp_server.g.dart';
+
+enum MCPTransportType { streamable, sse, stdio }
+
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MCPServer {
-  /// Unique identifier/name for this server configuration
   final String id;
   final String name;
-
-  /// Human-readable description
   final String? description;
-
-  /// Transport protocol type
   final MCPTransportType transport;
-
-  /// Configuration for HTTP transports (required if transport is sse or streamable)
   final MCPHttpConfig? httpConfig;
-
-  /// Server capabilities (discovered after connection)
   final MCPServerCapabilities? capabilities;
-
-  /// Available tools (discovered after connection)
   final List<MCPTool> tools;
-
-  /// Available resources (discovered after connection)
   final List<MCPResource> resources;
-
-  /// Available prompts (discovered after connection)
   final List<MCPPrompt> prompts;
 
   const MCPServer({
@@ -47,7 +35,6 @@ class MCPServer {
     this.prompts = const [],
   });
 
-  /// Create a stdio-based MCP server
   factory MCPServer.stdio({
     String? id,
     required String name,
@@ -66,7 +53,6 @@ class MCPServer {
     );
   }
 
-  /// Create an SSE-based MCP server
   factory MCPServer.sse({
     String? id,
     required String name,
@@ -83,7 +69,6 @@ class MCPServer {
     );
   }
 
-  /// Create a Streamable HTTP-based MCP server
   factory MCPServer.streamable({
     String? id,
     required String name,
@@ -100,13 +85,11 @@ class MCPServer {
     );
   }
 
-  /// Create a copy with updated fields
   MCPServer copyWith({
     String? id,
     String? name,
     String? description,
     MCPTransportType? transport,
-
     MCPHttpConfig? httpConfig,
     MCPServerCapabilities? capabilities,
     List<MCPTool>? tools,
@@ -126,52 +109,8 @@ class MCPServer {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      if (description != null) 'description': description,
-      'transport': transport.name,
-      if (httpConfig != null) 'http_config': httpConfig!.toJson(),
-      if (capabilities != null) 'capabilities': capabilities!.toJson(),
-      'tools': tools.map((t) => t.toJson()).toList(),
-      'resources': resources.map((r) => r.toJson()).toList(),
-      'prompts': prompts.map((p) => p.toJson()).toList(),
-    };
-  }
+  factory MCPServer.fromJson(Map<String, dynamic> json) =>
+      _$MCPServerFromJson(json);
 
-  factory MCPServer.fromJson(Map<String, dynamic> json) {
-    return MCPServer(
-      id: json['id'] as String? ?? const Uuid().v4(),
-      name: json['name'] as String,
-      description: json['description'] as String?,
-      transport: MCPTransportType.values.firstWhere(
-        (e) => e.name == json['transport'],
-        orElse: () => MCPTransportType.sse,
-      ),
-      httpConfig: json['http_config'] != null
-          ? MCPHttpConfig.fromJson(json['http_config'] as Map<String, dynamic>)
-          : null,
-      capabilities: json['capabilities'] != null
-          ? MCPServerCapabilities.fromJson(
-              json['capabilities'] as Map<String, dynamic>,
-            )
-          : null,
-      tools:
-          (json['tools'] as List?)
-              ?.map((t) => MCPTool.fromJson(t as Map<String, dynamic>))
-              .toList() ??
-          [],
-      resources:
-          (json['resources'] as List?)
-              ?.map((r) => MCPResource.fromJson(r as Map<String, dynamic>))
-              .toList() ??
-          [],
-      prompts:
-          (json['prompts'] as List?)
-              ?.map((p) => MCPPrompt.fromJson(p as Map<String, dynamic>))
-              .toList() ??
-          [],
-    );
-  }
+  Map<String, dynamic> toJson() => _$MCPServerToJson(this);
 }

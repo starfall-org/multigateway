@@ -15,17 +15,11 @@ class BasicModel {
   });
 
   factory BasicModel.fromJson(Map<String, dynamic> json) {
-    return BasicModel(
-      id: json['id'],
-      displayName: json['display_name'] ?? json['id'],
-      ownedBy:
-          json['owned_by'] ??
-          (json['display_name'] != null ? 'anthropic' : 'unknown'),
-    );
+    return _$BasicModelFromJson(json);
   }
 
   Map<String, dynamic> toJson() {
-    return {'id': id, 'display_name': displayName, 'owned_by': ownedBy};
+    return _$BasicModelToJson(this);
   }
 
   @override

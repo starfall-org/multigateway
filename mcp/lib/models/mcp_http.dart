@@ -1,22 +1,16 @@
-/// Configuration for HTTP-based transports (SSE, Streamable HTTP)
-class MCPHttpConfig {
-  /// Server URL endpoint
-  final String url;
+import 'package:json_annotation/json_annotation.dart';
 
-  /// Optional headers for authentication or other purposes
+part 'mcp_http.g.dart';
+
+@JsonSerializable(fieldRename: FieldRename.snake)
+class MCPHttpConfig {
+  final String url;
   final Map<String, String>? headers;
 
   const MCPHttpConfig({required this.url, this.headers});
 
-  Map<String, dynamic> toJson() {
-    return {'url': url, if (headers != null) 'headers': headers};
-  }
+  factory MCPHttpConfig.fromJson(Map<String, dynamic> json) =>
+      _$MCPHttpConfigFromJson(json);
 
-  factory MCPHttpConfig.fromJson(Map<String, dynamic> json) {
-    return MCPHttpConfig(
-      url: json['url'] as String,
-      headers: (json['headers'] as Map<String, dynamic>?)
-          ?.cast<String, String>(),
-    );
-  }
+  Map<String, dynamic> toJson() => _$MCPHttpConfigToJson(this);
 }

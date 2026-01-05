@@ -1,3 +1,8 @@
+import 'package:json_annotation/json_annotation.dart';
+
+part 'default_options.g.dart';
+
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class DefaultOptions {
   final DefaultModels defaultModels;
   final String defaultProfileId;
@@ -7,33 +12,24 @@ class DefaultOptions {
     required this.defaultProfileId,
   });
 
-  factory DefaultOptions.fromJson(Map<String, dynamic> json) {
-    return DefaultOptions(
-      defaultModels: DefaultModels.fromJson(json['defaultModels']),
-      defaultProfileId: json['defaultProfileId'],
-    );
-  }
+  factory DefaultOptions.fromJson(Map<String, dynamic> json) =>
+      _$DefaultOptionsFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'defaultModels': defaultModels.toJson(),
-      'defaultProfileId': defaultProfileId,
-    };
-  }
+  Map<String, dynamic> toJson() => _$DefaultOptionsToJson(this);
 }
 
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class DefaultModels {
-  final DefaultModel? titleGenerationModel; // text generation model
-  final DefaultModel? chatSummarizationModel; // text generation model
-  final DefaultModel? translationModel; // text generation model
-  final DefaultModel? supportOCRModel; // text generation (OCR) model
-  final DefaultModel? embeddingModel; // embedding model
-  final DefaultModel? imageGenerationModel; // image generation model
-  final DefaultModel?
-  chatModel; // text generation/image generation/video generation model
-  final DefaultModel? audioGenerationModel; // audio generation model
-  final DefaultModel? videoGenerationModel; // video generation model
-  final DefaultModel? rerankModel; // rerank model
+  final DefaultModel? titleGenerationModel;
+  final DefaultModel? chatSummarizationModel;
+  final DefaultModel? translationModel;
+  final DefaultModel? supportOCRModel;
+  final DefaultModel? embeddingModel;
+  final DefaultModel? imageGenerationModel;
+  final DefaultModel? chatModel;
+  final DefaultModel? audioGenerationModel;
+  final DefaultModel? videoGenerationModel;
+  final DefaultModel? rerankModel;
 
   DefaultModels({
     this.titleGenerationModel,
@@ -74,71 +70,21 @@ class DefaultModels {
     );
   }
 
-  factory DefaultModels.fromJson(Map<String, dynamic> json) {
-    return DefaultModels(
-      titleGenerationModel: json['titleGenerationModel'] != null
-          ? DefaultModel.fromJson(json['titleGenerationModel'])
-          : null,
-      chatSummarizationModel: json['chatSummarizationModel'] != null
-          ? DefaultModel.fromJson(json['chatSummarizationModel'])
-          : null,
-      translationModel: json['translationModel'] != null
-          ? DefaultModel.fromJson(json['translationModel'])
-          : null,
-      supportOCRModel: json['supportOCRModel'] != null
-          ? DefaultModel.fromJson(json['supportOCRModel'])
-          : null,
-      embeddingModel: json['embeddingModel'] != null
-          ? DefaultModel.fromJson(json['embeddingModel'])
-          : null,
-      imageGenerationModel: json['imageGenerationModel'] != null
-          ? DefaultModel.fromJson(json['imageGenerationModel'])
-          : null,
-      chatModel: json['chatModel'] != null
-          ? DefaultModel.fromJson(json['chatModel'])
-          : null,
-      audioGenerationModel: json['audioGenerationModel'] != null
-          ? DefaultModel.fromJson(json['audioGenerationModel'])
-          : null,
-      videoGenerationModel: json['videoGenerationModel'] != null
-          ? DefaultModel.fromJson(json['videoGenerationModel'])
-          : null,
-      rerankModel: json['rerankModel'] != null
-          ? DefaultModel.fromJson(json['rerankModel'])
-          : null,
-    );
-  }
+  factory DefaultModels.fromJson(Map<String, dynamic> json) =>
+      _$DefaultModelsFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'titleGenerationModel': titleGenerationModel?.toJson(),
-      'chatSummarizationModel': chatSummarizationModel?.toJson(),
-      'translationModel': translationModel?.toJson(),
-      'supportOCRModel': supportOCRModel?.toJson(),
-      'embeddingModel': embeddingModel?.toJson(),
-      'imageGenerationModel': imageGenerationModel?.toJson(),
-      'chatModel': chatModel?.toJson(),
-      'audioGenerationModel': audioGenerationModel?.toJson(),
-      'videoGenerationModel': videoGenerationModel?.toJson(),
-      'rerankModel': rerankModel?.toJson(),
-    };
-  }
+  Map<String, dynamic> toJson() => _$DefaultModelsToJson(this);
 }
 
+@JsonSerializable(fieldRename: FieldRename.snake)
 class DefaultModel {
   final String modelName;
   final String providerName;
 
   DefaultModel({required this.modelName, required this.providerName});
 
-  factory DefaultModel.fromJson(Map<String, dynamic> json) {
-    return DefaultModel(
-      modelName: json['modelName'] as String,
-      providerName: json['providerName'] as String,
-    );
-  }
+  factory DefaultModel.fromJson(Map<String, dynamic> json) =>
+      _$DefaultModelFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {'modelName': modelName, 'providerName': providerName};
-  }
+  Map<String, dynamic> toJson() => _$DefaultModelToJson(this);
 }

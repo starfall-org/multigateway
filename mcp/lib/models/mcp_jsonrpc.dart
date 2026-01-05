@@ -1,12 +1,9 @@
-/// Base JSON-RPC 2.0 message structure
-abstract class MCPMessage {
-  final String jsonrpc = '2.0';
+import 'package:json_annotation/json_annotation.dart';
 
-  Map<String, dynamic> toJson();
-}
+part 'mcp_jsonrpc.g.dart';
 
-/// JSON-RPC 2.0 Request
-class MCPRequest extends MCPMessage {
+@JsonSerializable()
+class MCPRequest {
   final dynamic id;
   final String method;
   final Map<String, dynamic>? params;
@@ -17,27 +14,14 @@ class MCPRequest extends MCPMessage {
     this.params,
   });
 
-  @override
-  Map<String, dynamic> toJson() {
-    return {
-      'jsonrpc': jsonrpc,
-      'id': id,
-      'method': method,
-      if (params != null) 'params': params,
-    };
-  }
+  factory MCPRequest.fromJson(Map<String, dynamic> json) =>
+      _$MCPRequestFromJson(json);
 
-  factory MCPRequest.fromJson(Map<String, dynamic> json) {
-    return MCPRequest(
-      id: json['id'],
-      method: json['method'] as String,
-      params: json['params'] as Map<String, dynamic>?,
-    );
-  }
+  Map<String, dynamic> toJson() => _$MCPRequestToJson(this);
 }
 
-/// JSON-RPC 2.0 Notification
-class MCPNotification extends MCPMessage {
+@JsonSerializable()
+class MCPNotification {
   final String method;
   final Map<String, dynamic>? params;
 
@@ -46,25 +30,14 @@ class MCPNotification extends MCPMessage {
     this.params,
   });
 
-  @override
-  Map<String, dynamic> toJson() {
-    return {
-      'jsonrpc': jsonrpc,
-      'method': method,
-      if (params != null) 'params': params,
-    };
-  }
+  factory MCPNotification.fromJson(Map<String, dynamic> json) =>
+      _$MCPNotificationFromJson(json);
 
-  factory MCPNotification.fromJson(Map<String, dynamic> json) {
-    return MCPNotification(
-      method: json['method'] as String,
-      params: json['params'] as Map<String, dynamic>?,
-    );
-  }
+  Map<String, dynamic> toJson() => _$MCPNotificationToJson(this);
 }
 
-/// JSON-RPC 2.0 Response
-class MCPResponse extends MCPMessage {
+@JsonSerializable()
+class MCPResponse {
   final dynamic id;
   final dynamic result;
   final MCPError? error;
@@ -75,28 +48,13 @@ class MCPResponse extends MCPMessage {
     this.error,
   });
 
-  @override
-  Map<String, dynamic> toJson() {
-    return {
-      'jsonrpc': jsonrpc,
-      'id': id,
-      if (result != null) 'result': result,
-      if (error != null) 'error': error!.toJson(),
-    };
-  }
+  factory MCPResponse.fromJson(Map<String, dynamic> json) =>
+      _$MCPResponseFromJson(json);
 
-  factory MCPResponse.fromJson(Map<String, dynamic> json) {
-    return MCPResponse(
-      id: json['id'],
-      result: json['result'],
-      error: json['error'] != null
-          ? MCPError.fromJson(json['error'] as Map<String, dynamic>)
-          : null,
-    );
-  }
+  Map<String, dynamic> toJson() => _$MCPResponseToJson(this);
 }
 
-/// JSON-RPC 2.0 Error
+@JsonSerializable()
 class MCPError {
   final int code;
   final String message;
@@ -108,19 +66,8 @@ class MCPError {
     this.data,
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      'code': code,
-      'message': message,
-      if (data != null) 'data': data,
-    };
-  }
+  factory MCPError.fromJson(Map<String, dynamic> json) =>
+      _$MCPErrorFromJson(json);
 
-  factory MCPError.fromJson(Map<String, dynamic> json) {
-    return MCPError(
-      code: json['code'] as int,
-      message: json['message'] as String,
-      data: json['data'],
-    );
-  }
+  Map<String, dynamic> toJson() => _$MCPErrorToJson(this);
 }

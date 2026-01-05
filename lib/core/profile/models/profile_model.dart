@@ -1,7 +1,11 @@
 import 'dart:convert';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'profile_model.g.dart';
 
 enum ThinkingLevel { none, low, medium, high, auto, custom }
 
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class AIProfile {
   final String id;
   final String name;
@@ -28,53 +32,10 @@ class AIProfile {
   List<String> get activeMCPServerIds =>
       activeMCPServers.map((e) => e.id).toList();
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'icon': icon,
-      ...config.toJson(),
-      'profileConversations': profileConversations,
-      'conversationIds': conversationIds,
-      'activeMCPServers': activeMCPServers.map((e) => e.toJson()).toList(),
-      'activeBuiltInTools': activeBuiltInTools,
-      if (persistChatSelection != null)
-        'persistChatSelection': persistChatSelection,
-    };
-  }
+  factory AIProfile.fromJson(Map<String, dynamic> json) =>
+      _$AIProfileFromJson(json);
 
-  factory AIProfile.fromJson(Map<String, dynamic> json) {
-    return AIProfile(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      icon: json['icon'] as String?,
-      config: AiConfig(
-        systemPrompt: json['systemPrompt'] as String? ?? '',
-        enableStream: json['enableStream'] as bool? ?? true,
-        topP: json['topP'] as double?,
-        topK: json['topK'] as double?,
-        temperature: json['temperature'] as double?,
-        contextWindow: json['contextWindow'] as int? ?? 60000,
-        conversationLength: json['conversationLength'] as int? ?? 10,
-        maxTokens: json['maxTokens'] as int? ?? 4000,
-        customThinkingTokens: json['customThinkingTokens'] as int?,
-        thinkingLevel: ThinkingLevel.values.firstWhere(
-          (e) => e.name == json['thinkingLevel'] as String,
-          orElse: () => ThinkingLevel.auto,
-        ),
-      ),
-      conversationIds:
-          (json['conversationIds'] as List?)?.cast<String>() ?? const [],
-      activeMCPServers:
-          (json['activeMCPServers'] as List?)
-              ?.map((e) => ActiveMCPServer.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      activeBuiltInTools:
-          (json['activeBuiltInTools'] as List?)?.cast<String>() ?? const [],
-      persistChatSelection: json['persistChatSelection'] as bool?,
-    );
-  }
+  Map<String, dynamic> toJson() => _$AIProfileToJson(this);
 
   String toJsonString() => json.encode(toJson());
 
@@ -82,6 +43,7 @@ class AIProfile {
       AIProfile.fromJson(json.decode(jsonString));
 }
 
+@JsonSerializable(fieldRename: FieldRename.snake)
 class AiConfig {
   final String systemPrompt;
   final bool enableStream;
@@ -107,36 +69,21 @@ class AiConfig {
     this.thinkingLevel = ThinkingLevel.auto,
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      'systemPrompt': systemPrompt,
-      'enableStream': enableStream,
-      'topP': topP,
-      'topK': topK,
-      'temperature': temperature,
-      'contextWindow': contextWindow,
-      'conversationLength': conversationLength,
-      'maxTokens': maxTokens,
-      'customThinkingTokens': customThinkingTokens,
-      'thinkingLevel': thinkingLevel.name,
-    };
-  }
+  factory AiConfig.fromJson(Map<String, dynamic> json) =>
+      _$AiConfigFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AiConfigToJson(this);
 }
 
+@JsonSerializable(fieldRename: FieldRename.snake)
 class ActiveMCPServer {
   final String id;
   final List<String> activeToolIds;
 
   ActiveMCPServer({required this.id, required this.activeToolIds});
 
-  Map<String, dynamic> toJson() {
-    return {'id': id, 'activeToolIds': activeToolIds};
-  }
+  factory ActiveMCPServer.fromJson(Map<String, dynamic> json) =>
+      _$ActiveMCPServerFromJson(json);
 
-  factory ActiveMCPServer.fromJson(Map<String, dynamic> json) {
-    return ActiveMCPServer(
-      id: json['id'] as String,
-      activeToolIds: (json['activeToolIds'] as List?)?.cast<String>() ?? [],
-    );
-  }
+  Map<String, dynamic> toJson() => _$ActiveMCPServerToJson(this);
 }

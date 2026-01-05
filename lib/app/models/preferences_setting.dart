@@ -1,8 +1,9 @@
 import 'dart:convert';
+import 'package:json_annotation/json_annotation.dart';
 
-/// App-wide preferences that are not language/theme related.
-/// - persistChatSelection: when true, persist selected provider/model and enabled tools per conversation
-/// - preferAgentSettings: when true, agent-level overrides take precedence over global preferences
+part 'preferences_setting.g.dart';
+
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class PreferencesSetting {
   final bool persistChatSelection;
   final VibrationSettings vibrationSettings;
@@ -54,29 +55,10 @@ class PreferencesSetting {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'persistChatSelection': persistChatSelection,
-      'vibrationSettings': vibrationSettings.toJson(),
-      'hideStatusBar': hideStatusBar,
-      'hideNavigationBar': hideNavigationBar,
-      'debugMode': debugMode,
-      'hasInitializedIcons': hasInitializedIcons,
-      'activeSidebar': activeSidebar,
-    };
-  }
+  factory PreferencesSetting.fromJson(Map<String, dynamic> json) =>
+      _$PreferencesSettingFromJson(json);
 
-  factory PreferencesSetting.fromJson(Map<String, dynamic> json) {
-    return PreferencesSetting(
-      persistChatSelection: (json['persistChatSelection'] as bool?) ?? false,
-      vibrationSettings: VibrationSettings.fromJson(json['vibrationSettings']),
-      hideStatusBar: (json['hideStatusBar'] as bool?) ?? false,
-      hideNavigationBar: (json['hideNavigationBar'] as bool?) ?? false,
-      debugMode: (json['debugMode'] as bool?) ?? false,
-      hasInitializedIcons: (json['hasInitializedIcons'] as bool?) ?? false,
-      activeSidebar: json['activeSidebar'] as String?,
-    );
-  }
+  Map<String, dynamic> toJson() => _$PreferencesSettingToJson(this);
 
   String toJsonString() => json.encode(toJson());
 
@@ -96,6 +78,7 @@ class PreferencesSetting {
   }
 }
 
+@JsonSerializable(fieldRename: FieldRename.snake)
 class VibrationSettings {
   final bool enable;
   final bool onHoldChatConversation;
@@ -138,24 +121,8 @@ class VibrationSettings {
     );
   }
 
-  static VibrationSettings fromJson(Map<String, dynamic> json) {
-    return VibrationSettings(
-      enable: (json['enable'] as bool?) ?? false,
-      onHoldChatConversation:
-          (json['onHoldChatConversation'] as bool?) ?? false,
-      onNewMessage: (json['onNewMessage'] as bool?) ?? false,
-      onGenerateToken: (json['onGenerateToken'] as bool?) ?? false,
-      onDeleteItem: (json['onDeleteItem'] as bool?) ?? false,
-    );
-  }
+  factory VibrationSettings.fromJson(Map<String, dynamic> json) =>
+      _$VibrationSettingsFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'enable': enable,
-      'onHoldChatConversation': onHoldChatConversation,
-      'onNewMessage': onNewMessage,
-      'onGenerateToken': onGenerateToken,
-      'onDeleteItem': onDeleteItem,
-    };
-  }
+  Map<String, dynamic> toJson() => _$VibrationSettingsToJson(this);
 }
