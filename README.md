@@ -9,6 +9,10 @@ AI Gateway is a LLM client application that provides a unified interface for int
 - [x] Web
 - [x] Desktop - (build from source by yourself)
 
+# Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to the project.
+
 # license
 
 [![License: SPLicense](https://img.shields.io/badge/Starfall-LICENSE-blue.svg)](LICENSE)
