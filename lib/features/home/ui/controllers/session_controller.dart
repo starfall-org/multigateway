@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/features/home/domain/domain.dart';
+import 'package:multigateway/features/home/domain/data/chat_store.dart';
 import 'package:uuid/uuid.dart';
 
 /// Controller responsible for managing chat sessions/conversations
 class SessionController extends ChangeNotifier {
-  final ChatRepository chatRepository;
+  final ConversationStorage conversationRepository;
 
   Conversation? currentSession;
   bool isLoading = true;
 
   SessionController({
-    required this.chatRepository,
+    required this.conversationRepository,
   });
 
   Future<void> initChat() async {
-    final sessions = chatRepository.getItems();
+    final sessions = conversationRepository.getItems();
 
     if (sessions.isNotEmpty) {
       currentSession = sessions.first;
@@ -32,8 +33,11 @@ class SessionController extends ChangeNotifier {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       messages: [],
+      providerId: '',
+      modelName: '',
+      profileId: '',
     );
-    await chatRepository.saveItem(session);
+    await conversationRepository.saveItem(session);
     currentSession = session;
     isLoading = false;
     notifyListeners();
@@ -43,7 +47,7 @@ class SessionController extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    final sessions = chatRepository.getItems();
+    final sessions = conversationRepository.getItems();
     final session = sessions.firstWhere(
       (s) => s.id == sessionId,
       orElse: () => sessions.first,
@@ -56,7 +60,7 @@ class SessionController extends ChangeNotifier {
 
   Future<void> saveCurrentSession() async {
     if (currentSession != null) {
-      await chatRepository.saveItem(currentSession!);
+      await conversationRepository.saveItem(currentSession!);
     }
   }
 
@@ -67,7 +71,7 @@ class SessionController extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
     notifyListeners();
-    await chatRepository.saveItem(currentSession!);
+    await conversationRepository.saveItem(currentSession!);
   }
 
   void updateSession(Conversation session) {

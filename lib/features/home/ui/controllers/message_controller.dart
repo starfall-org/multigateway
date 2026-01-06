@@ -37,7 +37,7 @@ class MessageController extends ChangeNotifier {
       role: ChatRole.user,
       content: text,
       timestamp: DateTime.now(),
-      attachments: attachments,
+      files: attachments,
     );
 
     var session = currentSession.copyWith(
@@ -56,7 +56,7 @@ class MessageController extends ChangeNotifier {
 
     onSessionUpdate(session);
 
-    final modelInput = ChatLogicUtils.formatAttachmentsForPrompt(
+    final modelInput = ChatLogicUtils.formatFilesForPrompt(
       text,
       attachments,
     );
@@ -368,8 +368,8 @@ class MessageController extends ChangeNotifier {
   }
 
   Future<void> copyMessage(BuildContext context, ChatMessage message) async {
-    if (message.content.trim().isEmpty) return;
-    await Clipboard.setData(ClipboardData(text: message.content));
+    if ((message.content ?? '').trim().isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: message.content ?? ''));
     if (context.mounted) {
       context.showSuccessSnackBar(tl('Transcript copied'));
     }
@@ -400,8 +400,8 @@ class MessageController extends ChangeNotifier {
   ) async {
     final result = await EditMessageSheet.show(
       context,
-      initialContent: message.content,
-      initialAttachments: message.attachments,
+      initialContent: message.content ?? '',
+      initialAttachments: message.files,
     );
     if (result == null) return;
     if (!context.mounted) return;
@@ -436,8 +436,11 @@ class MessageController extends ChangeNotifier {
       MessageContents(
         content: newContent,
         timestamp: DateTime.now(),
-        attachments: newAttachments,
+        files: newAttachments,
         reasoningContent: original.reasoningContent,
+        toolCall: original.toolCall,
+      ),
+    );
         files: original.files,
       ),
     );

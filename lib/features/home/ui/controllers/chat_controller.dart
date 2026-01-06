@@ -163,10 +163,10 @@ class ChatController extends ChangeNotifier {
     // If persistence is enabled and not loaded from session, store selection
     if (currentSession != null &&
         persist &&
-        (currentSession!.providerName == null ||
-            currentSession!.modelName == null)) {
+        (currentSession!.providerId.isEmpty ||
+            currentSession!.modelName.isEmpty)) {
       final updatedSession = currentSession!.copyWith(
-        providerName: providerName,
+        providerId: providerName,
         modelName: modelName,
         updatedAt: DateTime.now(),
       );
@@ -174,35 +174,19 @@ class ChatController extends ChangeNotifier {
       await sessionController.saveCurrentSession();
     }
 
-    // Prepare allowed tool names if persistence is enabled
-    List<String>? allowedToolNames;
-    if (persist) {
-      if (currentSession!.enabledToolNames == null) {
-        final profile =
-            selectedProfile ??
-            ChatProfile(
-              id: const Uuid().v4(),
-              name: 'Default Profile',
-              config: AiConfig(systemPrompt: '', enableStream: true),
-            );
-        final names = await profileController.snapshotEnabledToolNames(profile);
-        final updatedSession = currentSession!.copyWith(
-          enabledToolNames: names,
-          updatedAt: DateTime.now(),
-        );
-        sessionController.updateSession(updatedSession);
-        await sessionController.saveCurrentSession();
-      }
-      allowedToolNames = currentSession!.enabledToolNames;
-    }
-
     final profile =
         selectedProfile ??
         ChatProfile(
           id: const Uuid().v4(),
           name: 'Default Profile',
-          config: AiConfig(systemPrompt: '', enableStream: true),
+          config: LlmChatConfig(systemPrompt: '', enableStream: true),
         );
+
+    // Prepare allowed tool names if persistence is enabled
+    List<String>? allowedToolNames;
+    if (persist) {
+      allowedToolNames = await profileController.snapshotEnabledToolNames(profile);
+    }
 
     if (!context.mounted) return;
 
@@ -256,10 +240,10 @@ class ChatController extends ChangeNotifier {
 
     if (currentSession != null &&
         persist &&
-        (currentSession!.providerName == null ||
-            currentSession!.modelName == null)) {
+        (currentSession!.providerId.isEmpty ||
+            currentSession!.modelName.isEmpty)) {
       final updatedSession = currentSession!.copyWith(
-        providerName: providerName,
+        providerId: providerName,
         modelName: modelName,
         updatedAt: DateTime.now(),
       );
@@ -267,34 +251,19 @@ class ChatController extends ChangeNotifier {
       await sessionController.saveCurrentSession();
     }
 
-    List<String>? allowedToolNames;
-    if (persist) {
-      if (currentSession!.enabledToolNames == null) {
-        final profile =
-            selectedProfile ??
-            ChatProfile(
-              id: const Uuid().v4(),
-              name: 'Default Profile',
-              config: AiConfig(systemPrompt: '', enableStream: true),
-            );
-        final names = await profileController.snapshotEnabledToolNames(profile);
-        final updatedSession = currentSession!.copyWith(
-          enabledToolNames: names,
-          updatedAt: DateTime.now(),
-        );
-        sessionController.updateSession(updatedSession);
-        await sessionController.saveCurrentSession();
-      }
-      allowedToolNames = currentSession!.enabledToolNames;
-    }
-
     final profile =
         selectedProfile ??
         ChatProfile(
           id: const Uuid().v4(),
           name: 'Default Profile',
-          config: AiConfig(systemPrompt: '', enableStream: true),
+          config: LlmChatConfig(systemPrompt: '', enableStream: true),
         );
+
+    // Prepare allowed tool names if persistence is enabled
+    List<String>? allowedToolNames;
+    if (persist) {
+      allowedToolNames = await profileController.snapshotEnabledToolNames(profile);
+    }
 
     if (!context.mounted) return;
 
