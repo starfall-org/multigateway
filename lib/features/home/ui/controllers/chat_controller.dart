@@ -29,7 +29,7 @@ class ChatController extends ChangeNotifier {
   final ScrollController scrollController = ScrollController();
 
   final ChatNavigationInterface navigator;
-  final PreferencesSp preferencesSp;
+  final PreferencesStorage preferencesSp;
   final TTSService ttsService;
 
   // Sub-controllers
@@ -43,7 +43,7 @@ class ChatController extends ChangeNotifier {
     required this.navigator,
     required ChatRepository chatRepository,
     required AIProfileRepository aiProfileRepository,
-    required ProviderInfoStorage pInfStorage,
+    required LlmProviderInfoStorage pInfStorage,
     required this.preferencesSp,
     required MCPRepository mcpRepository,
     required this.ttsService,
@@ -149,7 +149,7 @@ class ChatController extends ChangeNotifier {
     attachmentController.clearPendingAttachments();
 
     // Resolve provider and model
-    final providerRepo = await ProviderInfoStorage.init();
+    final providerRepo = await LlmProviderInfoStorage.init();
     if (!context.mounted) return;
 
     final providersList = providerRepo.getProviders();
@@ -243,7 +243,7 @@ class ChatController extends ChangeNotifier {
   Future<void> regenerateLast(BuildContext context) async {
     if (currentSession == null) return;
 
-    final providerRepo = await ProviderInfoStorage.init();
+    final providerRepo = await LlmProviderInfoStorage.init();
     if (!context.mounted) return;
 
     final providersList = providerRepo.getProviders();

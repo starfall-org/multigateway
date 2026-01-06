@@ -22,7 +22,7 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
   List<Provider> _providers = [];
   bool _isLoading = true;
   bool _isGridView = false;
-  late ProviderInfoStorage _repository;
+  late LlmProviderInfoStorage _repository;
 
   @override
   void initState() {
@@ -40,7 +40,7 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
 
     try {
       // Add timeout to prevent infinite loading
-      _repository = await ProviderInfoStorage.init().timeout(
+      _repository = await LlmProviderInfoStorage.init().timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           throw TimeoutException(

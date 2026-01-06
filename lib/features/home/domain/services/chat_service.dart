@@ -155,7 +155,7 @@ class ChatService {
     required String modelName,
     List<String>? allowedToolNames,
   }) async* {
-    final providerRepo = await ProviderInfoStorage.init();
+    final providerRepo = await LlmProviderInfoStorage.init();
     final providers = providerRepo.getProviders();
     if (providers.isEmpty) {
       throw Exception(
@@ -188,7 +188,7 @@ class ChatService {
     final systemInstruction = profile.config.systemPrompt;
 
     switch (provider.type) {
-      case ProviderType.google:
+      case ProviderType.googleai:
         final builtinTools = _collectGeminiBuiltinTools(
           provider,
           modelName,
@@ -199,7 +199,7 @@ class ChatService {
         final aiMessages = messagesWithCurrent
             .map(
               (m) => AIMessage(
-                role: _mapRole(m.role, ProviderType.google),
+                role: _mapRole(m.role, ProviderType.googleai),
                 content: [AIContent(type: AIContentType.text, text: m.content)],
               ),
             )
@@ -389,7 +389,7 @@ class ChatService {
       case ChatRole.user:
         return 'user';
       case ChatRole.model:
-        if (providerType == ProviderType.google) return 'model';
+        if (providerType == ProviderType.googleai) return 'model';
         return 'assistant';
       case ChatRole.system:
         return 'system';

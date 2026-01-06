@@ -15,13 +15,13 @@ class TranslationService {
   }
 
   late final AIBaseApi _aiApi;
-  late final TranslationCacheRepository _cacheRepository;
+  late final TranslationCacheStorage _cacheRepository;
   late final String _defaultModel;
 
   /// Khởi tạo TranslationService
   static Future<TranslationService> init({
     required AIBaseApi aiApi,
-    required TranslationCacheRepository cacheRepository,
+    required TranslationCacheStorage cacheRepository,
     String defaultModel = 'gpt-3.5-turbo',
   }) async {
     if (_instance != null) {

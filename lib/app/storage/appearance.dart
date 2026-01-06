@@ -4,24 +4,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/appearance_setting.dart';
 import 'shared_prefs_base.dart';
 
-class AppearanceSp extends SharedPreferencesBase<AppearanceSetting> {
+class AppearanceStorage extends SharedPreferencesBase<AppearanceSetting> {
   static const String _prefix = 'appearance';
 
   // Expose a notifier for valid reactive UI updates
-  final ValueNotifier<AppearanceSetting> themeNotifier = ValueNotifier(
-    AppearanceSetting.defaults(themeMode: ThemeMode.system),
-  );
+  final ValueNotifier<AppearanceSetting> themeNotifier =
+      ValueNotifier(AppearanceSetting.defaults(themeMode: ThemeMode.system));
 
-  AppearanceSp(super.prefs) {
+  AppearanceStorage(super.prefs) {
     _loadInitialTheme();
-    // Auto-refresh notifier on any storage change (no restart needed)
     changes.listen((_) {
       final items = getItems();
-      if (items.isNotEmpty) {
-        themeNotifier.value = items.first;
-      } else {
-        themeNotifier.value = AppearanceSetting.defaults(themeMode: ThemeMode.system);
-      }
+      themeNotifier.value = items.isNotEmpty
+          ? items.first
+          : AppearanceSetting.defaults(themeMode: ThemeMode.system);
     });
   }
 
@@ -32,20 +28,18 @@ class AppearanceSp extends SharedPreferencesBase<AppearanceSetting> {
     }
   }
 
-  static AppearanceSp? _instance;
+  static AppearanceStorage? _instance;
 
-  static Future<AppearanceSp> init() async {
-    if (_instance != null) {
-      return _instance!;
-    }
+  static Future<AppearanceStorage> init() async {
+    if (_instance != null) return _instance!;
     final prefs = await SharedPreferences.getInstance();
-    _instance = AppearanceSp(prefs);
+    _instance = AppearanceStorage(prefs);
     return _instance!;
   }
 
-  static AppearanceSp get instance {
+  static AppearanceStorage get instance {
     if (_instance == null) {
-      throw Exception('AppearanceSp not initialized. Call init() first.');
+      throw Exception('AppearanceStorage not initialized. Call init() first.');
     }
     return _instance!;
   }
@@ -75,43 +69,34 @@ class AppearanceSp extends SharedPreferencesBase<AppearanceSetting> {
     String id,
     Map<String, dynamic> fields,
   ) {
-    final int? themeModeIndex = fields['themeMode'] as int?;
-    final int? selectionIndex = fields['selection'] as int?;
+    final themeModeIndex = fields['themeMode'] as int?;
+    final selectionIndex = fields['selection'] as int?;
 
-    final ThemeMode mode =
-        (themeModeIndex != null &&
+    final mode = (themeModeIndex != null &&
             themeModeIndex >= 0 &&
             themeModeIndex < ThemeMode.values.length)
         ? ThemeMode.values[themeModeIndex]
         : ThemeMode.system;
 
-    final ThemeSelection sel =
-        (selectionIndex != null &&
+    final selection = (selectionIndex != null &&
             selectionIndex >= 0 &&
             selectionIndex < ThemeSelection.values.length)
         ? ThemeSelection.values[selectionIndex]
         : ThemeSelection.system;
 
-    // Xác định màu mặc định dựa trên theme mode
-    final bool isDark = mode == ThemeMode.dark;
-
-    // Parse nested objects
+    final isDark = mode == ThemeMode.dark;
     final colorsMap = fields['colors'] as Map<String, dynamic>?;
     final fontMap = fields['font'] as Map<String, dynamic>?;
 
-    final colors = colorsMap != null
-        ? ColorSettings.fromJson(colorsMap)
-        : ColorSettings.defaults(isDark: isDark);
-
-    final font = fontMap != null
-        ? FontSettings.fromJson(fontMap)
-        : FontSettings.defaults();
-
     return AppearanceSetting(
       themeMode: mode,
-      selection: sel,
-      colors: colors,
-      font: font,
+      selection: selection,
+      colors: colorsMap != null
+          ? ColorSettings.fromJson(colorsMap)
+          : ColorSettings.defaults(isDark: isDark),
+      font: fontMap != null
+          ? FontSettings.fromJson(fontMap)
+          : FontSettings.defaults(),
       superDarkMode: fields['superDarkMode'] as bool? ?? false,
       dynamicColor: fields['dynamicColor'] as bool? ?? false,
       enableAnimation: fields['enableAnimation'] as bool? ?? true,
@@ -119,7 +104,6 @@ class AppearanceSp extends SharedPreferencesBase<AppearanceSetting> {
   }
 
   Future<void> updateSettings(AppearanceSetting settings) async {
-    // We only ever store one item for settings
     await saveItem(settings);
     themeNotifier.value = settings;
   }

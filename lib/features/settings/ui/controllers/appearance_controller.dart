@@ -12,12 +12,12 @@ enum ColorType {
 }
 
 class AppearanceViewModel extends ChangeNotifier {
-  final AppearanceSp _repository;
+  final AppearanceStorage _repository;
   AppearanceSetting settings;
 
   AppearanceViewModel()
-    : _repository = AppearanceSp.instance,
-      settings = AppearanceSp.instance.currentTheme;
+    : _repository = AppearanceStorage.instance,
+      settings = AppearanceStorage.instance.currentTheme;
 
   Future<void> updateSelection(ThemeSelection selection) async {
     // Keep themeMode in sync for non-custom selections

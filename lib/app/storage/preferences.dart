@@ -1,26 +1,23 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/preferences_setting.dart';
 import 'shared_prefs_base.dart';
 
-class PreferencesSp extends SharedPreferencesBase<PreferencesSetting> {
+class PreferencesStorage extends SharedPreferencesBase<PreferencesSetting> {
   static const String _prefix = 'app_prefs';
 
   // Reactive notifier for UI/VM
   final ValueNotifier<PreferencesSetting> preferencesNotifier =
       ValueNotifier<PreferencesSetting>(PreferencesSetting.defaults());
 
-  PreferencesSp(super.prefs) {
+  PreferencesStorage(super.prefs) {
     _loadInitial();
-    // Auto-refresh notifier on any storage change (no restart needed)
     changes.listen((_) {
       final items = getItems();
-      if (items.isNotEmpty) {
-        preferencesNotifier.value = items.first;
-      } else {
-        preferencesNotifier.value = PreferencesSetting.defaults();
-      }
+      preferencesNotifier.value = items.isNotEmpty
+          ? items.first
+          : PreferencesSetting.defaults();
     });
   }
 
@@ -31,18 +28,18 @@ class PreferencesSp extends SharedPreferencesBase<PreferencesSetting> {
     }
   }
 
-  static PreferencesSp? _instance;
+  static PreferencesStorage? _instance;
 
-  static Future<PreferencesSp> init() async {
+  static Future<PreferencesStorage> init() async {
     if (_instance != null) return _instance!;
     final prefs = await SharedPreferences.getInstance();
-    _instance = PreferencesSp(prefs);
+    _instance = PreferencesStorage(prefs);
     return _instance!;
   }
 
-  static PreferencesSp get instance {
+  static PreferencesStorage get instance {
     if (_instance == null) {
-      throw Exception('PreferencesSp not initialized. Call init() first.');
+      throw Exception('PreferencesStorage not initialized. Call init() first.');
     }
     return _instance!;
   }
@@ -62,6 +59,7 @@ class PreferencesSp extends SharedPreferencesBase<PreferencesSetting> {
       'debugMode': item.debugMode,
       'hasInitializedIcons': item.hasInitializedIcons,
       'vibrationSettings': item.vibrationSettings.toJson(),
+      'languageSetting': item.languageSetting.toJson(),
     };
   }
 
@@ -70,12 +68,8 @@ class PreferencesSp extends SharedPreferencesBase<PreferencesSetting> {
     String id,
     Map<String, dynamic> fields,
   ) {
-    final vibrationSettingsMap =
-        fields['vibrationSettings'] as Map<String, dynamic>?;
-
-    final vibrationSettings = vibrationSettingsMap != null
-        ? VibrationSettings.fromJson(vibrationSettingsMap)
-        : VibrationSettings.defaults();
+    final vibrationSettingsMap = fields['vibrationSettings'] as Map<String, dynamic>?;
+    final languageSettingMap = fields['languageSetting'] as Map<String, dynamic>?;
 
     return PreferencesSetting(
       persistChatSelection: fields['persistChatSelection'] as bool? ?? false,
@@ -83,31 +77,27 @@ class PreferencesSp extends SharedPreferencesBase<PreferencesSetting> {
       hideNavigationBar: fields['hideNavigationBar'] as bool? ?? false,
       debugMode: fields['debugMode'] as bool? ?? false,
       hasInitializedIcons: fields['hasInitializedIcons'] as bool? ?? false,
-      vibrationSettings: vibrationSettings,
+      vibrationSettings: vibrationSettingsMap != null
+          ? VibrationSettings.fromJson(vibrationSettingsMap)
+          : VibrationSettings.defaults(),
+      languageSetting: languageSettingMap != null
+          ? LanguageSetting.fromJson(languageSettingMap)
+          : LanguageSetting.defaults(),
     );
   }
 
   Future<void> updatePreferences(PreferencesSetting preferences) async {
-    try {
-      await saveItem(preferences);
-      preferencesNotifier.value = preferences;
-    } catch (e) {
-      throw Exception('Failed to update app preferences: $e');
-    }
+    await saveItem(preferences);
+    preferencesNotifier.value = preferences;
   }
 
   PreferencesSetting get currentPreferences => preferencesNotifier.value;
 
   // Convenience setters
   Future<void> setPersistChatSelection(bool persist) async {
-    final current = currentPreferences;
-    await updatePreferences(current.copyWith(persistChatSelection: persist));
-  }
-
-  Future<void> setPreferAgentSettings(bool preferAgent) async {
-    // Deprecated in new model, but keeping for compatibility if needed or removing
-    // final current = currentPreferences;
-    // await updatePreferences(current.copyWith(preferAgentSettings: preferAgent));
+    await updatePreferences(
+      currentPreferences.copyWith(persistChatSelection: persist),
+    );
   }
 
   Future<void> resetToDefaults() async {
@@ -115,9 +105,95 @@ class PreferencesSp extends SharedPreferencesBase<PreferencesSetting> {
   }
 
   Future<void> setInitializedIcons(bool initialized) async {
-    final current = currentPreferences;
-    await updatePreferences(current.copyWith(hasInitializedIcons: initialized));
+    await updatePreferences(
+      currentPreferences.copyWith(hasInitializedIcons: initialized),
+    );
   }
 
+  // Language convenience methods
+  Future<void> setLanguage(String languageCode, {String? countryCode}) async {
+    await updatePreferences(
+      currentPreferences.copyWith(
+        languageSetting: currentPreferences.languageSetting.copyWith(
+          languageCode: languageCode,
+          countryCode: countryCode,
+          autoDetect: false,
+        ),
+      ),
+    );
+  }
 
+  Future<void> setAutoDetectLanguage(bool autoDetect) async {
+    await updatePreferences(
+      currentPreferences.copyWith(
+        languageSetting: currentPreferences.languageSetting.copyWith(
+          autoDetect: autoDetect,
+        ),
+      ),
+    );
+  }
+
+  Locale getInitialLocale(Locale deviceLocale) {
+    final languageSetting = currentPreferences.languageSetting;
+
+    if (languageSetting.autoDetect || languageSetting.languageCode == 'auto') {
+      return _getSupportedLocale(deviceLocale);
+    }
+    return _getLocaleFromLanguageSetting(languageSetting);
+  }
+
+  Locale _getSupportedLocale(Locale deviceLocale) {
+    if (deviceLocale.languageCode.isEmpty) return const Locale('en');
+
+    const supportedLocales = [
+      Locale('en'),
+      Locale('vi'),
+      Locale('zh', 'CN'),
+      Locale('zh', 'TW'),
+      Locale('ja'),
+      Locale('fr'),
+      Locale('de'),
+    ];
+
+    // Exact match language + country
+    for (final locale in supportedLocales) {
+      if (locale.languageCode == deviceLocale.languageCode &&
+          locale.countryCode == deviceLocale.countryCode) {
+        return locale;
+      }
+    }
+
+    // Match language only
+    for (final locale in supportedLocales) {
+      if (locale.languageCode == deviceLocale.languageCode) {
+        return deviceLocale.languageCode == 'zh'
+            ? const Locale('zh', 'CN')
+            : locale;
+      }
+    }
+
+    return const Locale('en');
+  }
+
+  Locale _getLocaleFromLanguageSetting(LanguageSetting languageSetting) {
+    if (languageSetting.languageCode.isEmpty) return const Locale('en');
+
+    const supportedLanguages = ['en', 'vi', 'zh', 'ja', 'fr', 'de'];
+    if (!supportedLanguages.contains(languageSetting.languageCode)) {
+      return const Locale('en');
+    }
+
+    if (languageSetting.languageCode == 'zh') {
+      if (languageSetting.countryCode == 'CN' || 
+          languageSetting.countryCode == 'TW') {
+        return Locale(languageSetting.languageCode, languageSetting.countryCode);
+      }
+      return const Locale('zh', 'CN');
+    }
+
+    return languageSetting.countryCode != null && 
+           languageSetting.countryCode!.isNotEmpty
+        ? Locale(languageSetting.languageCode, languageSetting.countryCode)
+        : Locale(languageSetting.languageCode);
+  }
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'preferences_setting.g.dart';
@@ -11,10 +12,12 @@ class PreferencesSetting {
   final bool hideNavigationBar;
   final bool debugMode;
   final bool hasInitializedIcons;
+  final LanguageSetting languageSetting;
 
   const PreferencesSetting({
     required this.persistChatSelection,
     required this.vibrationSettings,
+    required this.languageSetting,
     this.hideStatusBar = false,
     this.hideNavigationBar = false,
     this.debugMode = false,
@@ -25,6 +28,7 @@ class PreferencesSetting {
     return PreferencesSetting(
       persistChatSelection: false,
       vibrationSettings: VibrationSettings.defaults(),
+      languageSetting: LanguageSetting.defaults(),
       hideStatusBar: false,
       hideNavigationBar: false,
       debugMode: false,
@@ -35,6 +39,7 @@ class PreferencesSetting {
   PreferencesSetting copyWith({
     bool? persistChatSelection,
     VibrationSettings? vibrationSettings,
+    LanguageSetting? languageSetting,
     bool? hideStatusBar,
     bool? hideNavigationBar,
     bool? debugMode,
@@ -43,6 +48,7 @@ class PreferencesSetting {
     return PreferencesSetting(
       persistChatSelection: persistChatSelection ?? this.persistChatSelection,
       vibrationSettings: vibrationSettings ?? this.vibrationSettings,
+      languageSetting: languageSetting ?? this.languageSetting,
       hideStatusBar: hideStatusBar ?? this.hideStatusBar,
       hideNavigationBar: hideNavigationBar ?? this.hideNavigationBar,
       debugMode: debugMode ?? this.debugMode,
@@ -120,4 +126,68 @@ class VibrationSettings {
       _$VibrationSettingsFromJson(json);
 
   Map<String, dynamic> toJson() => _$VibrationSettingsToJson(this);
+}
+
+@JsonSerializable(fieldRename: FieldRename.snake)
+class LanguageSetting {
+  final String languageCode;
+  final String? countryCode;
+  final bool autoDetect;
+
+  const LanguageSetting({
+    required this.languageCode,
+    this.countryCode,
+    this.autoDetect = true,
+  });
+
+  factory LanguageSetting.defaults() {
+    return const LanguageSetting(
+      languageCode: 'auto',
+      autoDetect: true,
+    );
+  }
+
+  factory LanguageSetting.fromJson(Map<String, dynamic> json) =>
+      _$LanguageSettingFromJson(json);
+
+  Map<String, dynamic> toJson() => _$LanguageSettingToJson(this);
+
+  Locale? getLocale() {
+    if (autoDetect || languageCode == 'auto') {
+      return null;
+    }
+
+    if (countryCode != null) {
+      return Locale(languageCode, countryCode);
+    }
+    return Locale(languageCode);
+  }
+
+  LanguageSetting copyWith({
+    String? languageCode,
+    String? countryCode,
+    bool? autoDetect,
+  }) {
+    return LanguageSetting(
+      languageCode: languageCode ?? this.languageCode,
+      countryCode: countryCode ?? this.countryCode,
+      autoDetect: autoDetect ?? this.autoDetect,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is LanguageSetting &&
+        other.languageCode == languageCode &&
+        other.countryCode == countryCode &&
+        other.autoDetect == autoDetect;
+  }
+
+  @override
+  int get hashCode {
+    return languageCode.hashCode ^
+        countryCode.hashCode ^
+        autoDetect.hashCode;
+  }
 }

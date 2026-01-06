@@ -7,7 +7,7 @@ import '../../../../core/llm/data/provider_info_storage.dart';
 
 /// Controller responsible for provider and model selection
 class ModelSelectionController extends ChangeNotifier {
-  final ProviderInfoStorage pInfStorage;
+  final LlmProviderInfoStorage pInfStorage;
 
   StreamSubscription? _providerSubscription;
   List<Provider> providers = [];

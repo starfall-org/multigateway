@@ -33,10 +33,10 @@ DefaultModels _$DefaultModelsFromJson(Map<String, dynamic> json) =>
           ? null
           : DefaultModel.fromJson(
               json['translation_model'] as Map<String, dynamic>),
-      supportOcrModel: json['support_o_c_r_model'] == null
+      supportOcrModel: json['support_ocr_model'] == null
           ? null
           : DefaultModel.fromJson(
-              json['support_o_c_r_model'] as Map<String, dynamic>),
+              json['support_ocr_model'] as Map<String, dynamic>),
       embeddingModel: json['embedding_model'] == null
           ? null
           : DefaultModel.fromJson(
@@ -66,7 +66,7 @@ Map<String, dynamic> _$DefaultModelsToJson(DefaultModels instance) =>
       'title_generation_model': instance.titleGenerationModel?.toJson(),
       'chat_summarization_model': instance.chatSummarizationModel?.toJson(),
       'translation_model': instance.translationModel?.toJson(),
-      'support_o_c_r_model': instance.supportOcrModel?.toJson(),
+      'support_ocr_model': instance.supportOcrModel?.toJson(),
       'embedding_model': instance.embeddingModel?.toJson(),
       'image_generation_model': instance.imageGenerationModel?.toJson(),
       'chat_model': instance.chatModel?.toJson(),

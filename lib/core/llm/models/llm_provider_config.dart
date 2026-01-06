@@ -4,16 +4,20 @@ part 'llm_provider_config.g.dart';
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 class LlmProviderConfig {
-  final String providerId;
-  final Map<String, dynamic> httpProxy;
+  final String id;
+  final Map<String, dynamic>? httpProxy;
+  final Map<String, dynamic>? socksProxy;
   final String? customChatCompletionUrl;
   final String? customListModelsUrl;
+  final Map<String, dynamic>? headers;
 
   LlmProviderConfig({
-    required this.providerId,
-    required this.httpProxy,
+    required this.id,
+    this.httpProxy,
+    this.socksProxy,
     this.customChatCompletionUrl,
     this.customListModelsUrl,
+    this.headers,
   });
 
   factory LlmProviderConfig.fromJson(Map<String, dynamic> json) =>

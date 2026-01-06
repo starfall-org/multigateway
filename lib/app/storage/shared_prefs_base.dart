@@ -58,10 +58,8 @@ abstract class SharedPreferencesBase<T> {
 
   /// Remove an item ID from the index
   Future<void> _removeFromIndex(String id) async {
-    fina<void> _removeFromIndex(String id) async {
-    final ids = _getItemIds();
-    ids.remove(id);
-    await _saveItemIds(ids);
+    final ids = getItemIds();
+    await _saveItemIds(ids..remove(id));
   }
 
   /// Get all keys for a specific item
@@ -98,15 +96,14 @@ abstract class SharedPreferencesBase<T> {
     String parentPath = '',
   ]) async {
     for (final entry in fields.entries) {
-      final fieldPath = parentPath.isEmpty
-          ? entry.key
-          : '$parentPath:${entry.key}';
+      final fieldPath = parentPath.isEmpty ? entry.key : '$parentPath:${entry.key}';
       final fullKey = '$prefix:$id:$fieldPath';
       final value = entry.value;
 
-      if (value == null) {
-        // Skip null values
-        continue;
+      if (value == null) continue;
+      
+      if (value is Map) {
+        await _saveFields(id, value.cast<String, dynamic>(), fieldPath);
       } else if (value is String) {
         await prefs.setString(fullKey, value);
       } else if (value is int) {
@@ -115,14 +112,7 @@ abstract class SharedPreferencesBase<T> {
         await prefs.setDouble(fullKey, value);
       } else if (value is bool) {
         await prefs.setBool(fullKey, value);
-      } else if (value is List) {
-        // Store list as JSON string
-        await prefs.setString(fullKey, json.encode(value));
-      } else if (value is Map) {
-        // For nested objects, recursively save fields
-        await _saveFields(id, value.cast<String, dynamic>(), fieldPath);
       } else {
-        // Fallback: store as JSON string
         await prefs.setString(fullKey, json.encode(value));
       }
     }
@@ -130,29 +120,20 @@ abstract class SharedPreferencesBase<T> {
 
   /// Get a specific item by ID
   T? getItem(String id) {
-    final ids = _getItemIds();
-    if (!ids.contains(id)) return null;
-
+    if (!getItemIds().contains(id)) return null;
     final fields = _loadFields(id);
-    if (fields.isEmpty) return null;
-
-    return deserializeFromFields(id, fields);
+    return fields.isEmpty ? null : deserializeFromFields(id, fields);
   }
 
   /// Load all fields for a specific item
   Map<String, dynamic> _loadFields(String id) {
     final itemPrefix = '$prefix:$id:';
-    final Map<String, dynamic> fields = {};
+    final fields = <String, dynamic>{};
 
-    for (final key in prefs.getKeys()) {
-      if (!key.startsWith(itemPrefix)) continue;
-
-      // Extract field path
-      final fieldPath = key.substring(itemPrefix.length);
+    for (final key in prefs.getKeys().where((k) => k.startsWith(itemPrefix))) {
       final value = _getValue(key);
-
       if (value != null) {
-        _setNestedValue(fields, fieldPath, value);
+        _setNestedValue(fields, key.substring(itemPrefix.length), value);
       }
     }
 
@@ -162,16 +143,10 @@ abstract class SharedPreferencesBase<T> {
   /// Get value from SharedPreferences by key
   dynamic _getValue(String key) {
     final value = prefs.get(key);
-    if (value is String) {
-      // Try to decode JSON if it's a list or map
-      if (value.startsWith('[') || value.startsWith('{')) {
-        try {
-          return json.decode(value);
-        } catch (_) {
-          return value;
-        }
-      }
-      return value;
+    if (value is String && (value.startsWith('[') || value.startsWith('{'))) {
+      try {
+        return json.decode(value);
+      } catch (_) {}
     }
     return value;
   }
@@ -194,17 +169,10 @@ abstract class SharedPreferencesBase<T> {
 
   /// Get all items
   List<T> getItems() {
-    final ids = _getItemIds();
-    final items = <T>[];
-
-    for (final id in ids) {
-      final item = getItem(id);
-      if (item != null) {
-        items.add(item);
-      }
-    }
-
-    return items;
+    return getItemIds()
+        .map((id) => getItem(id))
+        .whereType<T>()
+        .toList();
   }
 
   /// Delete an item by ID
@@ -224,44 +192,29 @@ abstract class SharedPreferencesBase<T> {
 
   /// Clear all items in this repository
   Future<void> clear() async {
-    final ids = _getItemIds();
-
-    // Remove all item keys
-    for (final id in ids) {
-      final keys = _getItemKeys(id);
-      for (final key in keys) {
+    for (final id in getItemIds()) {
+      for (final key in _getItemKeys(id)) {
         await prefs.remove(key);
       }
     }
-
-    // Clear index
     await prefs.remove(_indexKey);
-
-    // Notify listeners
     changeNotifier.value++;
   }
 
   /// Stream of changes (emits when data changes)
-  /// Emits only when ValueNotifier changes; starts with current value.
-  Stream<void> get changes =>
-      changeNotifier.toStream().map((_) => null).cast<void>();
+  Stream<void> get changes => changeNotifier.toStream().map((_) {});
 
   /// Stream of all items, emits immediately and on each change.
   Stream<List<T>> get itemsStream {
     final controller = StreamController<List<T>>.broadcast();
     StreamSubscription<void>? sub;
+    
     controller.onListen = () {
-      // Emit current items immediately
       controller.add(getItems());
-      // Re-emit items on every change
-      sub = changes.listen((_) {
-        controller.add(getItems());
-      });
+      sub = changes.listen((_) => controller.add(getItems()));
     };
-    controller.onCancel = () async {
-      await sub?.cancel();
-      sub = null;
-    };
+    controller.onCancel = () => sub?.cancel();
+    
     return controller.stream;
   }
 
@@ -270,22 +223,19 @@ abstract class SharedPreferencesBase<T> {
   Future<void> updateItem(T item) => saveItem(item);
 }
 
-//// Extension to convert ValueNotifier to a broadcast Stream that only
-/// emits on actual changes and starts with the current value.
+/// Extension to convert ValueNotifier to a broadcast Stream
 extension ValueNotifierStream<T> on ValueNotifier<T> {
   Stream<T> toStream() {
     late VoidCallback listener;
     final controller = StreamController<T>.broadcast();
+    
     controller.onListen = () {
-      // Emit current value immediately for new subscribers
       controller.add(value);
-      // Emit on each change
       listener = () => controller.add(value);
       addListener(listener);
     };
-    controller.onCancel = () {
-      removeListener(listener);
-    };
+    controller.onCancel = () => removeListener(listener);
+    
     return controller.stream;
   }
 }

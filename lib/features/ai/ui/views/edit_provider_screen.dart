@@ -112,7 +112,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                           ? 'azure-color'
                           : type == ProviderType.openai
                           ? 'openai'
-                          : type == ProviderType.google
+                          : type == ProviderType.googleai
                           ? 'aistudio'
                           : type == ProviderType.anthropic
                           ? 'anthropic'
@@ -139,7 +139,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
                   },
                   controlAffinity: ListTileControlAffinity.leading,
                 ),
-              if (_viewModel.selectedType == ProviderType.google)
+              if (_viewModel.selectedType == ProviderType.googleai)
                 CheckboxListTile(
                   title: Text(tl('Vertex AI')),
                   value: _viewModel.vertexAI,
@@ -403,7 +403,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
         _viewModel.nameController.text == 'Anthropic' ||
         _viewModel.nameController.text == 'Ollama') {
       switch (type) {
-        case ProviderType.google:
+        case ProviderType.googleai:
           _viewModel.nameController.text = 'Google';
           break;
         case ProviderType.openai:

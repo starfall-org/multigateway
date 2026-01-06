@@ -62,7 +62,7 @@ class AddProviderViewModel extends ChangeNotifier {
         if (provider.baseUrl.contains('azure')) {
           azureAI = true;
         }
-      } else if (provider.type == ProviderType.google) {
+      } else if (provider.type == ProviderType.googleai) {
         if (provider.vertexAIConfig != null) {
           vertexAI = true;
         }
@@ -87,7 +87,7 @@ class AddProviderViewModel extends ChangeNotifier {
       case ProviderType.ollama:
         baseUrlController.text = 'http://localhost:11434/api';
         break;
-      case ProviderType.google:
+      case ProviderType.googleai:
         baseUrlController.text = '';
         break;
     }
@@ -197,7 +197,7 @@ class AddProviderViewModel extends ChangeNotifier {
       vertexAIConfig: vertexAI ? VertexAIConfig(projectId: '', location: '') : null,
     );
 
-    final storage = await ProviderInfoStorage.init();
+    final storage = await LlmProviderInfoStorage.init();
     await storage.saveItem(provider); 
 
     if (context.mounted) {

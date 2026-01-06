@@ -49,7 +49,7 @@ class _AddTTSProfileScreenState extends State<AddTTSProfileScreen>
   }
 
   Future<void> _loadProviders() async {
-    final repository = await ProviderInfoStorage.init();
+    final repository = await LlmProviderInfoStorage.init();
     final providers = repository.getProviders();
     setState(() {
       // Filter providers that have TTS capability
@@ -201,7 +201,7 @@ class _AddTTSProfileScreenState extends State<AddTTSProfileScreen>
             value: _selectedProviderId,
             labelText: tl('Provider'),
             options: _availableProviders.map((p) {
-              final iconData = p.type == ProviderType.google
+              final iconData = p.type == ProviderType.googleai
                   ? Icons.cloud
                   : p.type == ProviderType.openai
                   ? Icons.api

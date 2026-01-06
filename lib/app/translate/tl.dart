@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:translator/translator.dart';
 
 import '../storage/translation_cache.dart';
-import '../storage/language.dart';
+import '../storage/preferences.dart';
 // import 'service.dart';
 
 /// Dịch text từ English sang ngôn ngữ được cài đặt trong language preferences
@@ -14,8 +14,7 @@ String tl(String text) {
   final translator = GoogleTranslator();
   try {
     // Lấy language preferences hiện tại
-    final languageRepo = LanguageSp.instance;
-    final preferences = languageRepo.currentPreferences;
+    final preferences = PreferencesStorage.instance.currentPreferences.languageSetting;
 
     // Xác định target language
     String targetLanguage;
@@ -38,7 +37,7 @@ String tl(String text) {
 
     // Kiểm tra cached translation trước
     try {
-      final translationCacheRepo = TranslationCacheRepository.instance;
+      final translationCacheRepo = TranslationCacheStorage.instance;
       final cached = translationCacheRepo.getCachedTranslation(
         originalText: text,
         sourceLanguage: 'en',
@@ -59,7 +58,7 @@ String tl(String text) {
           from: 'en',
           to: targetLanguage,
         );
-        final translationCacheRepo = TranslationCacheRepository.instance;
+        final translationCacheRepo = TranslationCacheStorage.instance;
         translationCacheRepo.saveTranslation(
           originalText: text,
           sourceLanguage: 'en',

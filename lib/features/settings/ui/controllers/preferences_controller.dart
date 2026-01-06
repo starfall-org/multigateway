@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../app/models/preferences_setting.dart';
-import '../../../../app/storage/language.dart';
 import '../../../../app/storage/preferences.dart';
 
 class PreferencesController extends ChangeNotifier {
-  final LanguageSp _languageSp;
-  final PreferencesSp _preferencesSp;
+  final PreferencesStorage _preferencesSp;
 
   bool _autoDetect = true;
   String _selectedLanguage = 'auto';
@@ -29,8 +27,7 @@ class PreferencesController extends ChangeNotifier {
   ];
 
   PreferencesController()
-      : _languageSp = LanguageSp.instance,
-        _preferencesSp = PreferencesSp.instance {
+      : _preferencesSp = PreferencesStorage.instance {
     _loadPreferences();
     _loadPreferencesSetting();
   }
@@ -44,9 +41,9 @@ class PreferencesController extends ChangeNotifier {
   bool get debugMode => _debugMode;
 
   void _loadPreferences() {
-    final preferences = _languageSp.currentPreferences;
-    _autoDetect = preferences.autoDetect;
-    _selectedLanguage = preferences.languageCode;
+    final languageSetting = _preferencesSp.currentPreferences.languageSetting;
+    _autoDetect = languageSetting.autoDetect;
+    _selectedLanguage = languageSetting.languageCode;
     notifyListeners();
   }
 
@@ -100,7 +97,7 @@ class PreferencesController extends ChangeNotifier {
       notifyListeners();
 
       if (languageCode == 'auto') {
-        await _languageSp.setAutoDetect(true);
+        await _preferencesSp.setAutoDetectLanguage(true);
       } else {
         String? countryCode;
         if (languageCode.contains('_')) {
@@ -109,7 +106,7 @@ class PreferencesController extends ChangeNotifier {
           languageCode = parts[0];
         }
 
-        await _languageSp.setLanguage(languageCode, countryCode: countryCode);
+        await _preferencesSp.setLanguage(languageCode, countryCode: countryCode);
       }
     } catch (e) {
       _loadPreferences();
@@ -118,19 +115,19 @@ class PreferencesController extends ChangeNotifier {
   }
 
   Locale getNewLocale() {
-    final preferences = _languageSp.currentPreferences;
+    final languageSetting = _preferencesSp.currentPreferences.languageSetting;
     Locale newLocale;
 
-    if (preferences.autoDetect || preferences.languageCode == 'auto') {
+    if (languageSetting.autoDetect || languageSetting.languageCode == 'auto') {
       newLocale = WidgetsBinding.instance.platformDispatcher.locale;
       if (newLocale.languageCode == 'zh') {
         newLocale = const Locale('zh', 'CN');
       }
     } else {
-      if (preferences.countryCode != null) {
-        newLocale = Locale(preferences.languageCode, preferences.countryCode);
+      if (languageSetting.countryCode != null) {
+        newLocale = Locale(languageSetting.languageCode, languageSetting.countryCode);
       } else {
-        newLocale = Locale(preferences.languageCode);
+        newLocale = Locale(languageSetting.languageCode);
       }
     }
 

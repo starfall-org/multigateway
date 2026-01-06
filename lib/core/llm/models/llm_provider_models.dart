@@ -8,12 +8,14 @@ part 'llm_provider_models.g.dart';
 
 @JsonSerializable()
 class LlmProviderModels {
-  final List<BasicModel?> basicModels;
-  final List<OllamaModel?> ollamaModels;
-  final List<GoogleAiModel?> googleAiModels;
-  final List<GitHubModel?> githubModels;
+  final String id;
+  List<BasicModel?> basicModels;
+  List<OllamaModel?> ollamaModels;
+  List<GoogleAiModel?> googleAiModels;
+  List<GitHubModel?> githubModels;
 
   LlmProviderModels({
+    required this.id,
     required this.basicModels,
     required this.ollamaModels,
     required this.googleAiModels,

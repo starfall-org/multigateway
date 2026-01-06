@@ -192,7 +192,7 @@ class MessageController extends ChangeNotifier {
       debugPrint(stackTrace.toString());
 
       if (context != null && context.mounted) {
-        if (PreferencesSp.instance.currentPreferences.debugMode) {
+        if (PreferencesStorage.instance.currentPreferences.debugMode) {
           ErrorDebugDialog.show(context, error: e, stackTrace: stackTrace);
         }
       }
@@ -262,7 +262,7 @@ class MessageController extends ChangeNotifier {
       debugPrint(stackTrace.toString());
 
       if (context != null && context.mounted) {
-        if (PreferencesSp.instance.currentPreferences.debugMode) {
+        if (PreferencesStorage.instance.currentPreferences.debugMode) {
           ErrorDebugDialog.show(context, error: e, stackTrace: stackTrace);
         }
       }
