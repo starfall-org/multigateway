@@ -4,7 +4,7 @@ import '../../llm_model/basic_model.dart';
 
 part 'models.g.dart';
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class AnthropicModels {
   final List<BasicModel> data;
   final String firstId;

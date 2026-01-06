@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'responses.g.dart';
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class RequestMessage {
   final String role;
   final dynamic content;
@@ -16,7 +16,7 @@ class RequestMessage {
   Map<String, dynamic> toJson() => _$RequestMessageToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class Tool {
   final String type;
   final FunctionDefinition function;
@@ -28,7 +28,7 @@ class Tool {
   Map<String, dynamic> toJson() => _$ToolToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class FunctionDefinition {
   final String? description;
   final String name;
@@ -49,7 +49,7 @@ class FunctionDefinition {
 }
 
 // Response-related classes
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class OpenAiResponses {
   final String id;
   final String object;
@@ -84,7 +84,7 @@ class OpenAiResponses {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class ResponseItem {
   final String id;
   final String type;
@@ -111,7 +111,7 @@ class ResponseItem {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MessageContents {
   final String type;
   final String text;
@@ -136,7 +136,7 @@ class MessageContents {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class Annotation {
   final String type;
   final String text;
@@ -165,7 +165,7 @@ class Annotation {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class Logprobs {
   final String token;
   final double logprob;
@@ -190,7 +190,7 @@ class Logprobs {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class TopLogprob {
   final String token;
   final double logprob;
@@ -209,7 +209,7 @@ class TopLogprob {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class ErrorInfo {
   final String code;
   final String message;
@@ -227,7 +227,7 @@ class ErrorInfo {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class IncompleteDetails {
   final String reason;
   final String type;
@@ -245,7 +245,7 @@ class IncompleteDetails {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class ResponsesUsage {
   final int inputTokens;
   final int outputTokens;
@@ -272,7 +272,7 @@ class ResponsesUsage {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class UsageDetails {
   final int? cachedTokens;
   final int? textTokens;
@@ -299,7 +299,7 @@ class UsageDetails {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class OpenAiResponsesRequest {
   final String model;
   final List<RequestMessage> input;
@@ -345,7 +345,7 @@ class OpenAiResponsesRequest {
   Map<String, dynamic> toJson() => _$OpenAiResponsesRequestToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class ReasoningConfig {
   final String effort;
 

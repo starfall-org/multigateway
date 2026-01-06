@@ -7,8 +7,9 @@ class AppearanceStorage extends SharedPreferencesBase<AppearanceSetting> {
   static const String _prefix = 'appearance';
 
   // Expose a notifier for valid reactive UI updates
-  final ValueNotifier<AppearanceSetting> themeNotifier =
-      ValueNotifier(AppearanceSetting.defaults(themeMode: ThemeMode.system));
+  final ValueNotifier<AppearanceSetting> themeNotifier = ValueNotifier(
+    AppearanceSetting.defaults(themeMode: ThemeMode.system),
+  );
 
   AppearanceStorage(super.prefs) {
     _loadInitialTheme();
@@ -52,15 +53,7 @@ class AppearanceStorage extends SharedPreferencesBase<AppearanceSetting> {
 
   @override
   Map<String, dynamic> serializeToFields(AppearanceSetting item) {
-    return {
-      'themeMode': item.themeMode.index,
-      'selection': item.selection.index,
-      'colors': item.colors.toJson(),
-      'font': item.font.toJson(),
-      'superDarkMode': item.superDarkMode,
-      'dynamicColor': item.dynamicColor,
-      'enableAnimation': item.enableAnimation,
-    };
+    return item.toJson();
   }
 
   @override
@@ -68,38 +61,7 @@ class AppearanceStorage extends SharedPreferencesBase<AppearanceSetting> {
     String id,
     Map<String, dynamic> fields,
   ) {
-    final themeModeIndex = fields['themeMode'] as int?;
-    final selectionIndex = fields['selection'] as int?;
-
-    final mode = (themeModeIndex != null &&
-            themeModeIndex >= 0 &&
-            themeModeIndex < ThemeMode.values.length)
-        ? ThemeMode.values[themeModeIndex]
-        : ThemeMode.system;
-
-    final selection = (selectionIndex != null &&
-            selectionIndex >= 0 &&
-            selectionIndex < ThemeSelection.values.length)
-        ? ThemeSelection.values[selectionIndex]
-        : ThemeSelection.system;
-
-    final isDark = mode == ThemeMode.dark;
-    final colorsMap = fields['colors'] as Map<String, dynamic>?;
-    final fontMap = fields['font'] as Map<String, dynamic>?;
-
-    return AppearanceSetting(
-      themeMode: mode,
-      selection: selection,
-      colors: colorsMap != null
-          ? ColorSettings.fromJson(colorsMap)
-          : ColorSettings.defaults(isDark: isDark),
-      font: fontMap != null
-          ? FontSettings.fromJson(fontMap)
-          : FontSettings.defaults(),
-      superDarkMode: fields['superDarkMode'] as bool? ?? false,
-      dynamicColor: fields['dynamicColor'] as bool? ?? false,
-      enableAnimation: fields['enableAnimation'] as bool? ?? true,
-    );
+    return AppearanceSetting.fromJson(fields);
   }
 
   Future<void> updateSettings(AppearanceSetting settings) async {

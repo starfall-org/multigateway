@@ -23,7 +23,7 @@ Map<String, dynamic> _$McpServerInfoToJson(McpServerInfo instance) =>
       'name': instance.name,
       'protocol': _$McpProtocolEnumMap[instance.protocol]!,
       'url': instance.url,
-      'stdio_config': instance.stdioConfig,
+      'stdio_config': instance.stdioConfig?.toJson(),
     };
 
 const _$McpProtocolEnumMap = {

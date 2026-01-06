@@ -55,8 +55,8 @@ Map<String, dynamic> _$AppearanceSettingToJson(AppearanceSetting instance) =>
     <String, dynamic>{
       'theme_mode': _$ThemeModeEnumMap[instance.themeMode]!,
       'selection': _$ThemeSelectionEnumMap[instance.selection]!,
-      'colors': instance.colors,
-      'font': instance.font,
+      'colors': instance.colors.toJson(),
+      'font': instance.font.toJson(),
       'super_dark_mode': instance.superDarkMode,
       'dynamic_color': instance.dynamicColor,
       'enable_animation': instance.enableAnimation,

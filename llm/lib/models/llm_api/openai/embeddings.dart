@@ -3,7 +3,7 @@ import 'package:json_annotation/json_annotation.dart';
 part 'embeddings.g.dart';
 
 // Request Models
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class OpenAiEmbeddingsRequest {
   /// Input text to embed, encoded as a string or array of tokens.
   /// To embed multiple inputs, pass an array of strings or array of token arrays.
@@ -37,7 +37,7 @@ class OpenAiEmbeddingsRequest {
 }
 
 // Response Models
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class OpenAiEmbeddings {
   /// The object type, which is always "list".
   final String object;
@@ -64,7 +64,7 @@ class OpenAiEmbeddings {
   Map<String, dynamic> toJson() => _$OpenAiEmbeddingsToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class EmbeddingData {
   /// The object type, which is always "embedding".
   final String object;
@@ -88,7 +88,7 @@ class EmbeddingData {
   Map<String, dynamic> toJson() => _$EmbeddingDataToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class EmbeddingUsage {
   /// The number of tokens used for the prompt.
   final int promptTokens;

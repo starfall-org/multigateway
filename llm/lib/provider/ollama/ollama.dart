@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-import '../../models/api/ollama/chat.dart';
-import '../../models/api/ollama/embed.dart';
-import '../../models/api/ollama/tags.dart';
+import '../../models/llm_api/ollama/chat.dart';
+import '../../models/llm_api/ollama/embed.dart';
+import '../../models/llm_api/ollama/tags.dart';
 import '../base.dart';
 
 class Ollama extends AIBaseApi {

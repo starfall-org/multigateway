@@ -17,7 +17,7 @@ enum ProviderType {
 
 enum AuthMethod { queryParam, bearerToken, customHeader, other }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class LlmProviderInfo {
   final String id;
   final String name;
@@ -76,11 +76,11 @@ class LlmProviderInfo {
 
   @override
   String toString() {
-    return 'LlmProviderInfo{id: $id, name: $name, type: $type, apiKey: $apiKey, icon: $icon, baseUrl: $baseUrl}';
+    return 'LlmProviderInfo{id: $id, name: $name, type: $type, auth: $auth, icon: $icon, baseUrl: $baseUrl}';
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class Authorization {
   final AuthMethod type;
   final String? key;

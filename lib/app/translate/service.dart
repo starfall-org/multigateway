@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:llm/llm.dart';
 
-import 'package:multigateway/app/storage/translation_cache.dart';
+import 'package:multigateway/app/storage/translation_cache_storage.dart';
 
 class TranslationService {
   static TranslationService? _instance;

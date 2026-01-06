@@ -23,7 +23,7 @@ Map<String, dynamic> _$LlmProviderInfoToJson(LlmProviderInfo instance) =>
       'id': instance.id,
       'name': instance.name,
       'type': _$ProviderTypeEnumMap[instance.type]!,
-      'auth': instance.auth,
+      'auth': instance.auth.toJson(),
       'icon': instance.icon,
       'base_url': instance.baseUrl,
     };

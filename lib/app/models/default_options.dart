@@ -76,7 +76,7 @@ class DefaultModels {
   Map<String, dynamic> toJson() => _$DefaultModelsToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class DefaultModel {
   final String modelName;
   final String providerId;

@@ -1,4 +1,4 @@
-export 'models/api/api.dart';
+export 'models/llm_api/api.dart';
 export 'models/llm_model/base.dart';
 export 'provider/anthropic/anthropic.dart';
 export 'provider/googleai/aistudio.dart';

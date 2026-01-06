@@ -2,7 +2,7 @@ import 'package:multigateway/core/llm/models/llm_provider_info.dart';
 import 'package:multigateway/core/storage/base.dart';
 
 class LlmProviderInfoStorage extends HiveBaseStorage<LlmProviderInfo> {
-  static const String _prefix = 'provider_info';
+  static const String _prefix = 'llm_provider_info';
 
   LlmProviderInfoStorage();
 

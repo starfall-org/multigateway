@@ -8,7 +8,7 @@ enum ThemeSelection { system, light, dark, custom }
 
 enum SecondaryBackgroundMode { off, auto, on }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class ColorSettings {
   final int primaryColor;
   final int secondaryColor;
@@ -63,7 +63,7 @@ class ColorSettings {
   Map<String, dynamic> toJson() => _$ColorSettingsToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class FontSettings {
   final String fontFamily;
   final int chatFontSize;
@@ -101,7 +101,7 @@ class FontSettings {
   Map<String, dynamic> toJson() => _$FontSettingsToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class AppearanceSetting {
   final ThemeMode themeMode;
   final ThemeSelection selection;

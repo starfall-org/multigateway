@@ -18,7 +18,7 @@ AnthropicModels _$AnthropicModelsFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$AnthropicModelsToJson(AnthropicModels instance) =>
     <String, dynamic>{
-      'data': instance.data,
+      'data': instance.data.map((e) => e.toJson()).toList(),
       'first_id': instance.firstId,
       'has_more': instance.hasMore,
       'last_id': instance.lastId,

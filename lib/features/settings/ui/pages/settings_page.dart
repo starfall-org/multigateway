@@ -49,7 +49,7 @@ class SettingsPage extends StatelessWidget {
             SettingsTile(
               icon: Icons.storage,
               title: tl('Data'),
-              onTap: () => Navigator.pushNamed(context, AppRoutes.userData),
+              onTap: () => Navigator.pushNamed(context, AppRoutes.userdata),
             ),
           ],
         ),

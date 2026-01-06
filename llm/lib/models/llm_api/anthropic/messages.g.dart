@@ -27,11 +27,11 @@ Map<String, dynamic> _$AnthropicMessagesRequestToJson(
   AnthropicMessagesRequest instance,
 ) => <String, dynamic>{
   'model': instance.model,
-  'messages': instance.messages,
+  'messages': instance.messages.map((e) => e.toJson()).toList(),
   'max_tokens': instance.maxTokens,
   'system': instance.system,
   'temperature': instance.temperature,
-  'tools': instance.tools,
+  'tools': instance.tools?.map((e) => e.toJson()).toList(),
   'tool_choice': instance.toolChoice,
   'stream': instance.stream,
 };
@@ -95,11 +95,11 @@ Map<String, dynamic> _$AnthropicMessagesResponseToJson(
   'id': instance.id,
   'type': instance.type,
   'role': instance.role,
-  'content': instance.content,
+  'content': instance.content.map((e) => e.toJson()).toList(),
   'model': instance.model,
   'stop_reason': instance.stopReason,
   'stop_sequence': instance.stopSequence,
-  'usage': instance.usage,
+  'usage': instance.usage.toJson(),
 };
 
 AnthropicUsage _$AnthropicUsageFromJson(Map<String, dynamic> json) =>

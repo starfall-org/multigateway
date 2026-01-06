@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'translation_cache_entry.g.dart';
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class TranslationCacheEntry {
   final String originalText;
   final String translatedText;

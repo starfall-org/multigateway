@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'ollama_model.g.dart';
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class OllamaModel {
   final String name;
   final String model;

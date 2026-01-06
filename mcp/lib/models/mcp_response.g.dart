@@ -20,8 +20,8 @@ InitializeResult _$InitializeResultFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$InitializeResultToJson(InitializeResult instance) =>
     <String, dynamic>{
       'protocol_version': instance.protocolVersion,
-      'capabilities': instance.capabilities,
-      'server_info': instance.serverInfo,
+      'capabilities': instance.capabilities.toJson(),
+      'server_info': instance.serverInfo.toJson(),
     };
 
 ListToolsResult _$ListToolsResultFromJson(Map<String, dynamic> json) =>
@@ -34,7 +34,7 @@ ListToolsResult _$ListToolsResultFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$ListToolsResultToJson(ListToolsResult instance) =>
     <String, dynamic>{
-      'tools': instance.tools,
+      'tools': instance.tools.map((e) => e.toJson()).toList(),
       'next_cursor': instance.nextCursor,
     };
 
@@ -48,7 +48,7 @@ CallToolResult _$CallToolResultFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$CallToolResultToJson(CallToolResult instance) =>
     <String, dynamic>{
-      'content': instance.content,
+      'content': instance.content.map((e) => e.toJson()).toList(),
       'is_error': instance.isError,
     };
 
@@ -63,7 +63,7 @@ ListResourcesResult _$ListResourcesResultFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$ListResourcesResultToJson(
   ListResourcesResult instance,
 ) => <String, dynamic>{
-  'resources': instance.resources,
+  'resources': instance.resources.map((e) => e.toJson()).toList(),
   'next_cursor': instance.nextCursor,
 };
 
@@ -75,7 +75,9 @@ ReadResourceResult _$ReadResourceResultFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$ReadResourceResultToJson(ReadResourceResult instance) =>
-    <String, dynamic>{'contents': instance.contents};
+    <String, dynamic>{
+      'contents': instance.contents.map((e) => e.toJson()).toList(),
+    };
 
 ListPromptsResult _$ListPromptsResultFromJson(Map<String, dynamic> json) =>
     ListPromptsResult(
@@ -87,7 +89,7 @@ ListPromptsResult _$ListPromptsResultFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$ListPromptsResultToJson(ListPromptsResult instance) =>
     <String, dynamic>{
-      'prompts': instance.prompts,
+      'prompts': instance.prompts.map((e) => e.toJson()).toList(),
       'next_cursor': instance.nextCursor,
     };
 
@@ -102,5 +104,5 @@ GetPromptResult _$GetPromptResultFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$GetPromptResultToJson(GetPromptResult instance) =>
     <String, dynamic>{
       'description': instance.description,
-      'messages': instance.messages,
+      'messages': instance.messages.map((e) => e.toJson()).toList(),
     };

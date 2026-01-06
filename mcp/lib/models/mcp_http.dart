@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'mcp_http.g.dart';
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class MCPHttpConfig {
   final String url;
   final Map<String, String>? headers;

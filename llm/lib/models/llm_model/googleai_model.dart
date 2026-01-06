@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'googleai_model.g.dart';
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class GoogleAiModel {
   final String name;
   final String displayName;

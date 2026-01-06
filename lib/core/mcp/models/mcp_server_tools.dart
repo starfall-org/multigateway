@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class McpServerTools {
   final String id;
   final String name;
@@ -16,7 +16,7 @@ class McpServerTools {
   Map<String, dynamic> toJson() => _$McpServerToolsToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class McpTool {
   String name;
   String description;
@@ -31,7 +31,7 @@ class McpTool {
   Map<String, dynamic> toJson() => _$McpToolToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class McpToolParam {
   String name;
   String value;
@@ -40,8 +40,6 @@ class McpToolParam {
 
   factory McpToolParam.fromJson(Map<String, dynamic> json) =>
       _$McpToolParamFromJson(json);
-
-  // _$McpToolParamFromJson(json);
 
   Map<String, dynamic> toJson() => _$McpToolParamToJson(this);
 }

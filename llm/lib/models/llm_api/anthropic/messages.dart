@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'messages.g.dart';
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class AnthropicMessagesRequest {
   final String model;
   final List<AnthropicMessage> messages;
@@ -30,15 +30,12 @@ class AnthropicMessagesRequest {
   Map<String, dynamic> toJson() => _$AnthropicMessagesRequestToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class AnthropicMessage {
   final String role;
   final dynamic content; // String or List<AnthropicContent>
 
-  AnthropicMessage({
-    required this.role,
-    required this.content,
-  });
+  AnthropicMessage({required this.role, required this.content});
 
   factory AnthropicMessage.fromJson(Map<String, dynamic> json) =>
       _$AnthropicMessageFromJson(json);
@@ -46,7 +43,7 @@ class AnthropicMessage {
   Map<String, dynamic> toJson() => _$AnthropicMessageToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class AnthropicContent {
   final String type;
   final String? text;
@@ -68,7 +65,7 @@ class AnthropicContent {
   Map<String, dynamic> toJson() => _$AnthropicContentToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class AnthropicTool {
   final String name;
   final String? description;
@@ -86,7 +83,7 @@ class AnthropicTool {
   Map<String, dynamic> toJson() => _$AnthropicToolToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class AnthropicMessagesResponse {
   final String id;
   final String type;
@@ -114,15 +111,12 @@ class AnthropicMessagesResponse {
   Map<String, dynamic> toJson() => _$AnthropicMessagesResponseToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class AnthropicUsage {
   final int inputTokens;
   final int outputTokens;
 
-  AnthropicUsage({
-    required this.inputTokens,
-    required this.outputTokens,
-  });
+  AnthropicUsage({required this.inputTokens, required this.outputTokens});
 
   factory AnthropicUsage.fromJson(Map<String, dynamic> json) =>
       _$AnthropicUsageFromJson(json);

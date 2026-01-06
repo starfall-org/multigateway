@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:llm/llm.dart';
 import 'package:mcp/mcp.dart';
-import 'package:multigateway/app/storage/preferences.dart';
+import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
 import 'package:multigateway/features/home/domain/domain.dart';

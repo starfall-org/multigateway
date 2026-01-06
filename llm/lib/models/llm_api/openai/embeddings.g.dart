@@ -39,9 +39,9 @@ OpenAiEmbeddings _$OpenAiEmbeddingsFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$OpenAiEmbeddingsToJson(OpenAiEmbeddings instance) =>
     <String, dynamic>{
       'object': instance.object,
-      'data': instance.data,
+      'data': instance.data.map((e) => e.toJson()).toList(),
       'model': instance.model,
-      'usage': instance.usage,
+      'usage': instance.usage.toJson(),
     };
 
 EmbeddingData _$EmbeddingDataFromJson(Map<String, dynamic> json) =>

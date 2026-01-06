@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'llm_provider_config.g.dart';
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class LlmProviderConfig {
   final String id;
   final Map<String, dynamic>? httpProxy;

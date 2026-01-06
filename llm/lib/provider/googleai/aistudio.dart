@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-import '../../models/api/googleai/generate_content.dart';
-import '../../models/api/googleai/embeddings.dart';
-import '../../models/api/googleai/models.dart';
+import '../../models/llm_api/googleai/generate_content.dart';
+import '../../models/llm_api/googleai/embeddings.dart';
+import '../../models/llm_api/googleai/models.dart';
 import '../base.dart';
 
 class GoogleAIStudio extends AIBaseApi {

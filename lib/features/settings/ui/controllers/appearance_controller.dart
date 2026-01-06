@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/models/appearance_setting.dart';
-import 'package:multigateway/app/storage/appearance.dart';
+import 'package:multigateway/app/storage/appearance_storage.dart';
 
 enum ColorType {
   primary,

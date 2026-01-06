@@ -5,7 +5,7 @@ part 'mcp_server_info.g.dart';
 
 enum McpProtocol { streamableHttp, sse, stdio }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class McpServerInfo {
   final String id;
   final String name;
@@ -27,7 +27,7 @@ class McpServerInfo {
   Map<String, dynamic> toJson() => _$McpServerInfoToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class StdioConfig {
   final String execBinaryPath;
   final String execArgs;

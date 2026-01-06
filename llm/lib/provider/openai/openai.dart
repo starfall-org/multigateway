@@ -3,14 +3,14 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../../models/api/openai/audio_speech.dart';
-import '../../models/api/openai/chat_completions.dart';
-import '../../models/api/openai/embeddings.dart';
-import '../../models/api/openai/image_generations.dart';
-import '../../models/api/openai/models.dart';
-import '../../models/api/openai/videos.dart';
+import '../../models/llm_api/openai/audio_speech.dart';
+import '../../models/llm_api/openai/chat_completions.dart';
+import '../../models/llm_api/openai/embeddings.dart';
+import '../../models/llm_api/openai/image_generations.dart';
+import '../../models/llm_api/openai/models.dart';
+import '../../models/llm_api/openai/videos.dart';
 import '../base.dart';
-import '../../models/api/openai/responses.dart';
+import '../../models/llm_api/openai/responses.dart';
 
 class OpenAI extends AIBaseApi {
   final String responsesPath;

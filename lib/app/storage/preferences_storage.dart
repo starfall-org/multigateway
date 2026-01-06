@@ -51,15 +51,7 @@ class PreferencesStorage extends SharedPreferencesBase<PreferencesSetting> {
 
   @override
   Map<String, dynamic> serializeToFields(PreferencesSetting item) {
-    return {
-      'persistChatSelection': item.persistChatSelection,
-      'hideStatusBar': item.hideStatusBar,
-      'hideNavigationBar': item.hideNavigationBar,
-      'debugMode': item.debugMode,
-      'hasInitializedIcons': item.hasInitializedIcons,
-      'vibrationSettings': item.vibrationSettings.toJson(),
-      'languageSetting': item.languageSetting.toJson(),
-    };
+    return item.toJson();
   }
 
   @override
@@ -67,22 +59,7 @@ class PreferencesStorage extends SharedPreferencesBase<PreferencesSetting> {
     String id,
     Map<String, dynamic> fields,
   ) {
-    final vibrationSettingsMap = fields['vibrationSettings'] as Map<String, dynamic>?;
-    final languageSettingMap = fields['languageSetting'] as Map<String, dynamic>?;
-
-    return PreferencesSetting(
-      persistChatSelection: fields['persistChatSelection'] as bool? ?? false,
-      hideStatusBar: fields['hideStatusBar'] as bool? ?? false,
-      hideNavigationBar: fields['hideNavigationBar'] as bool? ?? false,
-      debugMode: fields['debugMode'] as bool? ?? false,
-      hasInitializedIcons: fields['hasInitializedIcons'] as bool? ?? false,
-      vibrationSettings: vibrationSettingsMap != null
-          ? VibrationSettings.fromJson(vibrationSettingsMap)
-          : VibrationSettings.defaults(),
-      languageSetting: languageSettingMap != null
-          ? LanguageSetting.fromJson(languageSettingMap)
-          : LanguageSetting.defaults(),
-    );
+    return PreferencesSetting.fromJson(fields);
   }
 
   Future<void> updatePreferences(PreferencesSetting preferences) async {
@@ -183,15 +160,18 @@ class PreferencesStorage extends SharedPreferencesBase<PreferencesSetting> {
     }
 
     if (languageSetting.languageCode == 'zh') {
-      if (languageSetting.countryCode == 'CN' || 
+      if (languageSetting.countryCode == 'CN' ||
           languageSetting.countryCode == 'TW') {
-        return Locale(languageSetting.languageCode, languageSetting.countryCode);
+        return Locale(
+          languageSetting.languageCode,
+          languageSetting.countryCode,
+        );
       }
       return const Locale('zh', 'CN');
     }
 
-    return languageSetting.countryCode != null && 
-           languageSetting.countryCode!.isNotEmpty
+    return languageSetting.countryCode != null &&
+            languageSetting.countryCode!.isNotEmpty
         ? Locale(languageSetting.languageCode, languageSetting.countryCode)
         : Locale(languageSetting.languageCode);
   }

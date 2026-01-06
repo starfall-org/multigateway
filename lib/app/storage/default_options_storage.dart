@@ -60,10 +60,7 @@ class DefaultOptionsStorage extends SharedPreferencesBase<DefaultOptions> {
 
   @override
   Map<String, dynamic> serializeToFields(DefaultOptions item) {
-    return {
-      'defaultModels': item.defaultModels.toJson(),
-      'defaultProfileId': item.defaultProfileId,
-    };
+    return item.toJson();
   }
 
   @override

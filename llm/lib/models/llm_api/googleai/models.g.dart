@@ -18,7 +18,7 @@ GeminiModelsResponse _$GeminiModelsResponseFromJson(
 Map<String, dynamic> _$GeminiModelsResponseToJson(
   GeminiModelsResponse instance,
 ) => <String, dynamic>{
-  'models': instance.models,
+  'models': instance.models?.map((e) => e.toJson()).toList(),
   'next_page_token': instance.nextPageToken,
 };
 
@@ -48,9 +48,9 @@ Map<String, dynamic> _$GeminiModelToJson(GeminiModel instance) =>
       'description': instance.description,
       'version': instance.version,
       'base_model_id': instance.baseModelId,
-      'capabilities': instance.capabilities,
-      'input': instance.input,
-      'output': instance.output,
+      'capabilities': instance.capabilities?.toJson(),
+      'input': instance.input?.toJson(),
+      'output': instance.output?.toJson(),
     };
 
 GeminiModelCapabilities _$GeminiModelCapabilitiesFromJson(

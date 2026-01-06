@@ -79,7 +79,7 @@ class PreferencesSetting {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class VibrationSettings {
   final bool enable;
   final bool onHoldChatConversation;
@@ -128,7 +128,7 @@ class VibrationSettings {
   Map<String, dynamic> toJson() => _$VibrationSettingsToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class LanguageSetting {
   final String languageCode;
   final String? countryCode;
@@ -141,10 +141,7 @@ class LanguageSetting {
   });
 
   factory LanguageSetting.defaults() {
-    return const LanguageSetting(
-      languageCode: 'auto',
-      autoDetect: true,
-    );
+    return const LanguageSetting(languageCode: 'auto', autoDetect: true);
   }
 
   factory LanguageSetting.fromJson(Map<String, dynamic> json) =>
@@ -186,8 +183,6 @@ class LanguageSetting {
 
   @override
   int get hashCode {
-    return languageCode.hashCode ^
-        countryCode.hashCode ^
-        autoDetect.hashCode;
+    return languageCode.hashCode ^ countryCode.hashCode ^ autoDetect.hashCode;
   }
 }

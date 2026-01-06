@@ -6,7 +6,7 @@ part 'speech_service.g.dart';
 
 enum ServiceType { system, provider }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class SpeechService {
   final String id;
   final String name;
@@ -32,7 +32,7 @@ class SpeechService {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class TextToSpeech {
   final ServiceType type;
   final String? provider;
@@ -66,7 +66,7 @@ class TextToSpeech {
   }
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class SpeechToText {
   final ServiceType type;
   final String? provider;

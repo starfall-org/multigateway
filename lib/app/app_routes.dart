@@ -28,15 +28,15 @@ Route<dynamic> generateRoute(RouteSettings settings) {
       return MaterialPageRoute(builder: (_) => const AboutPage());
     case AppRoutes.update:
       return MaterialPageRoute(builder: (_) => const UpdatePage());
-    case AppRoutes.userData:
+    case AppRoutes.userdata:
       return MaterialPageRoute(builder: (_) => const DataControlsScreen());
-    case AppRoutes.aiProviders:
+    case AppRoutes.providers:
       return MaterialPageRoute(builder: (_) => const AiProvidersPage());
-    case AppRoutes.aiSpeechServices:
+    case AppRoutes.speech:
       return MaterialPageRoute(builder: (_) => const SpeechServicesPage());
-    case AppRoutes.aiProfiles:
+    case AppRoutes.profiles:
       return MaterialPageRoute(builder: (_) => const ChatProfilesScreen());
-    case AppRoutes.McpServers:
+    case AppRoutes.mcp:
       return MaterialPageRoute(builder: (_) => const McpServersPage());
     default:
       // Log the undefined route for debugging

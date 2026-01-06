@@ -37,7 +37,7 @@ abstract class HiveBaseStorage<T> {
   // Internal
   static bool _hiveInitialized = false;
 
-  String get _boxName => 'repo_$prefix';
+  String get _boxName => 'storage_$prefix';
 
   Future<void> _ensureHive() async {
     if (!_hiveInitialized) {

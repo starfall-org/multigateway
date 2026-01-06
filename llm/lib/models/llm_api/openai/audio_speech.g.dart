@@ -24,7 +24,7 @@ Map<String, dynamic> _$OpenAiAudioSpeechRequestToJson(
   'model': instance.model,
   'input': instance.input,
   'voice': instance.voice,
-  'response_format': instance.responseFormat,
+  'response_format': instance.responseFormat?.toJson(),
   'speed': instance.speed,
 };
 

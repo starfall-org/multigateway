@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'models/api/api.dart';
+import 'models/llm_api/api.dart';
 
 /// General helpers
 String encodeDataUrl({required String mimeType, required String base64Data}) {

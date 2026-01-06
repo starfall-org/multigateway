@@ -35,7 +35,7 @@ class ChatProfile {
       ChatProfile.fromJson(json.decode(jsonString));
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class LlmChatConfig {
   final String systemPrompt;
   final bool enableStream;
@@ -67,7 +67,7 @@ class LlmChatConfig {
   Map<String, dynamic> toJson() => _$LlmChatConfigToJson(this);
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class ActiveMcpServer {
   final String id;
   final List<String> activeToolIds;

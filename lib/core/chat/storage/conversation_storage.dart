@@ -4,7 +4,7 @@ import 'package:multigateway/core/chat/models/conversation.dart';
 import 'package:multigateway/core/storage/base.dart';
 
 class ConversationStorage extends HiveBaseStorage<Conversation> {
-  static const String _prefix = 'conv';
+  static const String _prefix = 'conversation';
 
   ConversationStorage();
 

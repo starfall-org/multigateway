@@ -1,8 +1,8 @@
 import 'package:llm/llm.dart';
 import 'package:mcp/mcp.dart';
-import 'package:multigateway/app/storage/appearance.dart';
-import 'package:multigateway/app/storage/default_options.dart';
-import 'package:multigateway/app/storage/preferences.dart';
+import 'package:multigateway/app/storage/appearance_storage.dart';
+import 'package:multigateway/app/storage/default_options_storage.dart';
+import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/core/llm/storage/llm_provider_info_storage.dart';
 import 'package:multigateway/core/mcp/storage/mcp_server_storage.dart';
 import 'package:multigateway/core/profile/profile.dart';

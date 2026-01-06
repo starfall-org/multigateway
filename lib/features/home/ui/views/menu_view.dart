@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:multigateway/app/config/routes.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/features/home/ui/widgets/menu_item_tile.dart';
-import 'package:multigateway/shared/widgets/right_drawer.dart';
+import 'package:multigateway/shared/widgets/app_sidebar.dart';
 
 class MenuView extends StatelessWidget {
   const MenuView({super.key});
@@ -30,7 +30,8 @@ class MenuView extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    return RightDrawer(
+    return AppSidebar(
+      position: SidebarPosition.right,
       width: screenWidth,
       backgroundColor: colorScheme.surface,
       child: Scaffold(
@@ -78,25 +79,25 @@ class MenuView extends StatelessWidget {
                     MenuItemTile(
                       icon: Icons.psychology_outlined,
                       title: tl('Profiles'),
-                      route: AppRoutes.aiProfiles,
+                      route: AppRoutes.profiles,
                     ),
                     MenuItemTile(
                       icon: Icons.cloud_outlined,
                       title: tl('Providers'),
 
-                      route: AppRoutes.aiProviders,
+                      route: AppRoutes.providers,
                     ),
                     MenuItemTile(
                       icon: Icons.dns_outlined,
                       title: tl('MCP Servers'),
 
-                      route: AppRoutes.mcpServers,
+                      route: AppRoutes.mcp,
                     ),
                     MenuItemTile(
                       icon: Icons.record_voice_over_outlined,
                       title: tl('Speech Services'),
 
-                      route: AppRoutes.aiSpeechServices,
+                      route: AppRoutes.speech,
                     ),
                     MenuItemTile(
                       icon: Icons.settings_outlined,

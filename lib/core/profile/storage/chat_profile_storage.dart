@@ -6,7 +6,7 @@ import 'package:multigateway/core/storage/base.dart';
 import 'package:uuid/uuid.dart';
 
 class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
-  static const String _prefix = 'profile';
+  static const String _prefix = 'chat_profile';
   static const String _selectedKey = '__selected_id__';
 
   ChatProfileStorage();
@@ -73,7 +73,7 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
       final allIds = getItemIds();
 
       if (allIds.isEmpty) {
-        final boxName = 'repo_$_prefix';
+        final boxName = 'storage_$_prefix';
         final box = Hive.isBoxOpen(boxName)
             ? Hive.box(boxName)
             : await Hive.openBox(boxName);
@@ -96,14 +96,14 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
   }
 
   String? getSelectedProfileId() {
-    final boxName = 'repo_$_prefix';
+    final boxName = 'storage_$_prefix';
     if (!Hive.isBoxOpen(boxName)) return null;
     final box = Hive.box(boxName);
     return box.get(_selectedKey) as String?;
   }
 
   Future<void> setSelectedProfileId(String id) async {
-    final boxName = 'repo_$_prefix';
+    final boxName = 'storage_$_prefix';
     final box = Hive.isBoxOpen(boxName)
         ? Hive.box(boxName)
         : await Hive.openBox(boxName);

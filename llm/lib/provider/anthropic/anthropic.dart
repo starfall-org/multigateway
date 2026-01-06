@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-import '../../models/api/anthropic/messages.dart';
-import '../../models/api/anthropic/models.dart';
+import '../../models/llm_api/anthropic/messages.dart';
+import '../../models/llm_api/anthropic/models.dart';
 import '../base.dart';
 
 class Anthropic extends AIBaseApi {

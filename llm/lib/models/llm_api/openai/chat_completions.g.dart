@@ -73,7 +73,7 @@ Map<String, dynamic> _$OpenAiChatCompletionsRequestToJson(
   OpenAiChatCompletionsRequest instance,
 ) => <String, dynamic>{
   'model': instance.model,
-  'messages': instance.messages,
+  'messages': instance.messages.map((e) => e.toJson()).toList(),
   'metadata': instance.metadata,
   'top_logprobs': instance.topLogprobs,
   'temperature': instance.temperature,
@@ -88,9 +88,9 @@ Map<String, dynamic> _$OpenAiChatCompletionsRequestToJson(
   'max_completion_tokens': instance.maxCompletionTokens,
   'frequency_penalty': instance.frequencyPenalty,
   'presence_penalty': instance.presencePenalty,
-  'web_search_options': instance.webSearchOptions,
-  'response_format': instance.responseFormat,
-  'audio': instance.audio,
+  'web_search_options': instance.webSearchOptions?.toJson(),
+  'response_format': instance.responseFormat?.toJson(),
+  'audio': instance.audio?.toJson(),
   'store': instance.store,
   'stream': instance.stream,
   'stop': instance.stop,
@@ -98,14 +98,14 @@ Map<String, dynamic> _$OpenAiChatCompletionsRequestToJson(
   'logprobs': instance.logprobs,
   'max_tokens': instance.maxTokens,
   'n': instance.n,
-  'prediction': instance.prediction,
+  'prediction': instance.prediction?.toJson(),
   'seed': instance.seed,
-  'stream_options': instance.streamOptions,
-  'tools': instance.tools,
+  'stream_options': instance.streamOptions?.toJson(),
+  'tools': instance.tools?.map((e) => e.toJson()).toList(),
   'tool_choice': instance.toolChoice,
   'parallel_tool_calls': instance.parallelToolCalls,
   'function_call': instance.functionCall,
-  'functions': instance.functions,
+  'functions': instance.functions?.map((e) => e.toJson()).toList(),
 };
 
 RequestMessage _$RequestMessageFromJson(Map<String, dynamic> json) =>
@@ -134,7 +134,7 @@ WebSearchOptions _$WebSearchOptionsFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$WebSearchOptionsToJson(WebSearchOptions instance) =>
     <String, dynamic>{
-      'user_location': instance.userLocation,
+      'user_location': instance.userLocation?.toJson(),
       'search_context_size': instance.searchContextSize,
     };
 
@@ -148,7 +148,7 @@ UserLocation _$UserLocationFromJson(Map<String, dynamic> json) => UserLocation(
 Map<String, dynamic> _$UserLocationToJson(UserLocation instance) =>
     <String, dynamic>{
       'type': instance.type,
-      'approximate': instance.approximate,
+      'approximate': instance.approximate.toJson(),
     };
 
 ApproximateLocation _$ApproximateLocationFromJson(Map<String, dynamic> json) =>
@@ -211,7 +211,7 @@ Tool _$ToolFromJson(Map<String, dynamic> json) => Tool(
 
 Map<String, dynamic> _$ToolToJson(Tool instance) => <String, dynamic>{
   'type': instance.type,
-  'function': instance.function,
+  'function': instance.function.toJson(),
 };
 
 FunctionDefinition _$FunctionDefinitionFromJson(Map<String, dynamic> json) =>
@@ -254,8 +254,8 @@ Map<String, dynamic> _$OpenAiChatCompletionsToJson(
   'object': instance.object,
   'created': instance.created,
   'model': instance.model,
-  'choices': instance.choices,
-  'usage': instance.usage,
+  'choices': instance.choices?.map((e) => e.toJson()).toList(),
+  'usage': instance.usage?.toJson(),
   'system_fingerprint': instance.systemFingerprint,
   'service_tier': instance.serviceTier,
 };
@@ -276,10 +276,10 @@ Choice _$ChoiceFromJson(Map<String, dynamic> json) => Choice(
 
 Map<String, dynamic> _$ChoiceToJson(Choice instance) => <String, dynamic>{
   'index': instance.index,
-  'message': instance.message,
-  'delta': instance.delta,
+  'message': instance.message?.toJson(),
+  'delta': instance.delta?.toJson(),
   'finish_reason': instance.finishReason,
-  'logprobs': instance.logprobs,
+  'logprobs': instance.logprobs?.toJson(),
 };
 
 Message _$MessageFromJson(Map<String, dynamic> json) => Message(
@@ -305,10 +305,10 @@ Map<String, dynamic> _$MessageToJson(Message instance) => <String, dynamic>{
   'content': instance.content,
   'refusal': instance.refusal,
   'role': instance.role,
-  'function_call': instance.functionCall,
-  'tool_calls': instance.toolCalls,
-  'annotations': instance.annotations,
-  'audio': instance.audio,
+  'function_call': instance.functionCall?.toJson(),
+  'tool_calls': instance.toolCalls?.map((e) => e.toJson()).toList(),
+  'annotations': instance.annotations?.map((e) => e.toJson()).toList(),
+  'audio': instance.audio?.toJson(),
   'reasoning_content': instance.reasoningContent,
 };
 
@@ -332,9 +332,9 @@ Map<String, dynamic> _$DeltaToJson(Delta instance) => <String, dynamic>{
   'content': instance.content,
   'role': instance.role,
   'refusal': instance.refusal,
-  'function_call': instance.functionCall,
-  'tool_calls': instance.toolCalls,
-  'audio': instance.audio,
+  'function_call': instance.functionCall?.toJson(),
+  'tool_calls': instance.toolCalls?.map((e) => e.toJson()).toList(),
+  'audio': instance.audio?.toJson(),
   'reasoning_content': instance.reasoningContent,
 };
 
@@ -349,7 +349,7 @@ ToolCall _$ToolCallFromJson(Map<String, dynamic> json) => ToolCall(
 Map<String, dynamic> _$ToolCallToJson(ToolCall instance) => <String, dynamic>{
   'id': instance.id,
   'type': instance.type,
-  'function': instance.function,
+  'function': instance.function?.toJson(),
 };
 
 FunctionCall _$FunctionCallFromJson(Map<String, dynamic> json) => FunctionCall(
@@ -370,7 +370,7 @@ Annotation _$AnnotationFromJson(Map<String, dynamic> json) => Annotation(
 Map<String, dynamic> _$AnnotationToJson(Annotation instance) =>
     <String, dynamic>{
       'type': instance.type,
-      'url_citation': instance.urlCitation,
+      'url_citation': instance.urlCitation?.toJson(),
     };
 
 UrlCitation _$UrlCitationFromJson(Map<String, dynamic> json) => UrlCitation(
@@ -412,8 +412,8 @@ Logprobs _$LogprobsFromJson(Map<String, dynamic> json) => Logprobs(
 );
 
 Map<String, dynamic> _$LogprobsToJson(Logprobs instance) => <String, dynamic>{
-  'content': instance.content,
-  'refusal': instance.refusal,
+  'content': instance.content?.map((e) => e.toJson()).toList(),
+  'refusal': instance.refusal?.map((e) => e.toJson()).toList(),
 };
 
 Token _$TokenFromJson(Map<String, dynamic> json) => Token(
@@ -431,7 +431,7 @@ Map<String, dynamic> _$TokenToJson(Token instance) => <String, dynamic>{
   'token': instance.token,
   'logprob': instance.logprob,
   'bytes': instance.bytes,
-  'top_logprobs': instance.topLogprobs,
+  'top_logprobs': instance.topLogprobs?.map((e) => e.toJson()).toList(),
 };
 
 TopLogprob _$TopLogprobFromJson(Map<String, dynamic> json) => TopLogprob(
@@ -472,8 +472,8 @@ Map<String, dynamic> _$ChatCompletionUsageToJson(
   'prompt_tokens': instance.promptTokens,
   'completion_tokens': instance.completionTokens,
   'total_tokens': instance.totalTokens,
-  'completion_tokens_details': instance.completionTokensDetails,
-  'prompt_tokens_details': instance.promptTokensDetails,
+  'completion_tokens_details': instance.completionTokensDetails?.toJson(),
+  'prompt_tokens_details': instance.promptTokensDetails?.toJson(),
 };
 
 PromptTokenDetails _$PromptTokenDetailsFromJson(Map<String, dynamic> json) =>
