@@ -6,8 +6,8 @@ import 'app_routes.dart';
 import 'config/theme.dart';
 import 'data/appearance.dart';
 
-class MetaloreApp extends StatelessWidget {
-  const MetaloreApp({super.key});
+class MultiGatewayApp extends StatelessWidget {
+  const MultiGatewayApp({super.key});
 
   @override
   Widget build(BuildContext context) {

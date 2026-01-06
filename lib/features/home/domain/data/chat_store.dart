@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import '../../../../core/storage/base.dart';
 import 'package:uuid/uuid.dart';
 import '../models/conversation.dart';

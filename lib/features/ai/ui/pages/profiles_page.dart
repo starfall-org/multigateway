@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/profile/profile.dart';
-import '../../../../core/profile/data/ai_profile_store.dart';
 import '../../../../app/translate/tl.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';

@@ -8,6 +8,6 @@
 PRODUCT_NAME = AI Gateway
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = org.starfall.ai-gateway
+PRODUCT_BUNDLE_IDENTIFIER = org.starfall.multigateway
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2025 Starfall. All rights reserved.

@@ -1,4 +1,4 @@
-package org.starfall.metalore;
+package org.starfall.multigateway;
 
 import io.flutter.embedding.android.FlutterActivity;
 

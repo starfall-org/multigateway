@@ -1,4 +1,4 @@
-name: metalore
+name: multigateway
 description: "Flutter LLM client."
 publish_to: 'none'
 

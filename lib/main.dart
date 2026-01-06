@@ -33,5 +33,5 @@ Future<void> main() async {
     ),
   );
 
-  runApp(const MetaloreApp());
+  runApp(const MultiGatewayApp());
 }

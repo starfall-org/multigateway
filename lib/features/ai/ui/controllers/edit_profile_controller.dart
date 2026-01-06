@@ -5,7 +5,6 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/profile/profile.dart';
 import 'package:mcp/mcp.dart';
 import '../../../../core/storage/mcpserver_store.dart';
-import '../../../../core/profile/data/ai_profile_store.dart';
 import '../../../../app/translate/tl.dart';
 
 /// Options for chat persistence: On, Off, and Disable

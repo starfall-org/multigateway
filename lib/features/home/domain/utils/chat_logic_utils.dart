@@ -1,4 +1,3 @@
-import 'package:llm/llm.dart';
 import '../models/conversation.dart';
 
 class ChatLogicUtils {
