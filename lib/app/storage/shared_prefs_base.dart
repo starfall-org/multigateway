@@ -32,20 +32,16 @@ abstract class SharedPreferencesBase<T> {
   String get _indexKey => '$prefix:_index';
 
   /// Get all item IDs from the index
-  List<String> _getItemIds() {
+  @protected
+  List<String> getItemIds() {
     final indexJson = prefs.getString(_indexKey);
     if (indexJson == null || indexJson.isEmpty) return [];
     try {
-      final List<dynamic> decoded = json.decode(indexJson);
-      return decoded.cast<String>();
+      return (json.decode(indexJson) as List).cast<String>();
     } catch (_) {
       return [];
     }
   }
-
-  /// Public getter for item IDs (for subclasses)
-  @protected
-  List<String> getItemIds() => _getItemIds();
 
   /// Save item IDs to the index
   Future<void> _saveItemIds(List<String> ids) async {
@@ -54,15 +50,15 @@ abstract class SharedPreferencesBase<T> {
 
   /// Add an item ID to the index
   Future<void> _addToIndex(String id) async {
-    final ids = _getItemIds();
+    final ids = getItemIds();
     if (!ids.contains(id)) {
-      ids.add(id);
-      await _saveItemIds(ids);
+      await _saveItemIds([...ids, id]);
     }
   }
 
   /// Remove an item ID from the index
   Future<void> _removeFromIndex(String id) async {
+    fina<void> _removeFromIndex(String id) async {
     final ids = _getItemIds();
     ids.remove(id);
     await _saveItemIds(ids);
