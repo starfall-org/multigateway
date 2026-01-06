@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'package:llm/llm.dart';
+
+import '../../../../app/translate/tl.dart';
 import '../../../../shared/widgets/common_dropdown.dart';
 import '../../../settings/ui/widgets/settings_card.dart';
 import '../../../../shared/widgets/item_card.dart';
 
-import '../../../../app/translate/tl.dart';
 
 class ModelsDrawer extends StatefulWidget {
   final List<AIModel> availableModels;

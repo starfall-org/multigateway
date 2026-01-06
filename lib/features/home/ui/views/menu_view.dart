@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../app/translate/tl.dart';
 import '../../../../shared/widgets/right_drawer.dart';
 import '../../../../app/config/routes.dart';
 import '../widgets/menu_item_tile.dart';

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import 'package:llm/llm.dart';
 import 'package:llm/models/llm_model/base.dart';
-import '../../../../app/translate/tl.dart';
 import 'files_action_sheet.dart';
 
 /// Helper để tạo theme-aware image

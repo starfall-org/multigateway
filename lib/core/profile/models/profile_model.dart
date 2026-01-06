@@ -6,45 +6,37 @@ part 'profile_model.g.dart';
 enum ThinkingLevel { none, low, medium, high, auto, custom }
 
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
-class AIProfile {
+class LlmChatProfile {
   final String id;
   final String name;
   final String? icon;
-  final AiConfig config;
-  final bool profileConversations;
-  final List<String?> conversationIds;
+  final LlmChatConfig config;
   final List<ActiveMCPServer> activeMCPServers;
-  final List<String> activeBuiltInTools;
-  final bool? persistChatSelection;
 
-  AIProfile({
+  LlmChatProfile({
     required this.id,
     required this.name,
     this.icon,
     required this.config,
-    this.profileConversations = false,
-    this.conversationIds = const [],
     this.activeMCPServers = const [],
-    this.activeBuiltInTools = const [],
-    this.persistChatSelection,
   });
 
   List<String> get activeMCPServerIds =>
       activeMCPServers.map((e) => e.id).toList();
 
-  factory AIProfile.fromJson(Map<String, dynamic> json) =>
-      _$AIProfileFromJson(json);
+  factory LlmChatProfile.fromJson(Map<String, dynamic> json) =>
+      _$LlmChatProfileFromJson(json);
 
-  Map<String, dynamic> toJson() => _$AIProfileToJson(this);
+  Map<String, dynamic> toJson() => _$LlmChatProfileToJson(this);
 
   String toJsonString() => json.encode(toJson());
 
-  factory AIProfile.fromJsonString(String jsonString) =>
-      AIProfile.fromJson(json.decode(jsonString));
+  factory LlmChatProfile.fromJsonString(String jsonString) =>
+      LlmChatProfile.fromJson(json.decode(jsonString));
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake)
-class AiConfig {
+class LlmChatConfig {
   final String systemPrompt;
   final bool enableStream;
   final double? topP;
@@ -56,7 +48,7 @@ class AiConfig {
   final int? customThinkingTokens;
   final ThinkingLevel thinkingLevel;
 
-  AiConfig({
+  LlmChatConfig({
     required this.systemPrompt,
     required this.enableStream,
     this.topP,
@@ -69,10 +61,10 @@ class AiConfig {
     this.thinkingLevel = ThinkingLevel.auto,
   });
 
-  factory AiConfig.fromJson(Map<String, dynamic> json) =>
-      _$AiConfigFromJson(json);
+  factory LlmChatConfig.fromJson(Map<String, dynamic> json) =>
+      _$LlmChatConfigFromJson(json);
 
-  Map<String, dynamic> toJson() => _$AiConfigToJson(this);
+  Map<String, dynamic> toJson() => _$LlmChatConfigToJson(this);
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake)

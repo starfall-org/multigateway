@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../../../core/profile/profile.dart';
-import '../../../../app/translate/tl.dart';
 import '../../../../shared/widgets/custom_text_field.dart';
 import '../../../settings/ui/widgets/settings_card.dart';
 import '../controllers/edit_profile_controller.dart';

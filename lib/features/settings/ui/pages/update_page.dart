@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/utils/app_version.dart';
+
 import '../../../../app/translate/tl.dart';
+import '../../../../shared/utils/app_version.dart';
 
 /// Màn hình cập nhật ứng dụng
 class UpdatePage extends StatefulWidget {

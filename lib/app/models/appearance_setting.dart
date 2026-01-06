@@ -164,8 +164,9 @@ class AppearanceSetting {
 
   factory AppearanceSetting.fromJsonString(String jsonString) {
     try {
-      if (jsonString.trim().isEmpty)
+      if (jsonString.trim().isEmpty) {
         return AppearanceSetting.defaults(themeMode: ThemeMode.system);
+      }
       final dynamic data = json.decode(jsonString);
       if (data is Map<String, dynamic>) {
         return AppearanceSetting.fromJson(data);

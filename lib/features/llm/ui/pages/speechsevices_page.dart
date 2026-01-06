@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/speech/speech.dart';
-import '../../../../app/translate/tl.dart';
 import '../views/edit_speechservice_screen.dart';
 
 class SpeechServicesPage extends StatefulWidget {

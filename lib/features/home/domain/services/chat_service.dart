@@ -3,7 +3,7 @@ import 'package:llm/llm.dart';
 import 'package:mcp/mcp.dart';
 import '../../../../core/profile/profile.dart';
 
-import '../../../../core/profile/data/ai_profile_store.dart';
+import '../../../../core/profile/storage/ai_profile_store.dart';
 import '../../../../core/llm/data/provider_info_storage.dart';
 import '../../../../core/storage/mcpserver_store.dart';
 

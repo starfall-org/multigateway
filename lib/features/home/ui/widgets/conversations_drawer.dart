@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/domain.dart';
 import '../../../../core/profile/profile.dart';
-import '../../../../app/translate/tl.dart';
 import '../../../ai/ui/pages/profiles_page.dart';
 
 class ConversationsDrawer extends StatefulWidget {

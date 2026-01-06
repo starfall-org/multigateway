@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/profile/profile.dart';
 import 'package:mcp/mcp.dart';
-import '../../../../app/translate/tl.dart';
 import '../controllers/chat_controller.dart';
 
 class QuickActionsSheet extends StatefulWidget {

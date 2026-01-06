@@ -9,6 +9,8 @@ class LlmProviderConfig {
   final Map<String, dynamic>? socksProxy;
   final String? customChatCompletionUrl;
   final String? customListModelsUrl;
+  final bool responsesApi;
+  final bool supportStream;
   final Map<String, dynamic>? headers;
 
   LlmProviderConfig({
@@ -17,6 +19,8 @@ class LlmProviderConfig {
     this.socksProxy,
     this.customChatCompletionUrl,
     this.customListModelsUrl,
+    this.responsesApi = false,
+    this.supportStream = true,
     this.headers,
   });
 

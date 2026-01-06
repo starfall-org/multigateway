@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../app/translate/tl.dart';
 import '../../../../shared/utils/app_version.dart';
 
 /// Màn hình thông tin về ứng dụng

@@ -4,7 +4,6 @@ import 'package:uuid/uuid.dart';
 
 import '../../domain/domain.dart';
 import '../../../../core/profile/profile.dart';
-import '../../../../app/translate/tl.dart';
 import '../../../../app/storage/preferences.dart';
 import '../../../../shared/widgets/error_debug_dialog.dart';
 import '../widgets/edit_message_sheet.dart';
