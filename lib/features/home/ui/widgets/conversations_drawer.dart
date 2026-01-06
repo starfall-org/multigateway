@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/features/home/domain/data/chat_store.dart';
+import 'package:multigateway/core/chat/chat.dart';
+import 'package:multigateway/core/chat/storage/conversation_storage.dart';
 import 'package:multigateway/features/home/domain/domain.dart';
 
 class ConversationsDrawer extends StatefulWidget {
@@ -28,7 +30,7 @@ class ConversationsDrawer extends StatefulWidget {
 
 class _ConversationsDrawerState extends State<ConversationsDrawer> {
   List<Conversation> _sessions = [];
-  ChatRepository? _chatRepository;
+  ConversationStorage? _chatRepository;
   final TextEditingController _searchController = TextEditingController();
   List<Conversation> _filteredSessions = [];
 
@@ -46,7 +48,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
   }
 
   Future<void> _loadHistory() async {
-    _chatRepository = await ChatRepository.init();
+    _chatRepository = await initChatRepository();
     setState(() {
       _sessions = _chatRepository!.getItems();
       _filteredSessions = _sessions;

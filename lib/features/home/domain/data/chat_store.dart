@@ -1,38 +1,7 @@
 import 'dart:async';
 
-import 'package:multigateway/core/storage/base.dart';
-import 'package:multigateway/features/home/domain/models/conversation.dart';
+import 'package:multigateway/core/chat/storage/conversation_storage.dart';
 
-class ChatRepository extends HiveBaseStorage<Conversation> {
-  static const String _prefix = 'conv';
+typedef ChatRepository = ConversationStorage;
 
-  ChatRepository();
-
-  static Future<ChatRepository> init() async {
-    return ChatRepository();
-  }
-
-  @override
-  String get prefix => _prefix;
-
-  @override
-  String getItemId(Conversation item) => item.id;
-
-  @override
-  Map<String, dynamic> serializeToFields(Conversation item) {
-    return item.toJson();
-  }
-
-  @override
-  Conversation deserializeFromFields(String id, Map<String, dynamic> fields) {
-    return Conversation.fromJson(fields);
-  }
-
-  @override
-  List<Conversation> getItems() {
-    final sessions = super.getItems();
-    // Sort by updated at descending
-    sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return sessions;
-  }
-}
+Future<ChatRepository> initChatRepository() => ConversationStorage.init();
