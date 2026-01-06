@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:multigateway/app/models/appearance_setting.dart';
 import 'package:multigateway/app/storage/shared_prefs_base.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AppearanceStorage extends SharedPreferencesBase<AppearanceSetting> {
   static const String _prefix = 'appearance';

@@ -8,25 +8,22 @@ part of 'message.dart';
 
 MessageContents _$MessageContentsFromJson(Map<String, dynamic> json) =>
     MessageContents(
-      content: json['content'] as String,
+      content: json['content'] as String?,
       timestamp: DateTime.parse(json['timestamp'] as String),
-      attachments: (json['attachments'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
       reasoningContent: json['reasoning_content'] as String?,
       files:
           (json['files'] as List<dynamic>?)?.map((e) => e as String).toList() ??
               const [],
+      toolCall: json['tool_call'] as Map<String, dynamic>? ?? const {},
     );
 
 Map<String, dynamic> _$MessageContentsToJson(MessageContents instance) =>
     <String, dynamic>{
       'content': instance.content,
       'timestamp': instance.timestamp.toIso8601String(),
-      'attachments': instance.attachments,
       'reasoning_content': instance.reasoningContent,
       'files': instance.files,
+      'tool_call': instance.toolCall,
     };
 
 ChatMessage _$ChatMessageFromJson(Map<String, dynamic> json) => ChatMessage(
@@ -41,14 +38,11 @@ ChatMessage _$ChatMessageFromJson(Map<String, dynamic> json) => ChatMessage(
       timestamp: json['timestamp'] == null
           ? null
           : DateTime.parse(json['timestamp'] as String),
-      attachments: (json['attachments'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
       reasoningContent: json['reasoning_content'] as String?,
       files:
           (json['files'] as List<dynamic>?)?.map((e) => e as String).toList() ??
               const [],
+      toolCall: json['tool_call'] as Map<String, dynamic>? ?? const {},
     );
 
 Map<String, dynamic> _$ChatMessageToJson(ChatMessage instance) =>
@@ -59,9 +53,9 @@ Map<String, dynamic> _$ChatMessageToJson(ChatMessage instance) =>
       'current_version_index': instance.currentVersionIndex,
       'content': instance.content,
       'timestamp': instance.timestamp.toIso8601String(),
-      'attachments': instance.attachments,
       'reasoning_content': instance.reasoningContent,
       'files': instance.files,
+      'tool_call': instance.toolCall,
     };
 
 const _$ChatRoleEnumMap = {

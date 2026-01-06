@@ -21,12 +21,12 @@ McpServer _$McpServerFromJson(Map<String, dynamic> json) => McpServer(
         ),
   tools:
       (json['tools'] as List<dynamic>?)
-          ?.map((e) => MCPTool.fromJson(e as Map<String, dynamic>))
+          ?.map((e) => McpTool.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
   resources:
       (json['resources'] as List<dynamic>?)
-          ?.map((e) => MCPResource.fromJson(e as Map<String, dynamic>))
+          ?.map((e) => McpResource.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
   prompts:

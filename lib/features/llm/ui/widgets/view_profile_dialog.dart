@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/features/profiles/ui/edit_profile_screen.dart';
 
@@ -294,7 +295,7 @@ class ViewProfileDialog extends StatelessWidget {
 
     if (confirmed == true) {
       final repo = await ChatProfileStorage.init();
-      await repo.deleteProfile(profile.id);
+      await repo.deleteItem(profile.id);
       if (context.mounted) {
         Navigator.pop(context, true);
       }

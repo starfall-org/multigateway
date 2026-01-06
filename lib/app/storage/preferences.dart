@@ -1,8 +1,7 @@
 import 'package:flutter/widgets.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:multigateway/app/models/preferences_setting.dart';
 import 'package:multigateway/app/storage/shared_prefs_base.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PreferencesStorage extends SharedPreferencesBase<PreferencesSetting> {
   static const String _prefix = 'app_prefs';

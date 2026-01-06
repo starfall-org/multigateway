@@ -87,7 +87,7 @@ ResponseItem _$ResponseItemFromJson(Map<String, dynamic> json) => ResponseItem(
   type: json['type'] as String,
   role: json['role'] as String,
   content: (json['content'] as List<dynamic>)
-      .map((e) => MessageContent.fromJson(e as Map<String, dynamic>))
+      .map((e) => MessageContents.fromJson(e as Map<String, dynamic>))
       .toList(),
   status: json['status'] as String,
 );
@@ -101,8 +101,8 @@ Map<String, dynamic> _$ResponseItemToJson(ResponseItem instance) =>
       'status': instance.status,
     };
 
-MessageContent _$MessageContentFromJson(Map<String, dynamic> json) =>
-    MessageContent(
+MessageContents _$MessageContentsFromJson(Map<String, dynamic> json) =>
+    MessageContents(
       type: json['type'] as String,
       text: json['text'] as String,
       annotations: (json['annotations'] as List<dynamic>?)
@@ -113,7 +113,7 @@ MessageContent _$MessageContentFromJson(Map<String, dynamic> json) =>
           : Logprobs.fromJson(json['logprobs'] as Map<String, dynamic>),
     );
 
-Map<String, dynamic> _$MessageContentToJson(MessageContent instance) =>
+Map<String, dynamic> _$MessageContentsToJson(MessageContents instance) =>
     <String, dynamic>{
       'type': instance.type,
       'text': instance.text,

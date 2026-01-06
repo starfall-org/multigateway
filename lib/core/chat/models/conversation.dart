@@ -1,6 +1,6 @@
-import 'package:json_annotation/json_annotation.dart';
 import 'dart:convert';
 
+import 'package:json_annotation/json_annotation.dart';
 import 'package:multigateway/core/chat/models/message.dart';
 
 part 'conversation.g.dart';
@@ -13,10 +13,9 @@ class Conversation {
   final DateTime updatedAt;
   final List<ChatMessage> messages;
   final int? tokenCount;
-  final bool isAgentConversation;
-  final String? providerName;
-  final String? modelName;
-  final List<String>? enabledToolNames;
+  final String providerId;
+  final String modelName;
+  final String profileId;
 
   Conversation({
     required this.id,
@@ -25,10 +24,9 @@ class Conversation {
     required this.updatedAt,
     this.messages = const [],
     this.tokenCount,
-    this.isAgentConversation = false,
-    this.providerName,
-    this.modelName,
-    this.enabledToolNames,
+    required this.providerId,
+    required this.modelName,
+    required this.profileId,
   });
 
   Conversation copyWith({
@@ -37,9 +35,9 @@ class Conversation {
     List<ChatMessage>? messages,
     int? tokenCount,
     bool? isAgentConversation,
-    String? providerName,
+    String? providerId,
     String? modelName,
-    List<String>? enabledToolNames,
+    String? profileId,
   }) {
     return Conversation(
       id: id,
@@ -48,10 +46,9 @@ class Conversation {
       updatedAt: updatedAt ?? this.updatedAt,
       messages: messages ?? this.messages,
       tokenCount: tokenCount ?? this.tokenCount,
-      isAgentConversation: isAgentConversation ?? this.isAgentConversation,
-      providerName: providerName ?? this.providerName,
+      providerId: providerId ?? this.providerId,
       modelName: modelName ?? this.modelName,
-      enabledToolNames: enabledToolNames ?? this.enabledToolNames,
+      profileId: profileId ?? this.profileId,
     );
   }
 

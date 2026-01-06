@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:uuid/uuid.dart';
-
-import 'package:multigateway/core/core.dart';
 import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/core.dart';
+import 'package:uuid/uuid.dart';
 
 class AddAgentViewModel extends ChangeNotifier {
   // Controllers
@@ -65,7 +64,7 @@ class AddAgentViewModel extends ChangeNotifier {
 
   Future<void> _loadMcpServers() async {
     final mcpRepo = await McpServerStorage.init();
-    availableMcpServers = mcpRepo.getMcpServers();
+    availableMcpServers = mcpRepo.getItems();
     notifyListeners();
   }
 
@@ -102,9 +101,9 @@ class AddAgentViewModel extends ChangeNotifier {
     );
 
     if (existingProfile != null) {
-      await repository.updateProfile(newProfile);
+      await repository.saveItem(newProfile);
     } else {
-      await repository.addProfile(newProfile);
+      await repository.saveItem(newProfile);
     }
   }
 

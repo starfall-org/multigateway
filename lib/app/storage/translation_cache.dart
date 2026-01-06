@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:multigateway/app/models/translation_cache_entry.dart';
 import 'package:multigateway/app/storage/shared_prefs_base.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TranslationCacheStorage
     extends SharedPreferencesBase<TranslationCacheEntry> {

@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:llm/llm.dart';
 import 'package:llm/models/llm_model/base.dart';
-import 'package:multigateway/core/llm/data/provider_info_storage.dart';
+import 'package:multigateway/core/llm/storage/llm_provider_info_storage.dart';
+
 
 /// Controller responsible for provider and model selection
 class ModelSelectionController extends ChangeNotifier {
@@ -34,7 +35,7 @@ class ModelSelectionController extends ChangeNotifier {
   }
 
   Future<void> refreshProviders() async {
-    providers = pInfStorage.getProviders();
+    providers = pInfStorage.getItems();
     // Initialize collapse map entries for unseen providers
     for (final p in providers) {
       providerCollapsed.putIfAbsent(p.name, () => false);

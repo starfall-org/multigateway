@@ -28,15 +28,4 @@ class McpServerStorage extends HiveBaseStorage<McpServer> {
   McpServer deserializeFromFields(String id, Map<String, dynamic> fields) {
     return McpServer.fromJson(fields);
   }
-
-  List<McpServer> getMcpServers() => getItems();
-
-  /// Reactive stream of MCP servers; emits immediately and on each change.
-  Stream<List<McpServer>> get McpServersStream => itemsStream;
-
-  Future<void> addMcpServer(McpServer server) => saveItem(server);
-
-  Future<void> updateMcpServer(McpServer server) => saveItem(server);
-
-  Future<void> deleteMcpServer(String id) => deleteItem(id);
 }

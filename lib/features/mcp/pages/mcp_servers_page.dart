@@ -1,16 +1,16 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 
+import 'package:flutter/material.dart';
 import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/mcp/storage/mcp_server_repository.dart';
-import 'package:multigateway/shared/widgets/app_snackbar.dart';
-import 'package:multigateway/shared/widgets/resource_tile.dart';
-import 'package:multigateway/shared/widgets/empty_state.dart';
-import 'package:multigateway/shared/widgets/confirm_dialog.dart';
-import 'package:multigateway/shared/widgets/item_card.dart';
-import 'package:multigateway/shared/utils/icon_builder.dart';
 import 'package:multigateway/features/mcp/ui/edit_mcpserver_screen.dart';
+import 'package:multigateway/shared/utils/icon_builder.dart';
+import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:multigateway/shared/widgets/confirm_dialog.dart';
+import 'package:multigateway/shared/widgets/empty_state.dart';
+import 'package:multigateway/shared/widgets/item_card.dart';
+import 'package:multigateway/shared/widgets/resource_tile.dart';
 
 class McpServersPage extends StatefulWidget {
   const McpServersPage({super.key});
@@ -51,7 +51,7 @@ class _McpServersPageState extends State<McpServersPage> {
         },
       );
 
-      final servers = _repository.getMcpServers();
+      final servers = _repository.getItems();
 
       if (mounted) {
         setState(() {

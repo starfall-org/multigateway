@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-
 import 'package:mcp/mcp.dart';
-import 'package:multigateway/core/core.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/core.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
 
 class EditMcpServerViewModel extends ChangeNotifier {
@@ -154,12 +153,12 @@ class EditMcpServerViewModel extends ChangeNotifier {
       );
 
       if (isEditMode) {
-        await _repository.updateMcpServer(server);
+        await _repository.saveItem(server);
         if (context.mounted) {
           context.showSuccessSnackBar(tl('MCP server updated successfully'));
         }
       } else {
-        await _repository.addMcpServer(server);
+        await _repository.saveItem(server);
         if (context.mounted) {
           context.showSuccessSnackBar(tl('MCP server added successfully'));
         }

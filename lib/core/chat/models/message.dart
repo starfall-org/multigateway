@@ -2,76 +2,70 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'message.g.dart';
 
-enum ChatRole {
-  user,
-  model,
-  system,
-  tool,
-  developer,
-}
+enum ChatRole { user, model, system, tool, developer }
 
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
-class MessageContent {
-  final String content;
+class MessageContents {
+  final String? content;
   final DateTime timestamp;
-  final List<String> attachments;
   final String? reasoningContent;
-  final List<String> aiMedia;
+  final List<String> files;
+  final Map<String, dynamic> toolCall;
 
-  MessageContent({
+  MessageContents({
     required this.content,
     required this.timestamp,
-    this.attachments = const [],
     this.reasoningContent,
-    this.aiMedia = const [],
+    this.files = const [],
+    this.toolCall = const {},
   });
 
-  factory MessageContent.fromJson(Map<String, dynamic> json) =>
-      _$MessageContentFromJson(json);
+  factory MessageContents.fromJson(Map<String, dynamic> json) =>
+      _$MessageContentsFromJson(json);
 
-  Map<String, dynamic> toJson() => _$MessageContentToJson(this);
+  Map<String, dynamic> toJson() => _$MessageContentsToJson(this);
 }
 
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class ChatMessage {
   final String id;
   final ChatRole role;
-  final List<MessageContent> versions;
+  final List<MessageContents> versions;
   final int currentVersionIndex;
 
   ChatMessage({
     required this.id,
     required this.role,
-    List<MessageContent>? versions,
+    List<MessageContents>? versions,
     this.currentVersionIndex = 0,
     String content = '',
     DateTime? timestamp,
-    List<String> attachments = const [],
     String? reasoningContent,
-    List<String> aiMedia = const [],
+    List<String> files = const [],
+    Map<String, dynamic> toolCall = const {},
   }) : versions =
-            versions ??
-            [
-              MessageContent(
-                content: content,
-                timestamp: timestamp ?? DateTime.now(),
-                attachments: attachments,
-                reasoningContent: reasoningContent,
-                aiMedia: aiMedia,
-              ),
-            ];
+           versions ??
+           [
+             MessageContents(
+               content: content,
+               timestamp: timestamp ?? DateTime.now(),
+               reasoningContent: reasoningContent,
+               files: files,
+               toolCall: toolCall,
+             ),
+           ];
 
-  MessageContent get current => versions[currentVersionIndex];
-  String get content => current.content;
+  MessageContents get current => versions[currentVersionIndex];
+  String? get content => current.content;
   DateTime get timestamp => current.timestamp;
-  List<String> get attachments => current.attachments;
   String? get reasoningContent => current.reasoningContent;
-  List<String> get aiMedia => current.aiMedia;
+  List<String> get files => current.files;
+  Map<String, dynamic> get toolCall => current.toolCall;
 
   ChatMessage copyWith({
     String? id,
     ChatRole? role,
-    List<MessageContent>? versions,
+    List<MessageContents>? versions,
     int? currentVersionIndex,
   }) {
     return ChatMessage(
@@ -82,7 +76,7 @@ class ChatMessage {
     );
   }
 
-  ChatMessage addVersion(MessageContent content) {
+  ChatMessage addVersion(MessageContents content) {
     return copyWith(
       versions: [...versions, content],
       currentVersionIndex: versions.length,
@@ -90,14 +84,14 @@ class ChatMessage {
   }
 
   ChatMessage updateActiveContent(String newContent) {
-    final updatedVersions = List<MessageContent>.from(versions);
+    final updatedVersions = List<MessageContents>.from(versions);
     final currentV = updatedVersions[currentVersionIndex];
-    updatedVersions[currentVersionIndex] = MessageContent(
+    updatedVersions[currentVersionIndex] = MessageContents(
       content: newContent,
       timestamp: currentV.timestamp,
-      attachments: currentV.attachments,
       reasoningContent: currentV.reasoningContent,
-      aiMedia: currentV.aiMedia,
+      files: currentV.files,
+      toolCall: currentV.toolCall,
     );
     return copyWith(versions: updatedVersions);
   }

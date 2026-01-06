@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
-import 'package:multigateway/core/profile/profile.dart';
 import 'package:mcp/mcp.dart';
+import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/features/home/ui/controllers/chat_controller.dart';
 
 class QuickActionsSheet extends StatefulWidget {
@@ -106,7 +105,7 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
     _updateProfile();
   }
 
-  void _toggleMCPTool(String serverId, String toolName, bool enabled) {
+  void _toggleMcpTool(String serverId, String toolName, bool enabled) {
     final currentServers = List<ActiveMcpServer>.from(
       _profile.activeMcpServers,
     );
@@ -330,7 +329,7 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
                   visualDensity: VisualDensity.compact,
                   contentPadding: const EdgeInsets.only(left: 40, right: 16),
                   onChanged: (val) =>
-                      _toggleMCPTool(server.id, tool.name, val ?? false),
+                      _toggleMcpTool(server.id, tool.name, val ?? false),
                 );
               }).toList(),
             ),

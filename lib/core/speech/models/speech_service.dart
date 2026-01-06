@@ -1,7 +1,12 @@
 import 'dart:convert';
 
+import 'package:json_annotation/json_annotation.dart';
+
+part 'speech_service.g.dart';
+
 enum ServiceType { system, provider }
 
+@JsonSerializable(fieldRename: FieldRename.snake)
 class SpeechService {
   final String id;
   final String name;
@@ -19,68 +24,36 @@ class SpeechService {
   });
 
   Map<String, dynamic> toJson() {
-    return {'tts': tts.toJson(), 'stt': stt.toJson()};
+    return _$SpeechServiceToJson(this);
   }
 
   factory SpeechService.fromJson(Map<String, dynamic> json) {
-    return SpeechService(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      icon: json['icon'] as String?,
-      tts: TextToSpeech.fromJson(json['tts']),
-      stt: SpeechToText.fromJson(json['stt']),
-    );
+    return _$SpeechServiceFromJson(json);
   }
 }
 
+@JsonSerializable(fieldRename: FieldRename.snake)
 class TextToSpeech {
-  final String id;
-  final String icon;
-  final String name;
   final ServiceType type;
   final String? provider;
-  final String? model;
+  final String? modelName;
   final String? voiceId;
   final Map<dynamic, dynamic> settings;
 
   const TextToSpeech({
-    required this.id,
-    required this.icon,
-    required this.name,
     required this.type,
     this.provider,
-    this.model,
+    this.modelName,
     this.voiceId,
     this.settings = const {},
   });
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'icon': icon,
-      'name': name,
-      'type': type.name,
-      'provider': provider,
-      'model': model,
-      'voiceId': voiceId,
-      'settings': settings,
-    };
+    return _$TextToSpeechToJson(this);
   }
 
   factory TextToSpeech.fromJson(Map<String, dynamic> json) {
-    return TextToSpeech(
-      id: json['id'] as String,
-      icon: json['icon'] as String,
-      name: json['name'] as String,
-      type: ServiceType.values.firstWhere(
-        (e) => e.name == json['type'],
-        orElse: () => ServiceType.system,
-      ),
-      provider: json['provider'] as String?,
-      model: json['model'] as String?,
-      voiceId: json['voiceId'] as String?,
-      settings: json['settings'] as Map<String, dynamic>? ?? {},
-    );
+    return _$TextToSpeechFromJson(json);
   }
 
   String toJsonString() => json.encode(toJson());
@@ -93,53 +66,25 @@ class TextToSpeech {
   }
 }
 
+@JsonSerializable(fieldRename: FieldRename.snake)
 class SpeechToText {
-  final String id;
-  final String icon;
-  final String name;
   final ServiceType type;
   final String? provider;
-  final String? model;
-  final String? voiceId;
+  final String? modelName;
   final Map<dynamic, dynamic> settings;
 
   const SpeechToText({
-    required this.id,
-    required this.icon,
-    required this.name,
     required this.type,
     this.provider,
-    this.model,
-    this.voiceId,
+    this.modelName,
     this.settings = const {},
   });
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'icon': icon,
-      'name': name,
-      'type': type.name,
-      'provider': provider,
-      'model': model,
-      'voiceId': voiceId,
-      'settings': settings,
-    };
+    return _$SpeechToTextToJson(this);
   }
 
   factory SpeechToText.fromJson(Map<String, dynamic> json) {
-    return SpeechToText(
-      id: json['id'] as String,
-      icon: json['icon'] as String,
-      name: json['name'] as String,
-      type: ServiceType.values.firstWhere(
-        (e) => e.name == json['type'],
-        orElse: () => ServiceType.system,
-      ),
-      provider: json['provider'] as String?,
-      model: json['model'] as String?,
-      voiceId: json['voiceId'] as String?,
-      settings: json['settings'] as Map<String, dynamic>? ?? {},
-    );
+    return _$SpeechToTextFromJson(json);
   }
 }

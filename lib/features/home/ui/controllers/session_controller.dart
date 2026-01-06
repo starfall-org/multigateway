@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/features/home/domain/domain.dart';
+import 'package:uuid/uuid.dart';
 
 /// Controller responsible for managing chat sessions/conversations
 class SessionController extends ChangeNotifier {
@@ -13,7 +14,7 @@ class SessionController extends ChangeNotifier {
   });
 
   Future<void> initChat() async {
-    final sessions = chatRepository.getConversations();
+    final sessions = chatRepository.getItems();
 
     if (sessions.isNotEmpty) {
       currentSession = sessions.first;
@@ -25,7 +26,14 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<void> createNewSession() async {
-    final session = await chatRepository.createConversation();
+    final session = Conversation(
+      id: const Uuid().v4(),
+      title: 'New Chat',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      messages: [],
+    );
+    await chatRepository.saveItem(session);
     currentSession = session;
     isLoading = false;
     notifyListeners();
@@ -35,7 +43,7 @@ class SessionController extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    final sessions = chatRepository.getConversations();
+    final sessions = chatRepository.getItems();
     final session = sessions.firstWhere(
       (s) => s.id == sessionId,
       orElse: () => sessions.first,
@@ -48,7 +56,7 @@ class SessionController extends ChangeNotifier {
 
   Future<void> saveCurrentSession() async {
     if (currentSession != null) {
-      await chatRepository.saveConversation(currentSession!);
+      await chatRepository.saveItem(currentSession!);
     }
   }
 
@@ -59,7 +67,7 @@ class SessionController extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
     notifyListeners();
-    await chatRepository.saveConversation(currentSession!);
+    await chatRepository.saveItem(currentSession!);
   }
 
   void updateSession(Conversation session) {

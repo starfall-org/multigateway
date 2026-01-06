@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:multigateway/app/models/default_options.dart';
 import 'package:multigateway/app/storage/shared_prefs_base.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Repository for managing default AI models configuration.
 class DefaultOptionsStorage extends SharedPreferencesBase<DefaultOptions> {

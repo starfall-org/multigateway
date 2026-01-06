@@ -1,15 +1,15 @@
 import 'dart:async';
 
+import 'package:multigateway/core/chat/models/conversation.dart';
 import 'package:multigateway/core/storage/base.dart';
-import 'package:multigateway/features/home/domain/models/conversation.dart';
 
-class ChatRepository extends HiveBaseStorage<Conversation> {
+class ConversationStorage extends HiveBaseStorage<Conversation> {
   static const String _prefix = 'conv';
 
-  ChatRepository();
+  ConversationStorage();
 
-  static Future<ChatRepository> init() async {
-    return ChatRepository();
+  static Future<ConversationStorage> init() async {
+    return ConversationStorage();
   }
 
   @override

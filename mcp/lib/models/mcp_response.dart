@@ -9,7 +9,7 @@ part 'mcp_response.g.dart';
 class InitializeResult {
   final String protocolVersion;
   final McpServerCapabilities capabilities;
-  final MCPImplementation serverInfo;
+  final McpImplementation serverInfo;
 
   InitializeResult({
     required this.protocolVersion,
@@ -24,7 +24,7 @@ class InitializeResult {
 /// Response result for 'tools/list' method
 @JsonSerializable(fieldRename: FieldRename.snake)
 class ListToolsResult {
-  final List<MCPTool> tools;
+  final List<McpTool> tools;
   final String? nextCursor;
 
   ListToolsResult({required this.tools, this.nextCursor});
@@ -36,7 +36,7 @@ class ListToolsResult {
 /// Response result for 'tools/call' method
 @JsonSerializable(fieldRename: FieldRename.snake)
 class CallToolResult {
-  final List<MCPContent> content;
+  final List<McpContent> content;
   final bool isError;
 
   CallToolResult({required this.content, this.isError = false});
@@ -48,7 +48,7 @@ class CallToolResult {
 /// Response result for 'resources/list' method
 @JsonSerializable(fieldRename: FieldRename.snake)
 class ListResourcesResult {
-  final List<MCPResource> resources;
+  final List<McpResource> resources;
   final String? nextCursor;
 
   ListResourcesResult({required this.resources, this.nextCursor});
@@ -60,7 +60,7 @@ class ListResourcesResult {
 /// Response result for 'resources/read' method
 @JsonSerializable(fieldRename: FieldRename.snake)
 class ReadResourceResult {
-  final List<MCPResourceContent> contents;
+  final List<McpResourceContent> contents;
 
   ReadResourceResult({required this.contents});
 
@@ -84,7 +84,7 @@ class ListPromptsResult {
 @JsonSerializable(fieldRename: FieldRename.snake)
 class GetPromptResult {
   final String? description;
-  final List<MCPPromptMessage> messages;
+  final List<McpPromptMessage> messages;
 
   GetPromptResult({this.description, required this.messages});
 

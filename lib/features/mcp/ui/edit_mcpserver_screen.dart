@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-
 import 'package:mcp/mcp.dart';
-import 'package:multigateway/shared/widgets/custom_text_field.dart';
-import 'package:multigateway/shared/widgets/common_dropdown.dart';
+import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/features/mcp/controllers/edit_mcpserver_controller.dart';
+import 'package:multigateway/shared/widgets/common_dropdown.dart';
+import 'package:multigateway/shared/widgets/custom_text_field.dart';
 
 class EditMcpServerscreen extends StatefulWidget {
   final McpServer? server;

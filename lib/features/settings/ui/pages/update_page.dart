@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/shared/utils/app_version.dart';
+import 'package:multigateway/shared/widgets/app_snackbar.dart';
 
 /// Màn hình cập nhật ứng dụng
 class UpdatePage extends StatefulWidget {

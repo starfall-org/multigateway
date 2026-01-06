@@ -11,67 +11,67 @@ enum ChatRole {
 }
 
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
-class MessageContent {
+class MessageContents {
   final String content;
   final DateTime timestamp;
   final List<String> attachments;
   final String? reasoningContent;
-  final List<String> aiMedia;
+  final List<String> files;
 
-  MessageContent({
+  MessageContents({
     required this.content,
     required this.timestamp,
     this.attachments = const [],
     this.reasoningContent,
-    this.aiMedia = const [],
+    this.files = const [],
   });
 
-  factory MessageContent.fromJson(Map<String, dynamic> json) =>
-      _$MessageContentFromJson(json);
+  factory MessageContents.fromJson(Map<String, dynamic> json) =>
+      _$MessageContentsFromJson(json);
 
-  Map<String, dynamic> toJson() => _$MessageContentToJson(this);
+  Map<String, dynamic> toJson() => _$MessageContentsToJson(this);
 }
 
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class ChatMessage {
   final String id;
   final ChatRole role;
-  final List<MessageContent> versions;
+  final List<MessageContents> versions;
   final int currentVersionIndex;
 
   ChatMessage({
     required this.id,
     required this.role,
-    List<MessageContent>? versions,
+    List<MessageContents>? versions,
     this.currentVersionIndex = 0,
     String content = '',
     DateTime? timestamp,
     List<String> attachments = const [],
     String? reasoningContent,
-    List<String> aiMedia = const [],
+    List<String> files = const [],
   }) : versions =
             versions ??
             [
-              MessageContent(
+              MessageContents(
                 content: content,
                 timestamp: timestamp ?? DateTime.now(),
                 attachments: attachments,
                 reasoningContent: reasoningContent,
-                aiMedia: aiMedia,
+                files: files,
               ),
             ];
 
-  MessageContent get current => versions[currentVersionIndex];
+  MessageContents get current => versions[currentVersionIndex];
   String get content => current.content;
   DateTime get timestamp => current.timestamp;
   List<String> get attachments => current.attachments;
   String? get reasoningContent => current.reasoningContent;
-  List<String> get aiMedia => current.aiMedia;
+  List<String> get files => current.files;
 
   ChatMessage copyWith({
     String? id,
     ChatRole? role,
-    List<MessageContent>? versions,
+    List<MessageContents>? versions,
     int? currentVersionIndex,
   }) {
     return ChatMessage(
@@ -82,7 +82,7 @@ class ChatMessage {
     );
   }
 
-  ChatMessage addVersion(MessageContent content) {
+  ChatMessage addVersion(MessageContents content) {
     return copyWith(
       versions: [...versions, content],
       currentVersionIndex: versions.length,
@@ -90,14 +90,14 @@ class ChatMessage {
   }
 
   ChatMessage updateActiveContent(String newContent) {
-    final updatedVersions = List<MessageContent>.from(versions);
+    final updatedVersions = List<MessageContents>.from(versions);
     final currentV = updatedVersions[currentVersionIndex];
-    updatedVersions[currentVersionIndex] = MessageContent(
+    updatedVersions[currentVersionIndex] = MessageContents(
       content: newContent,
       timestamp: currentV.timestamp,
       attachments: currentV.attachments,
       reasoningContent: currentV.reasoningContent,
-      aiMedia: currentV.aiMedia,
+      files: currentV.files,
     );
     return copyWith(versions: updatedVersions);
   }

@@ -1,2 +1,2 @@
-export 'models/profile_model.dart';
-export 'storage/ai_profile_repository.dart';
+export 'models/chat_profile.dart';
+export 'storage/chat_profile_storage.dart';

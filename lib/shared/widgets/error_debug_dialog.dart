@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/shared/widgets/app_snackbar.dart';
 
 class ErrorDebugDialog extends StatelessWidget {
   final dynamic error;

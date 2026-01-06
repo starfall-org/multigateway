@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:uuid/uuid.dart';
-
-import 'package:multigateway/core/core.dart';
-import 'package:multigateway/features/home/domain/domain.dart';
-import 'package:mcp/mcp.dart';
 import 'package:llm/llm.dart';
-
+import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/storage/preferences.dart';
 import 'package:multigateway/app/translate/tl.dart';
-import 'package:multigateway/features/home/ui/controllers/chat_controller_parts/chat_navigation_interface.dart';
-
-// Import các controller con
-import 'package:multigateway/features/home/ui/controllers/session_controller.dart';
-import 'package:multigateway/features/home/ui/controllers/message_controller.dart';
+import 'package:multigateway/core/core.dart';
+import 'package:multigateway/features/home/domain/domain.dart';
 import 'package:multigateway/features/home/ui/controllers/attachment_controller.dart';
+import 'package:multigateway/features/home/ui/controllers/chat_controller_parts/chat_navigation_interface.dart';
+import 'package:multigateway/features/home/ui/controllers/message_controller.dart';
 import 'package:multigateway/features/home/ui/controllers/model_selection_controller.dart';
 import 'package:multigateway/features/home/ui/controllers/profile_controller.dart';
+// Import các controller con
+import 'package:multigateway/features/home/ui/controllers/session_controller.dart';
+import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:uuid/uuid.dart';
 
 /// Main ChatController orchestrates all sub-controllers
 class ChatController extends ChangeNotifier {
@@ -37,11 +35,11 @@ class ChatController extends ChangeNotifier {
 
   ChatController({
     required this.navigator,
-    required ConversationRepository conversationRepository,
+    required ConversationStorage conversationRepository,
     required ChatProfileStorage aiProfileRepository,
     required LlmProviderInfoStorage llmProviderInfoStorage,
     required this.preferencesSp,
-    required McpServerStorage McpServerStorage,
+    required McpServerStorage mcpServerStorage,
     required this.ttsService,
   }) {
     // Initialize sub-controllers
@@ -74,7 +72,7 @@ class ChatController extends ChangeNotifier {
   List<String> get inspectingAttachments =>
       attachmentController.inspectingAttachments;
   List<Provider> get providers => modelSelectionController.providers;
-  List<McpServer> get McpServers => profileController.McpServers;
+  List<McpServer> get mcpServers => profileController.mcpServers;
   Map<String, bool> get providerCollapsed =>
       modelSelectionController.providerCollapsed;
   String? get selectedProviderName =>
@@ -148,7 +146,7 @@ class ChatController extends ChangeNotifier {
     final providerRepo = await LlmProviderInfoStorage.init();
     if (!context.mounted) return;
 
-    final providersList = providerRepo.getProviders();
+    final providersList = providerRepo.getItems();
     final persist = shouldPersistSelections();
 
     final selection = ChatLogicUtils.resolveProviderAndModel(
@@ -242,7 +240,7 @@ class ChatController extends ChangeNotifier {
     final providerRepo = await LlmProviderInfoStorage.init();
     if (!context.mounted) return;
 
-    final providersList = providerRepo.getProviders();
+    final providersList = providerRepo.getItems();
     final persist = shouldPersistSelections();
 
     final selection = ChatLogicUtils.resolveProviderAndModel(

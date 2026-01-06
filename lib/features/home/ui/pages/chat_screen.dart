@@ -1,11 +1,8 @@
-import 'package:flutter/material.dart';
-
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:multigateway/app/config/services.dart';
 import 'package:multigateway/app/translate/tl.dart';
-import 'package:multigateway/shared/widgets/app_dialog.dart';
-import 'package:multigateway/shared/widgets/empty_state.dart';
 import 'package:multigateway/features/home/ui/controllers/chat_controller.dart';
 import 'package:multigateway/features/home/ui/controllers/chat_controller_parts/chat_navigation_interface.dart';
 import 'package:multigateway/features/home/ui/views/menu_view.dart';
@@ -15,6 +12,8 @@ import 'package:multigateway/features/home/ui/widgets/edit_message_sheet.dart';
 import 'package:multigateway/features/home/ui/widgets/model_picker_sheet.dart';
 import 'package:multigateway/features/home/ui/widgets/quick_actions_sheet.dart';
 import 'package:multigateway/features/home/ui/widgets/user_input_area.dart';
+import 'package:multigateway/shared/widgets/app_dialog.dart';
+import 'package:multigateway/shared/widgets/empty_state.dart';
 
 /// Helper để tạo theme-aware image cho chat screen
 Widget _buildThemeAwareImageForChatScreen(BuildContext context, Widget child) {

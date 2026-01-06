@@ -1,11 +1,10 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_core/firebase_core.dart';
-
+import 'package:multigateway/app/app.dart';
 import 'package:multigateway/app/config/services.dart';
 import 'package:multigateway/firebase_options.dart';
 import 'package:multigateway/shared/utils/icon_builder.dart';
-import 'package:multigateway/app/app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

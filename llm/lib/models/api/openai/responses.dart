@@ -89,7 +89,7 @@ class ResponseItem {
   final String id;
   final String type;
   final String role;
-  final List<MessageContent> content;
+  final List<MessageContents> content;
   final String status;
 
   ResponseItem({
@@ -112,27 +112,27 @@ class ResponseItem {
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake)
-class MessageContent {
+class MessageContents {
   final String type;
   final String text;
   final List<Annotation>? annotations;
   final Logprobs? logprobs;
 
-  MessageContent({
+  MessageContents({
     required this.type,
     required this.text,
     this.annotations,
     this.logprobs,
   });
 
-  factory MessageContent.fromJson(Map<String, dynamic> json) =>
-      _$MessageContentFromJson(json);
+  factory MessageContents.fromJson(Map<String, dynamic> json) =>
+      _$MessageContentsFromJson(json);
 
-  Map<String, dynamic> toJson() => _$MessageContentToJson(this);
+  Map<String, dynamic> toJson() => _$MessageContentsToJson(this);
 
   @override
   String toString() {
-    return 'MessageContent(type: $type, text: $text, annotations: $annotations, logprobs: $logprobs)';
+    return 'MessageContents(type: $type, text: $text, annotations: $annotations, logprobs: $logprobs)';
   }
 }
 

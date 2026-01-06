@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'package:uuid/uuid.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:multigateway/core/profile/models/chat_profile.dart';
 import 'package:multigateway/core/storage/base.dart';
-import 'package:multigateway/core/profile/models/profile_model.dart';
+import 'package:uuid/uuid.dart';
 
 class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
   static const String _prefix = 'profile';
@@ -23,64 +23,12 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
 
   @override
   Map<String, dynamic> serializeToFields(ChatProfile item) {
-    return {
-      'id': item.id,
-      'name': item.name,
-      'profileConversations': item.profileConversations,
-      'conversationIds': item.conversationIds,
-      'activeMcpServers': item.activeMcpServers.map((e) => e.toJson()).toList(),
-      'activeBuiltInTools': item.activeBuiltInTools,
-      'persistChatSelection': item.persistChatSelection,
-      // AiConfig fields
-      'config': {
-        'systemPrompt': item.config.systemPrompt,
-        'enableStream': item.config.enableStream,
-        'topP': item.config.topP,
-        'topK': item.config.topK,
-        'temperature': item.config.temperature,
-        'contextWindow': item.config.contextWindow,
-        'conversationLength': item.config.conversationLength,
-        'maxTokens': item.config.maxTokens,
-        'customThinkingTokens': item.config.customThinkingTokens,
-        'thinkingLevel': item.config.thinkingLevel.name,
-      },
-    };
+    return item.toJson();
   }
 
   @override
   ChatProfile deserializeFromFields(String id, Map<String, dynamic> fields) {
-    final configMap = fields['config'] as Map<String, dynamic>? ?? {};
-
-    return ChatProfile(
-      id: fields['id'] as String,
-      name: fields['name'] as String,
-      profileConversations: fields['profileConversations'] as bool? ?? false,
-      conversationIds:
-          (fields['conversationIds'] as List?)?.cast<String>() ?? const [],
-      activeMcpServers:
-          (fields['activeMcpServers'] as List?)
-              ?.map((e) => ActiveMcpServer.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      activeBuiltInTools:
-          (fields['activeBuiltInTools'] as List?)?.cast<String>() ?? const [],
-      persistChatSelection: fields['persistChatSelection'] as bool?,
-      config: AiConfig(
-        systemPrompt: configMap['systemPrompt'] as String? ?? '',
-        enableStream: configMap['enableStream'] as bool? ?? true,
-        topP: configMap['topP'] as double?,
-        topK: configMap['topK'] as double?,
-        temperature: configMap['temperature'] as double?,
-        contextWindow: configMap['contextWindow'] as int? ?? 60000,
-        conversationLength: configMap['conversationLength'] as int? ?? 10,
-        maxTokens: configMap['maxTokens'] as int? ?? 4000,
-        customThinkingTokens: configMap['customThinkingTokens'] as int?,
-        thinkingLevel: ThinkingLevel.values.firstWhere(
-          (e) => e.name == configMap['thinkingLevel'] as String?,
-          orElse: () => ThinkingLevel.auto,
-        ),
-      ),
-    );
+    return ChatProfile.fromJson(fields);
   }
 
   @override
@@ -93,11 +41,7 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
     return items;
   }
 
-  List<ChatProfile> getProfiles() => getItems();
-
   // Reactive streams
-  Stream<List<ChatProfile>> get profilesStream => itemsStream;
-
   Stream<ChatProfile> get selectedProfileStream {
     final controller = StreamController<ChatProfile>.broadcast();
     StreamSubscription<void>? sub;
@@ -116,20 +60,12 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
     return controller.stream;
   }
 
-  Future<void> addProfile(ChatProfile profile) async {
-    await saveItem(profile);
-    // If no selection yet, select the newly added profile by default
-    if (getSelectedProfileId() == null) {
-      await setSelectedProfileId(profile.id);
-    }
-  }
+  // --- Selection helpers ---
 
-  Future<void> updateProfile(ChatProfile profile) async {
-    await updateItem(profile);
-  }
-
-  Future<void> deleteProfile(String id) async {
-    await deleteItem(id);
+  /// Override deleteItem to maintain valid selection after deletion
+  @override
+  Future<void> deleteItem(String id) async {
+    await super.deleteItem(id);
 
     // Maintain a valid selection after deletion
     final selectedId = getSelectedProfileId();
@@ -149,7 +85,15 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
     }
   }
 
-  // --- Selection helpers ---
+  /// Override saveItem to auto-select first profile if none selected
+  @override
+  Future<void> saveItem(ChatProfile profile) async {
+    await super.saveItem(profile);
+    // If no selection yet, select the newly added profile by default
+    if (getSelectedProfileId() == null) {
+      await setSelectedProfileId(profile.id);
+    }
+  }
 
   String? getSelectedProfileId() {
     final boxName = 'repo_$_prefix';
@@ -196,8 +140,8 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
   ChatProfile _createDefaultProfile() {
     return ChatProfile(
       id: const Uuid().v4(),
-      name: 'Basic Profile',
-      config: AiConfig(systemPrompt: '', enableStream: true),
+      name: 'Default Profile',
+      config: LlmChatConfig(systemPrompt: '', enableStream: true),
     );
   }
 }

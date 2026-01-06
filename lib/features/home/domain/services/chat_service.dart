@@ -1,9 +1,9 @@
 import 'dart:async';
+
 import 'package:llm/llm.dart';
+import 'package:llm/models/api/api.dart';
 import 'package:mcp/mcp.dart';
 import 'package:multigateway/core/core.dart';
-
-import 'package:llm/models/api/api.dart';
 
 class ChatService {
   // Thu thập MCP tools ưu tiên cache; cập nhật khi dùng.
@@ -14,11 +14,11 @@ class ChatService {
       return const <AIToolFunction>[];
     }
     try {
-      final McpServerStorage = await McpServerStorage.init();
+      final mcpServerStorage = await McpServerStorage.init();
       final mcpService = MCPService();
 
       final servers = profile.activeMcpServers
-          .map((i) => McpServerStorage.getItem(i.id))
+          .map((i) => mcpServerStorage.getItem(i.id))
           .whereType<McpServer>()
           .toList();
 
@@ -28,7 +28,7 @@ class ChatService {
         for (var s in profile.activeMcpServers) s.id: s.activeToolIds.toSet(),
       };
 
-      List<MCPTool> filterTools(List<McpServer> serversToFilter) {
+      List<McpTool> filterTools(List<McpServer> serversToFilter) {
         return serversToFilter.expand((s) {
           final allowedNames = allowedToolsMap[s.id] ?? {};
           return s.tools.where(
@@ -37,7 +37,7 @@ class ChatService {
         }).toList();
       }
 
-      List<MCPTool> cachedTools = filterTools(servers);
+      List<McpTool> cachedTools = filterTools(servers);
 
       if (cachedTools.isEmpty) {
         final fetchedLists = await Future.wait(
@@ -45,7 +45,7 @@ class ChatService {
             try {
               final tools = await mcpService.fetchTools(s);
               final updatedServer = s.copyWith(tools: tools);
-              await McpServerStorage.updateMcpServer(updatedServer);
+              await mcpServerStorage.saveItem(updatedServer);
               return updatedServer;
             } catch (_) {
               return s;
@@ -58,7 +58,7 @@ class ChatService {
           for (final s in servers) {
             try {
               final tools = await mcpService.fetchTools(s);
-              await McpServerStorage.updateMcpServer(s.copyWith(tools: tools));
+              await mcpServerStorage.saveItem(s.copyWith(tools: tools));
             } catch (_) {}
           }
         });

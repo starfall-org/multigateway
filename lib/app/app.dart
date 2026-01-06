@@ -1,7 +1,6 @@
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:dynamic_color/dynamic_color.dart';
-
 import 'package:multigateway/app/app_routes.dart';
 import 'package:multigateway/app/config/theme.dart';
 import 'package:multigateway/app/storage/appearance.dart';

@@ -1,8 +1,8 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:llm/models/llm_model/ollama_model.dart';
 import 'package:llm/models/llm_model/basic_model.dart';
-import 'package:llm/models/llm_model/googleai_model.dart';
 import 'package:llm/models/llm_model/github_model.dart';
+import 'package:llm/models/llm_model/googleai_model.dart';
+import 'package:llm/models/llm_model/ollama_model.dart';
 
 part 'llm_provider_models.g.dart';
 

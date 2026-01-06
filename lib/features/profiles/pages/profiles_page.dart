@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
-import 'package:multigateway/shared/widgets/empty_state.dart';
-import 'package:multigateway/shared/widgets/confirm_dialog.dart';
-import 'package:multigateway/shared/widgets/item_card.dart';
-import 'package:multigateway/features/profiles/ui/edit_profile_screen.dart';
 import 'package:multigateway/features/llm/ui/widgets/view_profile_dialog.dart';
+import 'package:multigateway/features/profiles/ui/edit_profile_screen.dart';
+import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:multigateway/shared/widgets/confirm_dialog.dart';
+import 'package:multigateway/shared/widgets/empty_state.dart';
+import 'package:multigateway/shared/widgets/item_card.dart';
 
 class ChatProfilesScreen extends StatefulWidget {
   const ChatProfilesScreen({super.key});
@@ -30,13 +31,13 @@ class _ChatProfilesScreenState extends State<ChatProfilesScreen> {
     _repository = await ChatProfileStorage.init();
     if (!mounted) return;
     setState(() {
-      _profiles = _repository.getProfiles();
+      _profiles = _repository.getItems();
       _isLoading = false;
     });
   }
 
   Future<void> _deleteProfile(String id) async {
-    await _repository.deleteProfile(id);
+    await _repository.deleteItem(id);
     _loadProfiles();
   }
 

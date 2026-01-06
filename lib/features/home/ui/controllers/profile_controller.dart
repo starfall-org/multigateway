@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
-
-import 'package:multigateway/core/profile/profile.dart';
 import 'package:mcp/mcp.dart';
-import 'package:multigateway/core/storage/mcpserver_store.dart';
+import 'package:multigateway/core/mcp/storage/mcp_server_repository.dart';
+import 'package:multigateway/core/profile/profile.dart';
 
 /// Controller responsible for AI profile and MCP server management
 class ProfileController extends ChangeNotifier {
   final ChatProfileStorage aiProfileRepository;
-  final McpServerStorage McpServerStorage;
+  final McpServerStorage mcpServerStorage;
 
   ChatProfile? selectedProfile;
-  List<McpServer> McpServers = [];
+  List<McpServer> mcpServers = [];
 
   ProfileController({
     required this.aiProfileRepository,
-    required this.McpServerStorage,
+    required this.mcpServerStorage,
   });
 
   Future<void> loadSelectedProfile() async {
@@ -25,12 +24,12 @@ class ProfileController extends ChangeNotifier {
 
   Future<void> updateProfile(ChatProfile profile) async {
     selectedProfile = profile;
-    await aiProfileRepository.updateProfile(profile);
+    await aiProfileRepository.saveItem(profile);
     notifyListeners();
   }
 
   Future<void> loadMcpServers() async {
-    McpServers = McpServerStorage.getItems().whereType<McpServer>().toList();
+    mcpServers = mcpServerStorage.getItems().whereType<McpServer>().toList();
     notifyListeners();
   }
 

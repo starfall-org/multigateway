@@ -19,8 +19,8 @@ class McpServer {
   final MCPTransportType transport;
   final MCPHttpConfig? httpConfig;
   final McpServerCapabilities? capabilities;
-  final List<MCPTool> tools;
-  final List<MCPResource> resources;
+  final List<McpTool> tools;
+  final List<McpResource> resources;
   final List<MCPPrompt> prompts;
 
   const McpServer({
@@ -92,8 +92,8 @@ class McpServer {
     MCPTransportType? transport,
     MCPHttpConfig? httpConfig,
     McpServerCapabilities? capabilities,
-    List<MCPTool>? tools,
-    List<MCPResource>? resources,
+    List<McpTool>? tools,
+    List<McpResource>? resources,
     List<MCPPrompt>? prompts,
   }) {
     return McpServer(

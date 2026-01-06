@@ -14,6 +14,7 @@ LlmProviderConfig _$LlmProviderConfigFromJson(Map<String, dynamic> json) =>
       customChatCompletionUrl: json['custom_chat_completion_url'] as String?,
       customListModelsUrl: json['custom_list_models_url'] as String?,
       responsesApi: json['responses_api'] as bool? ?? false,
+      supportStream: json['support_stream'] as bool? ?? true,
       headers: json['headers'] as Map<String, dynamic>?,
     );
 
@@ -25,5 +26,6 @@ Map<String, dynamic> _$LlmProviderConfigToJson(LlmProviderConfig instance) =>
       'custom_chat_completion_url': instance.customChatCompletionUrl,
       'custom_list_models_url': instance.customListModelsUrl,
       'responses_api': instance.responsesApi,
+      'support_stream': instance.supportStream,
       'headers': instance.headers,
     };

@@ -8,7 +8,7 @@ class AppRoutes {
   static const String update = '/settings/update';
   static const String aiProfiles = '/ai/profiles';
   static const String editAiProfiles = '/ai/profiles/edit';
-  static const String McpServers = '/ai/mcp/servers';
+  static const String mcpServers = '/ai/mcp/servers';
   static const String editMcpServer = '/ai/mcp/servers/edit';
   static const String aiProviders = '/ai/providers';
   static const String editAiProvider = '/ai/providers/edit';

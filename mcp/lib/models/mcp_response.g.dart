@@ -12,7 +12,7 @@ InitializeResult _$InitializeResultFromJson(Map<String, dynamic> json) =>
       capabilities: McpServerCapabilities.fromJson(
         json['capabilities'] as Map<String, dynamic>,
       ),
-      serverInfo: MCPImplementation.fromJson(
+      serverInfo: McpImplementation.fromJson(
         json['server_info'] as Map<String, dynamic>,
       ),
     );
@@ -27,7 +27,7 @@ Map<String, dynamic> _$InitializeResultToJson(InitializeResult instance) =>
 ListToolsResult _$ListToolsResultFromJson(Map<String, dynamic> json) =>
     ListToolsResult(
       tools: (json['tools'] as List<dynamic>)
-          .map((e) => MCPTool.fromJson(e as Map<String, dynamic>))
+          .map((e) => McpTool.fromJson(e as Map<String, dynamic>))
           .toList(),
       nextCursor: json['next_cursor'] as String?,
     );
@@ -41,7 +41,7 @@ Map<String, dynamic> _$ListToolsResultToJson(ListToolsResult instance) =>
 CallToolResult _$CallToolResultFromJson(Map<String, dynamic> json) =>
     CallToolResult(
       content: (json['content'] as List<dynamic>)
-          .map((e) => MCPContent.fromJson(e as Map<String, dynamic>))
+          .map((e) => McpContent.fromJson(e as Map<String, dynamic>))
           .toList(),
       isError: json['is_error'] as bool? ?? false,
     );
@@ -55,7 +55,7 @@ Map<String, dynamic> _$CallToolResultToJson(CallToolResult instance) =>
 ListResourcesResult _$ListResourcesResultFromJson(Map<String, dynamic> json) =>
     ListResourcesResult(
       resources: (json['resources'] as List<dynamic>)
-          .map((e) => MCPResource.fromJson(e as Map<String, dynamic>))
+          .map((e) => McpResource.fromJson(e as Map<String, dynamic>))
           .toList(),
       nextCursor: json['next_cursor'] as String?,
     );
@@ -70,7 +70,7 @@ Map<String, dynamic> _$ListResourcesResultToJson(
 ReadResourceResult _$ReadResourceResultFromJson(Map<String, dynamic> json) =>
     ReadResourceResult(
       contents: (json['contents'] as List<dynamic>)
-          .map((e) => MCPResourceContent.fromJson(e as Map<String, dynamic>))
+          .map((e) => McpResourceContent.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
 
@@ -95,7 +95,7 @@ GetPromptResult _$GetPromptResultFromJson(Map<String, dynamic> json) =>
     GetPromptResult(
       description: json['description'] as String?,
       messages: (json['messages'] as List<dynamic>)
-          .map((e) => MCPPromptMessage.fromJson(e as Map<String, dynamic>))
+          .map((e) => McpPromptMessage.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
 

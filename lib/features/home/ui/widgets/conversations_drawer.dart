@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:multigateway/features/home/domain/domain.dart';
+import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
-import 'package:multigateway/features/ai/ui/pages/profiles_page.dart';
+import 'package:multigateway/features/home/domain/data/chat_store.dart';
+import 'package:multigateway/features/home/domain/domain.dart';
 
 class ConversationsDrawer extends StatefulWidget {
   final Function(String) onSessionSelected;
@@ -47,7 +48,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
   Future<void> _loadHistory() async {
     _chatRepository = await ChatRepository.init();
     setState(() {
-      _sessions = _chatRepository!.getConversations();
+      _sessions = _chatRepository!.getItems();
       _filteredSessions = _sessions;
     });
   }
@@ -66,7 +67,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
   }
 
   Future<void> _deleteSession(String id) async {
-    await _chatRepository!.deleteConversation(id);
+    await _chatRepository!.deleteItem(id);
     _loadHistory();
   }
 

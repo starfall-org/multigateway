@@ -47,7 +47,7 @@ Map<String, dynamic> _$JsonSchemaPropertyToJson(JsonSchemaProperty instance) =>
       'items': instance.items?.toJson(),
     };
 
-MCPTool _$MCPToolFromJson(Map<String, dynamic> json) => MCPTool(
+McpTool _$McpToolFromJson(Map<String, dynamic> json) => McpTool(
   name: json['name'] as String,
   description: json['description'] as String?,
   inputSchema: JsonSchema.fromJson(
@@ -56,21 +56,21 @@ MCPTool _$MCPToolFromJson(Map<String, dynamic> json) => MCPTool(
   enabled: json['enabled'] as bool? ?? true,
 );
 
-Map<String, dynamic> _$MCPToolToJson(MCPTool instance) => <String, dynamic>{
+Map<String, dynamic> _$McpToolToJson(McpTool instance) => <String, dynamic>{
   'name': instance.name,
   'description': instance.description,
   'input_schema': instance.inputSchema.toJson(),
   'enabled': instance.enabled,
 };
 
-MCPResource _$MCPResourceFromJson(Map<String, dynamic> json) => MCPResource(
+McpResource _$McpResourceFromJson(Map<String, dynamic> json) => McpResource(
   uri: json['uri'] as String,
   name: json['name'] as String,
   description: json['description'] as String?,
   mimeType: json['mime_type'] as String?,
 );
 
-Map<String, dynamic> _$MCPResourceToJson(MCPResource instance) =>
+Map<String, dynamic> _$McpResourceToJson(McpResource instance) =>
     <String, dynamic>{
       'uri': instance.uri,
       'name': instance.name,
@@ -78,14 +78,14 @@ Map<String, dynamic> _$MCPResourceToJson(MCPResource instance) =>
       'mime_type': instance.mimeType,
     };
 
-MCPPromptArgument _$MCPPromptArgumentFromJson(Map<String, dynamic> json) =>
-    MCPPromptArgument(
+McpPromptArgument _$McpPromptArgumentFromJson(Map<String, dynamic> json) =>
+    McpPromptArgument(
       name: json['name'] as String,
       description: json['description'] as String?,
       required: json['required'] as bool? ?? false,
     );
 
-Map<String, dynamic> _$MCPPromptArgumentToJson(MCPPromptArgument instance) =>
+Map<String, dynamic> _$McpPromptArgumentToJson(McpPromptArgument instance) =>
     <String, dynamic>{
       'name': instance.name,
       'description': instance.description,
@@ -96,7 +96,7 @@ MCPPrompt _$MCPPromptFromJson(Map<String, dynamic> json) => MCPPrompt(
   name: json['name'] as String,
   description: json['description'] as String?,
   arguments: (json['arguments'] as List<dynamic>?)
-      ?.map((e) => MCPPromptArgument.fromJson(e as Map<String, dynamic>))
+      ?.map((e) => McpPromptArgument.fromJson(e as Map<String, dynamic>))
       .toList(),
 );
 
@@ -124,39 +124,39 @@ Map<String, dynamic> _$McpServerCapabilitiesToJson(
   'logging': instance.logging,
 };
 
-MCPImplementation _$MCPImplementationFromJson(Map<String, dynamic> json) =>
-    MCPImplementation(
+McpImplementation _$McpImplementationFromJson(Map<String, dynamic> json) =>
+    McpImplementation(
       name: json['name'] as String,
       version: json['version'] as String,
     );
 
-Map<String, dynamic> _$MCPImplementationToJson(MCPImplementation instance) =>
+Map<String, dynamic> _$McpImplementationToJson(McpImplementation instance) =>
     <String, dynamic>{'name': instance.name, 'version': instance.version};
 
-MCPTextContent _$MCPTextContentFromJson(Map<String, dynamic> json) =>
-    MCPTextContent(json['text'] as String);
+McpTextContent _$McpTextContentFromJson(Map<String, dynamic> json) =>
+    McpTextContent(json['text'] as String);
 
-Map<String, dynamic> _$MCPTextContentToJson(MCPTextContent instance) =>
+Map<String, dynamic> _$McpTextContentToJson(McpTextContent instance) =>
     <String, dynamic>{'text': instance.text};
 
-MCPImageContent _$MCPImageContentFromJson(Map<String, dynamic> json) =>
-    MCPImageContent(
+McpImageContent _$McpImageContentFromJson(Map<String, dynamic> json) =>
+    McpImageContent(
       data: json['data'] as String,
       mimeType: json['mime_type'] as String,
     );
 
-Map<String, dynamic> _$MCPImageContentToJson(MCPImageContent instance) =>
+Map<String, dynamic> _$McpImageContentToJson(McpImageContent instance) =>
     <String, dynamic>{'data': instance.data, 'mime_type': instance.mimeType};
 
-MCPResourceContent _$MCPResourceContentFromJson(Map<String, dynamic> json) =>
-    MCPResourceContent(
+McpResourceContent _$McpResourceContentFromJson(Map<String, dynamic> json) =>
+    McpResourceContent(
       uri: json['uri'] as String,
       mimeType: json['mime_type'] as String?,
       text: json['text'] as String?,
       blob: json['blob'] as String?,
     );
 
-Map<String, dynamic> _$MCPResourceContentToJson(MCPResourceContent instance) =>
+Map<String, dynamic> _$McpResourceContentToJson(McpResourceContent instance) =>
     <String, dynamic>{
       'uri': instance.uri,
       'mime_type': instance.mimeType,
@@ -164,16 +164,16 @@ Map<String, dynamic> _$MCPResourceContentToJson(MCPResourceContent instance) =>
       'blob': instance.blob,
     };
 
-MCPPromptMessage _$MCPPromptMessageFromJson(Map<String, dynamic> json) =>
-    MCPPromptMessage(
+McpPromptMessage _$McpPromptMessageFromJson(Map<String, dynamic> json) =>
+    McpPromptMessage(
       role: json['role'] as String,
-      content: MCPPromptMessage._contentFromJson(
+      content: McpPromptMessage._contentFromJson(
         json['content'] as Map<String, dynamic>,
       ),
     );
 
-Map<String, dynamic> _$MCPPromptMessageToJson(MCPPromptMessage instance) =>
+Map<String, dynamic> _$McpPromptMessageToJson(McpPromptMessage instance) =>
     <String, dynamic>{
       'role': instance.role,
-      'content': MCPPromptMessage._contentToJson(instance.content),
+      'content': McpPromptMessage._contentToJson(instance.content),
     };

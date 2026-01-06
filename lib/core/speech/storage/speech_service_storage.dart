@@ -1,14 +1,15 @@
 import 'dart:async';
-import 'package:multigateway/core/storage/base.dart';
-import 'package:multigateway/core/speech/models/speech_service.dart';
 
-class SpeechServiceRepository extends HiveBaseStorage<SpeechService> {
+import 'package:multigateway/core/speech/models/speech_service.dart';
+import 'package:multigateway/core/storage/base.dart';
+
+class SpeechServiceStorage extends HiveBaseStorage<SpeechService> {
   static const String _prefix = 'tts';
 
-  SpeechServiceRepository();
+  SpeechServiceStorage();
 
-  static Future<SpeechServiceRepository> init() async {
-    return SpeechServiceRepository();
+  static Future<SpeechServiceStorage> init() async {
+    return SpeechServiceStorage();
   }
 
   @override
@@ -19,13 +20,7 @@ class SpeechServiceRepository extends HiveBaseStorage<SpeechService> {
 
   @override
   Map<String, dynamic> serializeToFields(SpeechService item) {
-    return {
-      'id': item.id,
-      'name': item.name,
-      'icon': item.icon,
-      'tts': item.tts.toJson(),
-      'stt': item.stt.toJson(),
-    };
+    return item.toJson();
   }
 
   @override
@@ -33,13 +28,7 @@ class SpeechServiceRepository extends HiveBaseStorage<SpeechService> {
     // Normalize persisted data to current SpeechService schema
     // Case A: New schema already persisted with nested 'tts' and 'stt'
     if (fields.containsKey('tts') && fields.containsKey('stt')) {
-      return SpeechService.fromJson({
-        'id': (fields['id'] ?? id) as String,
-        'name': (fields['name'] as String?) ?? '',
-        'icon': fields['icon'] as String?,
-        'tts': Map<String, dynamic>.from(fields['tts'] as Map),
-        'stt': Map<String, dynamic>.from(fields['stt'] as Map),
-      });
+      return SpeechService.fromJson(fields);
     }
 
     // Case B: Legacy flat schema (single TTS-like fields at top-level)
@@ -89,15 +78,4 @@ class SpeechServiceRepository extends HiveBaseStorage<SpeechService> {
       'stt': sttJson,
     });
   }
-
-  List<SpeechService> getServices() => getItems();
-
-  /// Reactive stream of speech services; emits immediately and on each change.
-  Stream<List<SpeechService>> get servicesStream => itemsStream;
-
-  Future<void> addService(SpeechService service) => saveItem(service);
-
-  Future<void> updateService(SpeechService service) => saveItem(service);
-
-  Future<void> deleteService(String id) => deleteItem(id);
 }

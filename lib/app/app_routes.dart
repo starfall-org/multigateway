@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-
-import 'package:multigateway/features/ai/ui/pages/McpServers_page.dart';
-import 'package:multigateway/features/ai/ui/pages/profiles_page.dart';
-import 'package:multigateway/features/ai/ui/pages/providers_page.dart';
-import 'package:multigateway/features/ai/ui/pages/speechsevices_page.dart';
+import 'package:multigateway/app/config/routes.dart';
+import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/features/home/ui/pages/chat_screen.dart';
+import 'package:multigateway/features/llm/pages/providers_page.dart';
+import 'package:multigateway/features/mcp/pages/mcp_servers_page.dart';
+import 'package:multigateway/features/profiles/pages/profiles_page.dart';
 import 'package:multigateway/features/settings/ui/pages/about_page.dart';
 import 'package:multigateway/features/settings/ui/pages/appearance_page.dart';
 import 'package:multigateway/features/settings/ui/pages/preferences_page.dart';
 import 'package:multigateway/features/settings/ui/pages/settings_page.dart';
 import 'package:multigateway/features/settings/ui/pages/update_page.dart';
 import 'package:multigateway/features/settings/ui/pages/userdata_page.dart';
-import 'package:multigateway/app/translate/tl.dart';
-import 'package:multigateway/app/config/routes.dart';
+import 'package:multigateway/features/speech/pages/speech_sevices_page.dart';
 
 /// Generate a route based on the route name.
 Route<dynamic> generateRoute(RouteSettings settings) {

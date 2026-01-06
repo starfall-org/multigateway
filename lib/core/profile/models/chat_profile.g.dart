@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'profile_model.dart';
+part of 'chat_profile.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
@@ -10,37 +10,25 @@ ChatProfile _$ChatProfileFromJson(Map<String, dynamic> json) => ChatProfile(
       id: json['id'] as String,
       name: json['name'] as String,
       icon: json['icon'] as String?,
-      config: AiConfig.fromJson(json['config'] as Map<String, dynamic>),
-      profileConversations: json['profile_conversations'] as bool? ?? false,
-      conversationIds: (json['conversation_ids'] as List<dynamic>?)
-              ?.map((e) => e as String?)
-              .toList() ??
-          const [],
-      activeMcpServers: (json['active_m_c_p_servers'] as List<dynamic>?)
+      config: LlmChatConfig.fromJson(json['config'] as Map<String, dynamic>),
+      activeMcpServers: (json['active_mcp_servers'] as List<dynamic>?)
               ?.map((e) => ActiveMcpServer.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      activeBuiltInTools: (json['active_built_in_tools'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      persistChatSelection: json['persist_chat_selection'] as bool?,
     );
 
-Map<String, dynamic> _$ChatProfileToJson(ChatProfile instance) => <String, dynamic>{
+Map<String, dynamic> _$ChatProfileToJson(ChatProfile instance) =>
+    <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
       'icon': instance.icon,
       'config': instance.config.toJson(),
-      'profile_conversations': instance.profileConversations,
-      'conversation_ids': instance.conversationIds,
-      'active_m_c_p_servers':
+      'active_mcp_servers':
           instance.activeMcpServers.map((e) => e.toJson()).toList(),
-      'active_built_in_tools': instance.activeBuiltInTools,
-      'persist_chat_selection': instance.persistChatSelection,
     };
 
-AiConfig _$AiConfigFromJson(Map<String, dynamic> json) => AiConfig(
+LlmChatConfig _$LlmChatConfigFromJson(Map<String, dynamic> json) =>
+    LlmChatConfig(
       systemPrompt: json['system_prompt'] as String,
       enableStream: json['enable_stream'] as bool,
       topP: (json['top_p'] as num?)?.toDouble(),
@@ -55,7 +43,8 @@ AiConfig _$AiConfigFromJson(Map<String, dynamic> json) => AiConfig(
               ThinkingLevel.auto,
     );
 
-Map<String, dynamic> _$AiConfigToJson(AiConfig instance) => <String, dynamic>{
+Map<String, dynamic> _$LlmChatConfigToJson(LlmChatConfig instance) =>
+    <String, dynamic>{
       'system_prompt': instance.systemPrompt,
       'enable_stream': instance.enableStream,
       'top_p': instance.topP,

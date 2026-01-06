@@ -70,7 +70,7 @@ class JsonSchemaProperty {
 /// Tools enable LLMs to perform actions through the MCP server
 /// Spec: https://spec.modelcontextprotocol.io/specification/server/tools/
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
-class MCPTool {
+class McpTool {
   /// Unique identifier for the tool
   final String name;
 
@@ -84,22 +84,22 @@ class MCPTool {
   @JsonKey(defaultValue: true)
   final bool enabled;
 
-  const MCPTool({
+  const McpTool({
     required this.name,
     this.description,
     required this.inputSchema,
     this.enabled = true,
   });
 
-  factory MCPTool.fromJson(Map<String, dynamic> json) => _$MCPToolFromJson(json);
-  Map<String, dynamic> toJson() => _$MCPToolToJson(this);
+  factory McpTool.fromJson(Map<String, dynamic> json) => _$McpToolFromJson(json);
+  Map<String, dynamic> toJson() => _$McpToolToJson(this);
 }
 
 /// MCP Resource Definition
 /// Resources represent data that an MCP server makes available to clients
 /// Spec: https://spec.modelcontextprotocol.io/specification/server/resources/
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
-class MCPResource {
+class McpResource {
   /// Unique identifier for the resource (URI format)
   final String uri;
 
@@ -112,21 +112,21 @@ class MCPResource {
   /// MIME type of the resource content
   final String? mimeType;
 
-  const MCPResource({
+  const McpResource({
     required this.uri,
     required this.name,
     this.description,
     this.mimeType,
   });
 
-  factory MCPResource.fromJson(Map<String, dynamic> json) => _$MCPResourceFromJson(json);
-  Map<String, dynamic> toJson() => _$MCPResourceToJson(this);
+  factory McpResource.fromJson(Map<String, dynamic> json) => _$McpResourceFromJson(json);
+  Map<String, dynamic> toJson() => _$McpResourceToJson(this);
 }
 
 /// MCP Prompt Argument Definition
 /// Arguments that can be passed to a prompt template
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
-class MCPPromptArgument {
+class McpPromptArgument {
   /// Argument name
   final String name;
 
@@ -137,14 +137,14 @@ class MCPPromptArgument {
   @JsonKey(defaultValue: false)
   final bool required;
 
-  const MCPPromptArgument({
+  const McpPromptArgument({
     required this.name,
     this.description,
     this.required = false,
   });
 
-  factory MCPPromptArgument.fromJson(Map<String, dynamic> json) => _$MCPPromptArgumentFromJson(json);
-  Map<String, dynamic> toJson() => _$MCPPromptArgumentToJson(this);
+  factory McpPromptArgument.fromJson(Map<String, dynamic> json) => _$McpPromptArgumentFromJson(json);
+  Map<String, dynamic> toJson() => _$McpPromptArgumentToJson(this);
 }
 
 /// MCP Prompt Definition
@@ -159,7 +159,7 @@ class MCPPrompt {
   final String? description;
 
   /// Arguments that can be passed to the prompt
-  final List<MCPPromptArgument>? arguments;
+  final List<McpPromptArgument>? arguments;
 
   const MCPPrompt({required this.name, this.description, this.arguments});
 
@@ -216,31 +216,31 @@ class McpServerCapabilities {
 
 /// Information about an MCP implementation (client or server)
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
-class MCPImplementation {
+class McpImplementation {
   final String name;
   final String version;
 
-  const MCPImplementation({required this.name, required this.version});
+  const McpImplementation({required this.name, required this.version});
 
-  factory MCPImplementation.fromJson(Map<String, dynamic> json) => _$MCPImplementationFromJson(json);
-  Map<String, dynamic> toJson() => _$MCPImplementationToJson(this);
+  factory McpImplementation.fromJson(Map<String, dynamic> json) => _$McpImplementationFromJson(json);
+  Map<String, dynamic> toJson() => _$McpImplementationToJson(this);
 }
 
 /// Base class for content shared in MCP messages
-abstract class MCPContent {
+abstract class McpContent {
   final String type;
-  const MCPContent(this.type);
+  const McpContent(this.type);
   Map<String, dynamic> toJson();
 
-  factory MCPContent.fromJson(Map<String, dynamic> json) {
+  factory McpContent.fromJson(Map<String, dynamic> json) {
     final type = json['type'] as String;
     switch (type) {
       case 'text':
-        return MCPTextContent.fromJson(json);
+        return McpTextContent.fromJson(json);
       case 'image':
-        return MCPImageContent.fromJson(json);
+        return McpImageContent.fromJson(json);
       case 'resource':
-        return MCPResourceContent.fromJson(json);
+        return McpResourceContent.fromJson(json);
       default:
         throw Exception('Unknown content type: $type');
     }
@@ -249,39 +249,39 @@ abstract class MCPContent {
 
 /// Textual content
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
-class MCPTextContent extends MCPContent {
+class McpTextContent extends McpContent {
   final String text;
-  const MCPTextContent(this.text) : super('text');
+  const McpTextContent(this.text) : super('text');
 
   @override
-  Map<String, dynamic> toJson() => _$MCPTextContentToJson(this);
+  Map<String, dynamic> toJson() => _$McpTextContentToJson(this);
 
-  factory MCPTextContent.fromJson(Map<String, dynamic> json) => _$MCPTextContentFromJson(json);
+  factory McpTextContent.fromJson(Map<String, dynamic> json) => _$McpTextContentFromJson(json);
 }
 
 /// Image content
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
-class MCPImageContent extends MCPContent {
+class McpImageContent extends McpContent {
   final String data;
   final String mimeType;
-  const MCPImageContent({required this.data, required this.mimeType})
+  const McpImageContent({required this.data, required this.mimeType})
     : super('image');
 
   @override
-  Map<String, dynamic> toJson() => _$MCPImageContentToJson(this);
+  Map<String, dynamic> toJson() => _$McpImageContentToJson(this);
 
-  factory MCPImageContent.fromJson(Map<String, dynamic> json) => _$MCPImageContentFromJson(json);
+  factory McpImageContent.fromJson(Map<String, dynamic> json) => _$McpImageContentFromJson(json);
 }
 
 /// Content representing a resource
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
-class MCPResourceContent extends MCPContent {
+class McpResourceContent extends McpContent {
   final String uri;
   final String? mimeType;
   final String? text;
   final String? blob;
 
-  const MCPResourceContent({
+  const McpResourceContent({
     required this.uri,
     this.mimeType,
     this.text,
@@ -289,23 +289,23 @@ class MCPResourceContent extends MCPContent {
   }) : super('resource');
 
   @override
-  Map<String, dynamic> toJson() => _$MCPResourceContentToJson(this);
+  Map<String, dynamic> toJson() => _$McpResourceContentToJson(this);
 
-  factory MCPResourceContent.fromJson(Map<String, dynamic> json) => _$MCPResourceContentFromJson(json);
+  factory McpResourceContent.fromJson(Map<String, dynamic> json) => _$McpResourceContentFromJson(json);
 }
 
 /// A message in a prompt or sampling context
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
-class MCPPromptMessage {
+class McpPromptMessage {
   final String role; // 'user' or 'assistant'
   @JsonKey(fromJson: _contentFromJson, toJson: _contentToJson)
-  final MCPContent content;
+  final McpContent content;
 
-  const MCPPromptMessage({required this.role, required this.content});
+  const McpPromptMessage({required this.role, required this.content});
 
-  factory MCPPromptMessage.fromJson(Map<String, dynamic> json) => _$MCPPromptMessageFromJson(json);
-  Map<String, dynamic> toJson() => _$MCPPromptMessageToJson(this);
+  factory McpPromptMessage.fromJson(Map<String, dynamic> json) => _$McpPromptMessageFromJson(json);
+  Map<String, dynamic> toJson() => _$McpPromptMessageToJson(this);
 
-  static MCPContent _contentFromJson(Map<String, dynamic> json) => MCPContent.fromJson(json);
-  static Map<String, dynamic> _contentToJson(MCPContent content) => content.toJson();
+  static McpContent _contentFromJson(Map<String, dynamic> json) => McpContent.fromJson(json);
+  static Map<String, dynamic> _contentToJson(McpContent content) => content.toJson();
 }

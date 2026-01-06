@@ -19,7 +19,7 @@ class SpeechServiceTile extends StatelessWidget {
       child: ListTile(
         leading: const Icon(Icons.drag_handle),
         title: Text(service.name),
-        subtitle: Text(service.provider),
+        subtitle: Text(''),
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline),
           onPressed: onDelete,

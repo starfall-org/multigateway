@@ -5,6 +5,7 @@ import 'package:multigateway/features/settings/ui/controllers/preferences_contro
 import 'package:multigateway/features/settings/ui/widgets/settings_card.dart';
 import 'package:multigateway/features/settings/ui/widgets/settings_section_header.dart';
 import 'package:multigateway/features/settings/ui/widgets/settings_tile.dart';
+import 'package:multigateway/shared/widgets/app_snackbar.dart';
 
 class PreferencesPage extends StatefulWidget {
   const PreferencesPage({super.key});

@@ -42,7 +42,7 @@ void main() {
         }
         
         // Resources might be empty, so we just check it doesn't throw
-        expect(resources, isA<List<MCPResource>>());
+        expect(resources, isA<List<McpResource>>());
       } catch (e) {
         print('✗ Error fetching resources: $e');
         rethrow;
@@ -72,11 +72,11 @@ void main() {
           
           print('✓ Tool call successful');
           for (var content in result.content) {
-            if (content is MCPTextContent) {
+            if (content is McpTextContent) {
               print('  Text: ${content.text}');
-            } else if (content is MCPImageContent) {
+            } else if (content is McpImageContent) {
               print('  Image: ${content.mimeType}');
-            } else if (content is MCPResourceContent) {
+            } else if (content is McpResourceContent) {
               print('  Resource: ${content.uri}');
             }
           }

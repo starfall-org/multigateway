@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:llm/llm.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/llm/models/llm_provider_info.dart';
 
 class ModelPickerSheet extends StatelessWidget {
   final List<Provider> providers;

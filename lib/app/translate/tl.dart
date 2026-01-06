@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'package:flutter/widgets.dart';
-import 'package:translator/translator.dart';
 
-import 'package:multigateway/app/storage/translation_cache.dart';
+import 'package:flutter/widgets.dart';
 import 'package:multigateway/app/storage/preferences.dart';
+import 'package:multigateway/app/storage/translation_cache.dart';
+import 'package:translator/translator.dart';
 
 /// TranslationManager quản lý việc dịch và notify UI khi có bản dịch mới
 class TranslationManager extends ChangeNotifier {

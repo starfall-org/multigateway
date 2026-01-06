@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:multigateway/app/translate/tl.dart';
 
 import 'package:multigateway/core/speech/speech.dart';
-import 'package:multigateway/features/llm/ui/views/edit_speechservice_screen.dart';
+import 'package:multigateway/shared/widgets/app_snackbar.dart';
+
 
 class SpeechServicesPage extends StatefulWidget {
   const SpeechServicesPage({super.key});
@@ -13,32 +15,32 @@ class SpeechServicesPage extends StatefulWidget {
 class _SpeechServicesPageState extends State<SpeechServicesPage> {
   List<SpeechService> _profiles = [];
   bool _isLoading = true;
-  late TTSRepository _repository;
+  late SpeechServiceStorage _repository;
 
   @override
   void initState() {
     super.initState();
-    _loadProfiles();
+    _loadServices();
   }
 
-  Future<void> _loadProfiles() async {
-    _repository = await TTSRepository.init();
+  Future<void> _loadServices() async {
+    _repository = await SpeechServiceStorage.init();
     setState(() {
-      _profiles = _repository.getProfiles();
+      _profiles = _repository.getItems();
       _isLoading = false;
     });
   }
 
-  Future<void> _deleteProfile(String id) async {
-    await _repository.deleteProfile(id);
-    _loadProfiles();
+  Future<void> _deleteService(String id) async {
+    await _repository.deleteItem(id);
+    _loadServices();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(tl('TTS Profiles')),
+        title: Text(tl('TTS Services')),
         elevation: 0,
         actions: [
           IconButton(
@@ -47,11 +49,11 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const AddTTSProfileScreen(),
+                  builder: (context) => const EditSpeechServiceScreen(),
                 ),
               );
               if (result == true) {
-                _loadProfiles();
+                _loadServices();
               }
             },
           ),
@@ -68,7 +70,7 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
                 itemCount: _profiles.length,
                 onReorder: _onReorder,
                 itemBuilder: (context, index) =>
-                    _buildProfileTile(_profiles[index]),
+                    _buildServiceTile(_profiles[index]),
               ),
       ),
     );
@@ -85,7 +87,7 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
     _repository.saveOrder(_profiles.map((e) => e.id).toList());
   }
 
-  Widget _buildProfileTile(SpeechService profile) {
+  Widget _buildServiceTile(SpeechService profile) {
     return Dismissible(
       key: ValueKey(profile.id),
       background: Container(
@@ -96,7 +98,7 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
       ),
       direction: DismissDirection.endToStart,
       onDismissed: (direction) {
-        _deleteProfile(profile.id);
+        _deleteService(profile.id);
         context.showSuccessSnackBar(tl('${profile.name} deleted'));
       },
       child: ListTile(

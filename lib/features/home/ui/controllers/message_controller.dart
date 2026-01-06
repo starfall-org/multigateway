@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:uuid/uuid.dart';
-
-import 'package:multigateway/features/home/domain/domain.dart';
-import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/app/storage/preferences.dart';
-import 'package:multigateway/shared/widgets/error_debug_dialog.dart';
+import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/profile/profile.dart';
+import 'package:multigateway/features/home/domain/domain.dart';
 import 'package:multigateway/features/home/ui/widgets/edit_message_sheet.dart';
+import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:multigateway/shared/widgets/error_debug_dialog.dart';
+import 'package:uuid/uuid.dart';
 
 /// Controller responsible for message operations
 class MessageController extends ChangeNotifier {
@@ -122,7 +123,7 @@ class MessageController extends ChangeNotifier {
       if (idx != -1) {
         final existing = session.messages[idx];
         final withNewVersion = existing.addVersion(
-          MessageContent(content: '', timestamp: DateTime.now()),
+          MessageContents(content: '', timestamp: DateTime.now()),
         );
         final msgs = List<ChatMessage>.from(session.messages);
         msgs[idx] = withNewVersion;
@@ -236,7 +237,7 @@ class MessageController extends ChangeNotifier {
         if (idx != -1) {
           final existing = session.messages[idx];
           final updated = existing.addVersion(
-            MessageContent(content: reply, timestamp: DateTime.now()),
+            MessageContents(content: reply, timestamp: DateTime.now()),
           );
           final msgs = List<ChatMessage>.from(session.messages);
           msgs[idx] = updated;
@@ -432,12 +433,12 @@ class MessageController extends ChangeNotifier {
     if (idx == -1) return;
 
     final updated = original.addVersion(
-      MessageContent(
+      MessageContents(
         content: newContent,
         timestamp: DateTime.now(),
         attachments: newAttachments,
         reasoningContent: original.reasoningContent,
-        aiMedia: original.aiMedia,
+        files: original.files,
       ),
     );
     msgs[idx] = updated;
