@@ -7,6 +7,7 @@ import 'package:multigateway/features/home/ui/widgets/chat_message_widgets/user_
 class ChatMessagesDisplay extends StatelessWidget {
   final List<ChatMessage> messages;
   final ScrollController scrollController;
+  final bool isGenerating;
 
   // Callbacks để liên kết với Controller/Screen
   final void Function(ChatMessage message)? onCopy;
@@ -21,6 +22,7 @@ class ChatMessagesDisplay extends StatelessWidget {
     super.key,
     required this.messages,
     required this.scrollController,
+    this.isGenerating = false,
     this.onCopy,
     this.onEdit,
     this.onDelete,
@@ -53,6 +55,7 @@ class ChatMessagesDisplay extends StatelessWidget {
               )
             : AssistantMessageCard(
                 message: message,
+                isStreaming: isGenerating && index == messages.length - 1,
                 onCopy: onCopy != null ? () => onCopy!(message) : null,
                 onEdit: onEdit != null ? () => onEdit!(message) : null,
                 onDelete: onDelete != null ? () => onDelete!(message) : null,

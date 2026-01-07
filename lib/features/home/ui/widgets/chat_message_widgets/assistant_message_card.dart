@@ -10,6 +10,7 @@ import 'package:multigateway/shared/utils/theme_aware_image.dart';
 /// Widget hiển thị tin nhắn của trợ lý AI
 class AssistantMessageCard extends StatelessWidget {
   final ChatMessage message;
+  final bool isStreaming;
   final VoidCallback? onCopy;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -20,6 +21,7 @@ class AssistantMessageCard extends StatelessWidget {
   const AssistantMessageCard({
     super.key,
     required this.message,
+    this.isStreaming = false,
     this.onCopy,
     this.onEdit,
     this.onDelete,
@@ -79,7 +81,10 @@ class AssistantMessageCard extends StatelessWidget {
                 // Reasoning dropdown
                 if ((message.reasoningContent ?? '').trim().isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  ReasoningDropdown(reasoning: message.reasoningContent!.trim()),
+                  ReasoningDropdown(
+                    reasoning: message.reasoningContent!.trim(),
+                    isStreaming: isStreaming,
+                  ),
                 ],
 
                 // Bottom toolbar

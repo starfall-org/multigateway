@@ -29,6 +29,7 @@ class ChatBody extends StatelessWidget {
                 : ChatMessagesDisplay(
                     messages: controller.currentSession!.messages,
                     scrollController: controller.scrollController,
+                    isGenerating: controller.isGenerating,
                     onCopy: (m) => controller.copyMessage(context, m),
                     onEdit: (m) => controller.openEditMessageDialog(context, m),
                     onDelete: (m) => controller.deleteMessage(m),
