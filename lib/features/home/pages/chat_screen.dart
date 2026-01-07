@@ -61,9 +61,15 @@ class _ChatPageState extends State<ChatPage>
       await _controller.initChat();
       await _controller.loadSelectedProfile();
       await _controller.refreshProviders();
+      
+      // Trigger rebuild after initialization completes
+      if (mounted) {
+        setState(() {});
+      }
     } catch (e) {
       if (mounted) {
         showSnackBar('Error initializing chat: $e');
+        setState(() {}); // Also rebuild on error to show error state
       }
     }
   }
