@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-import '../../models/llm_api/anthropic/messages.dart';
-import '../../models/llm_api/anthropic/models.dart';
-import '../base.dart';
+import 'package:llm/models/llm_api/anthropic/messages.dart';
+import 'package:llm/models/llm_api/anthropic/models.dart';
+import 'package:llm/provider/base.dart';
 
 class AnthropicProvider extends LlmProviderBase {
   final String messagesPath;

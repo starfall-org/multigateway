@@ -1,6 +1,6 @@
+import 'package:multigateway/core/chat/models/conversation.dart';
 import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
 import 'package:multigateway/core/llm/models/llm_provider_info.dart';
-import 'package:multigateway/core/chat/models/conversation.dart';
 
 class ChatLogicUtils {
   /// Tạo tiêu đề cho cuộc trò chuyện dựa trên tin nhắn đầu tiên hoặc tệp đính kèm
@@ -25,7 +25,7 @@ class ChatLogicUtils {
     required String? selectedProvider,
     required String? selectedModel,
     required List<LlmProviderInfo> providers,
-    required Map<String, List<AIModel>> providerModels,
+    required Map<String, List<LegacyAiModel>> providerModels,
   }) {
     if (persistSelection &&
         currentSession?.providerId != null &&

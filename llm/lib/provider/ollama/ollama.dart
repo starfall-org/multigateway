@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-import '../../models/llm_api/ollama/chat.dart';
-import '../../models/llm_api/ollama/embed.dart';
-import '../../models/llm_api/ollama/tags.dart';
-import '../base.dart';
+import 'package:llm/models/llm_api/ollama/chat.dart';
+import 'package:llm/models/llm_api/ollama/embed.dart';
+import 'package:llm/models/llm_api/ollama/tags.dart';
+import 'package:llm/provider/base.dart';
 
 class OllamaProvider extends LlmProviderBase {
   final String chatPath;

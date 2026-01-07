@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:llm/llm.dart';
-import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
+import 'package:llm/models/llm_model/basic_model.dart';
+import 'package:llm/models/llm_model/github_model.dart';
+import 'package:llm/models/llm_model/googleai_model.dart';
+import 'package:llm/models/llm_model/ollama_model.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
+import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
+import 'package:multigateway/features/llm/domain/tools/fetch_models.dart'
+    as fetch_tools;
+import 'package:multigateway/shared/widgets/app_snackbar.dart';
 import 'package:uuid/uuid.dart';
-import 'package:multigateway/core/llm/models/llm_provider_info.dart';
-import 'package:multigateway/core/llm/models/llm_provider_config.dart';
-import 'package:multigateway/core/llm/models/llm_provider_models.dart';
-import 'package:llm/models/llm_model/basic_model.dart';
-import 'package:llm/models/llm_model/ollama_model.dart';
-import 'package:llm/models/llm_model/googleai_model.dart';
-import 'package:llm/models/llm_model/github_model.dart';
-import 'package:multigateway/core/llm/storage/llm_provider_info_storage.dart';
-import 'package:multigateway/core/llm/storage/llm_provider_config_storage.dart';
-import 'package:multigateway/core/llm/storage/llm_provider_models_storage.dart';
 
 class HeaderPair {
   final TextEditingController key = TextEditingController();
@@ -31,18 +26,21 @@ class HeaderPair {
   }
 }
 
-class AddProviderViewModel extends ChangeNotifier {
+class AddProviderController extends ChangeNotifier {
   // Controllers
   final TextEditingController nameController = TextEditingController();
   final TextEditingController apiKeyController = TextEditingController();
   final TextEditingController baseUrlController = TextEditingController();
   final TextEditingController openAIChatCompletionsRouteController =
       TextEditingController();
-  final TextEditingController openAIModelsRouteOrUrlController =
+  final TextEditingController openLegacyAiModelsRouteOrUrlController =
       TextEditingController();
 
   // State
   ProviderType selectedType = ProviderType.openai;
+  AuthMethod selectedAuthMethod = AuthMethod.bearerToken;
+  final TextEditingController customHeaderKeyController =
+      TextEditingController();
   bool vertexAI = false;
   bool azureAI = false;
   bool responsesApi = false;
@@ -50,9 +48,11 @@ class AddProviderViewModel extends ChangeNotifier {
   // Headers
   final List<HeaderPair> headers = [];
 
-  // Models
-  List<AIModel> availableModels = [];
-  List<AIModel> selectedModels = [];
+  // Models - Using new model types from llm package
+  List<dynamic> availableModels =
+      []; // Can be BasicModel, OllamaModel, GoogleAiModel
+  List<dynamic> selectedModels =
+      []; // Can be BasicModel, OllamaModel, GoogleAiModel
   bool isFetchingModels = false;
 
   void initialize({
@@ -75,7 +75,7 @@ class AddProviderViewModel extends ChangeNotifier {
 
         openAIChatCompletionsRouteController.text =
             providerConfig.customChatCompletionUrl ?? '';
-        openAIModelsRouteOrUrlController.text =
+        openLegacyAiModelsRouteOrUrlController.text =
             providerConfig.customListModelsUrl ?? '';
       }
 
@@ -104,15 +104,19 @@ class AddProviderViewModel extends ChangeNotifier {
     switch (type) {
       case ProviderType.openai:
         baseUrlController.text = 'https://api.openai.com/v1';
+        selectedAuthMethod = AuthMethod.bearerToken;
         break;
       case ProviderType.anthropic:
         baseUrlController.text = 'https://api.anthropic.com/v1';
+        selectedAuthMethod = AuthMethod.bearerToken;
         break;
       case ProviderType.ollama:
         baseUrlController.text = 'http://localhost:11434/api';
+        selectedAuthMethod = AuthMethod.bearerToken;
         break;
       case ProviderType.googleai:
         baseUrlController.text = '';
+        selectedAuthMethod = AuthMethod.queryParam;
         break;
     }
     notifyListeners();
@@ -133,6 +137,16 @@ class AddProviderViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateAuthMethod(AuthMethod method) {
+    selectedAuthMethod = method;
+    notifyListeners();
+  }
+
+  void updateCustomHeaderKey(String value) {
+    customHeaderKeyController.text = value;
+    notifyListeners();
+  }
+
   void addHeader() {
     headers.add(HeaderPair());
     notifyListeners();
@@ -146,25 +160,35 @@ class AddProviderViewModel extends ChangeNotifier {
     }
   }
 
-  // Model Management
+  // Model Management - Works with any model type (BasicModel, OllamaModel, GoogleAiModel)
+  String _getModelName(dynamic model) {
+    if (model is BasicModel) return model.id;
+    if (model is OllamaModel) return model.name;
+    if (model is GoogleAiModel) return model.name;
+    if (model is LegacyAiModel) return model.name;
+    return 'unknown';
+  }
+
   void removeModel(String modelName) {
-    selectedModels.removeWhere((m) => m.name == modelName);
+    selectedModels.removeWhere((m) => _getModelName(m) == modelName);
     notifyListeners();
   }
 
-  void removeModelDirectly(AIModel model) {
-    removeModel(model.name);
+  void removeModelDirectly(dynamic model) {
+    removeModel(_getModelName(model));
   }
 
-  void addModelDirectly(AIModel model) {
-    if (!selectedModels.any((m) => m.name == model.name)) {
+  void addModelDirectly(dynamic model) {
+    final modelName = _getModelName(model);
+    if (!selectedModels.any((m) => _getModelName(m) == modelName)) {
       selectedModels.add(model);
       notifyListeners();
     }
   }
 
-  void updateModel(AIModel oldModel, AIModel newModel) {
-    final index = selectedModels.indexWhere((m) => m.name == oldModel.name);
+  void updateModel(dynamic oldModel, dynamic newModel) {
+    final oldName = _getModelName(oldModel);
+    final index = selectedModels.indexWhere((m) => _getModelName(m) == oldName);
     if (index != -1) {
       selectedModels[index] = newModel;
       notifyListeners();
@@ -172,10 +196,11 @@ class AddProviderViewModel extends ChangeNotifier {
   }
 
   void addNewCustomModel() {
-    final newModel = AIModel(
-      name: 'custom-${DateTime.now().millisecondsSinceEpoch}',
+    // Create a BasicModel for custom models
+    final newModel = BasicModel(
+      id: 'custom-${DateTime.now().millisecondsSinceEpoch}',
       displayName: 'New Model',
-      type: ModelType.chat,
+      ownedBy: 'user',
     );
     selectedModels.add(newModel);
     notifyListeners();
@@ -184,11 +209,41 @@ class AddProviderViewModel extends ChangeNotifier {
   Future<void> fetchModels(BuildContext context) async {
     isFetchingModels = true;
     notifyListeners();
+
     try {
-      // Basic fetch implementation could go here
-      availableModels = [];
+      final baseUrl = baseUrlController.text.trim();
+      final apiKey = apiKeyController.text.trim();
+
+      if (baseUrl.isEmpty) {
+        throw Exception(tl('Base URL is required'));
+      }
+
+      // Build custom headers
+      final customHeaders = <String, String>{};
+      for (var h in headers) {
+        if (h.key.text.isNotEmpty) {
+          customHeaders[h.key.text] = h.value.text;
+        }
+      }
+
+      // Fetch models based on provider type using new API
+      // Keep models in their original types (BasicModel, OllamaModel, GoogleAiModel)
+      availableModels = await fetch_tools.fetchModels(
+        providerType: selectedType,
+        baseUrl: baseUrl,
+        apiKey: apiKey.isEmpty ? null : apiKey,
+        customHeaders: customHeaders.isEmpty ? null : customHeaders,
+      );
+
+      if (context.mounted) {
+        context.showSuccessSnackBar(
+          tl('Fetched ${availableModels.length} models'),
+        );
+      }
     } catch (e) {
-      if (context.mounted) context.showErrorSnackBar(e.toString());
+      if (context.mounted) {
+        context.showErrorSnackBar(e.toString());
+      }
     } finally {
       isFetchingModels = false;
       notifyListeners();
@@ -217,7 +272,7 @@ class AddProviderViewModel extends ChangeNotifier {
       name: name,
       type: selectedType,
       auth: Authorization(
-        type: AuthMethod.apiKey,
+        type: selectedAuthMethod,
         key: apiKeyController.text.trim().isEmpty
             ? null
             : apiKeyController.text.trim(),
@@ -233,24 +288,33 @@ class AddProviderViewModel extends ChangeNotifier {
           openAIChatCompletionsRouteController.text.trim().isEmpty
           ? null
           : openAIChatCompletionsRouteController.text.trim(),
-      customListModelsUrl: openAIModelsRouteOrUrlController.text.trim().isEmpty
+      customListModelsUrl:
+          openLegacyAiModelsRouteOrUrlController.text.trim().isEmpty
           ? null
-          : openAIModelsRouteOrUrlController.text.trim(),
+          : openLegacyAiModelsRouteOrUrlController.text.trim(),
     );
 
-    // Filter models into categories
+    // Filter models into categories based on their actual types
     final basicModels = <BasicModel>[];
     final ollamaModels = <OllamaModel>[];
     final googleAiModels = <GoogleAiModel>[];
     final githubModels = <GitHubModel>[];
 
-    // For now, let's treat all added models as BasicModel for simplicity,
-    // or we could try to preserve their original types if we had them.
-    // Since selectedModels are AIModel, we map them back to BasicModel.
     for (var m in selectedModels) {
-      basicModels.add(
-        BasicModel(id: m.name, displayName: m.displayName, ownedBy: 'user'),
-      );
+      if (m is BasicModel) {
+        basicModels.add(m);
+      } else if (m is OllamaModel) {
+        ollamaModels.add(m);
+      } else if (m is GoogleAiModel) {
+        googleAiModels.add(m);
+      } else if (m is GitHubModel) {
+        githubModels.add(m);
+      } else if (m is LegacyAiModel) {
+        // Convert legacy LegacyAiModel to BasicModel
+        basicModels.add(
+          BasicModel(id: m.name, displayName: m.displayName, ownedBy: 'user'),
+        );
+      }
     }
 
     final providerModels = LlmProviderModels(
@@ -280,7 +344,7 @@ class AddProviderViewModel extends ChangeNotifier {
     apiKeyController.dispose();
     baseUrlController.dispose();
     openAIChatCompletionsRouteController.dispose();
-    openAIModelsRouteOrUrlController.dispose();
+    openLegacyAiModelsRouteOrUrlController.dispose();
     for (var h in headers) {
       h.dispose();
     }

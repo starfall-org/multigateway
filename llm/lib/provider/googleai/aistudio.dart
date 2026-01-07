@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 
-import '../../models/llm_api/googleai/generate_content.dart';
-import '../../models/llm_api/googleai/embeddings.dart';
-import '../../models/llm_api/googleai/models.dart';
-import '../base.dart';
+import 'package:http/http.dart' as http;
+import 'package:llm/models/llm_api/googleai/embeddings.dart';
+import 'package:llm/models/llm_api/googleai/generate_content.dart';
+import 'package:llm/models/llm_api/googleai/models.dart';
+import 'package:llm/provider/base.dart';
 
 class GoogleAiStudio extends LlmProviderBase {
   final String generateContentPath;

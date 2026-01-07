@@ -23,13 +23,17 @@ class LlmProviderModels {
     required this.githubModels,
   });
 
-  List<AIModel> toAiModels() {
-    final List<AIModel> models = [];
+  List<LegacyAiModel> toAiModels() {
+    final List<LegacyAiModel> models = [];
 
     for (var m in basicModels) {
       if (m != null) {
         models.add(
-          AIModel(name: m.id, displayName: m.displayName, type: ModelType.chat),
+          LegacyAiModel(
+            name: m.id,
+            displayName: m.displayName,
+            type: ModelType.chat,
+          ),
         );
       }
     }
@@ -37,7 +41,11 @@ class LlmProviderModels {
     for (var m in ollamaModels) {
       if (m != null) {
         models.add(
-          AIModel(name: m.model, displayName: m.name, type: ModelType.chat),
+          LegacyAiModel(
+            name: m.model,
+            displayName: m.name,
+            type: ModelType.chat,
+          ),
         );
       }
     }
@@ -45,7 +53,7 @@ class LlmProviderModels {
     for (var m in googleAiModels) {
       if (m != null) {
         models.add(
-          AIModel(
+          LegacyAiModel(
             name: m.name,
             displayName: m.displayName,
             type: ModelType.chat,
@@ -57,7 +65,7 @@ class LlmProviderModels {
     for (var m in githubModels) {
       if (m != null) {
         models.add(
-          AIModel(name: m.id, displayName: m.name, type: ModelType.chat),
+          LegacyAiModel(name: m.id, displayName: m.name, type: ModelType.chat),
         );
       }
     }

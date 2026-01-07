@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-import 'package:llm/llm.dart';
-import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
 import 'package:multigateway/features/home/ui/widgets/files_action_sheet.dart';
+import 'package:multigateway/features/home/ui/widgets/input_widgets/attachment_chips.dart';
 
 /// Helper để tạo theme-aware image
 Widget _buildThemeAwareImageForUserInput(BuildContext context, Widget child) {
@@ -32,7 +31,7 @@ class UserInputArea extends StatefulWidget {
   final void Function(int index) onRemoveAttachment;
   // Nút mở drawer chọn model
   final VoidCallback onOpenModelPicker;
-  final AIModel? selectedAIModel;
+  final LegacyAiModel? selectedLegacyAiModel;
 
   // Trạng thái sinh câu trả lời để disable input/nút gửi
   final bool isGenerating;
@@ -49,7 +48,7 @@ class UserInputArea extends StatefulWidget {
     this.onPickFromGallery,
     required this.onRemoveAttachment,
     required this.onOpenModelPicker,
-    this.selectedAIModel,
+    this.selectedLegacyAiModel,
     this.isGenerating = false,
     this.onOpenMenu,
   });
@@ -90,26 +89,6 @@ class _UserInputAreaState extends State<UserInputArea> {
     }
   }
 
-  Widget _buildAttachmentChips(BuildContext context) {
-    if (widget.attachments.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, right: 4, bottom: 6),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: -8,
-        children: List.generate(widget.attachments.length, (i) {
-          final name = widget.attachments[i].split('/').last;
-          return Chip(
-            label: Text(name, overflow: TextOverflow.ellipsis),
-            onDeleted: () => widget.onRemoveAttachment(i),
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            visualDensity: VisualDensity.compact,
-          );
-        }),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final canSend =
@@ -142,7 +121,10 @@ class _UserInputAreaState extends State<UserInputArea> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildAttachmentChips(context),
+              AttachmentChips(
+                attachments: widget.attachments,
+                onRemove: widget.onRemoveAttachment,
+              ),
               // Input row với focus management
               GestureDetector(
                 onTap: () {
@@ -244,14 +226,14 @@ class _UserInputAreaState extends State<UserInputArea> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (widget.selectedAIModel != null) ...[
-                              if (widget.selectedAIModel!.icon != null)
+                            if (widget.selectedLegacyAiModel != null) ...[
+                              if (widget.selectedLegacyAiModel!.icon != null)
                                 Padding(
                                   padding: const EdgeInsets.only(right: 8.0),
                                   child: _buildThemeAwareImageForUserInput(
                                     context,
                                     Image.asset(
-                                      widget.selectedAIModel!.icon!,
+                                      widget.selectedLegacyAiModel!.icon!,
                                       width: 20,
                                       height: 20,
                                       errorBuilder:

@@ -2,19 +2,19 @@
 
 enum ModelType { chat, image, video, audio, embed, rerank }
 
-class AIModel {
+class LegacyAiModel {
   final String name;
   final String displayName;
   final String? icon;
   final ModelType type;
-  final AIModelIO? input;
-  final AIModelIO? output;
+  final LegacyAiModelIO? input;
+  final LegacyAiModelIO? output;
   final BuiltInTools? builtInTools;
   final bool reasoning;
   final int? contextWindow;
   final int? parameters;
 
-  AIModel({
+  LegacyAiModel({
     required this.name,
     required this.displayName,
     this.icon,
@@ -42,7 +42,7 @@ class AIModel {
     };
   }
 
-  factory AIModel.fromJson(Map<String, dynamic> json) {
+  factory LegacyAiModel.fromJson(Map<String, dynamic> json) {
     // Handle 'id' (OpenAI, Anthropic) and 'name' (Gemini, Ollama)
     final String name =
         json['id'] as String? ?? json['name'] as String? ?? 'unknown';
@@ -65,8 +65,8 @@ class AIModel {
       );
     }
 
-    AIModelIO? input;
-    AIModelIO? output;
+    LegacyAiModelIO? input;
+    LegacyAiModelIO? output;
 
     if (lowerName.contains('embed')) {
       type = ModelType.embed;
@@ -75,20 +75,20 @@ class AIModel {
         lowerName.contains('image') ||
         lowerName.contains('nano-banana')) {
       type = ModelType.image;
-      input = AIModelIO(text: true, image: true);
-      output = AIModelIO(image: true);
+      input = LegacyAiModelIO(text: true, image: true);
+      output = LegacyAiModelIO(image: true);
     } else if (lowerName.contains('tts') ||
         lowerName.contains('audio') ||
         lowerName.contains('whisper')) {
       type = ModelType.audio;
-      input = AIModelIO(text: true, audio: true);
-      output = AIModelIO(audio: true, text: true);
+      input = LegacyAiModelIO(text: true, audio: true);
+      output = LegacyAiModelIO(audio: true, text: true);
     } else if (lowerName.contains('video') ||
         lowerName.contains('sora') ||
         lowerName.contains('veo')) {
       type = ModelType.video;
-      input = AIModelIO(text: true, video: true);
-      output = AIModelIO(video: true);
+      input = LegacyAiModelIO(text: true, video: true);
+      output = LegacyAiModelIO(video: true);
     } else if (lowerName.contains('rerank')) {
       type = ModelType.rerank;
     }
@@ -150,7 +150,7 @@ class AIModel {
         break;
     }
 
-    return AIModel(
+    return LegacyAiModel(
       name: name,
       displayName: displayName,
       icon: json['icon'] as String?,
@@ -174,33 +174,33 @@ int? safeInt(dynamic val) {
 }
 
 // Safe parsing for input/output lists
-AIModelIO parseIOList(dynamic list) {
+LegacyAiModelIO parseIOList(dynamic list) {
   if (list is List) {
-    return AIModelIO(
+    return LegacyAiModelIO(
       text: list.contains('text'),
       image: list.contains('image'),
       video: list.contains('video'),
       audio: list.contains('audio'),
     );
   }
-  return AIModelIO();
+  return LegacyAiModelIO();
 }
 
-class AIModelIO {
+class LegacyAiModelIO {
   bool text;
   bool image;
   bool video;
   bool audio;
 
-  AIModelIO({
+  LegacyAiModelIO({
     this.text = true,
     this.image = false,
     this.video = false,
     this.audio = false,
   });
 
-  factory AIModelIO.fromJson(Map<String, dynamic> json) {
-    return AIModelIO(
+  factory LegacyAiModelIO.fromJson(Map<String, dynamic> json) {
+    return LegacyAiModelIO(
       text: json['text'] == true,
       image: json['image'] == true,
       video: json['video'] == true,

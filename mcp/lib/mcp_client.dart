@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+import 'package:mcp/models/mcp_jsonrpc.dart';
+import 'package:mcp/models/mcp_request.dart';
+import 'package:mcp/models/mcp_response.dart';
+import 'package:mcp/models/mcp_server.dart';
 
-import 'models/mcp_server.dart';
-import 'models/mcp_jsonrpc.dart';
-import 'models/mcp_request.dart';
-import 'models/mcp_response.dart';
-
-class MCPService {
+class McpClient {
   /// Fetches the list of tools from an MCP server.
   Future<List<McpTool>> fetchTools(McpServer server) async {
     final response = await _sendRequest(
@@ -103,7 +103,10 @@ class MCPService {
     final requestHeaders = Map<String, String>.from(headers);
     requestHeaders.putIfAbsent('Content-Type', () => 'application/json');
     // Streamable HTTP servers may require both content types
-    requestHeaders.putIfAbsent('Accept', () => 'application/json, text/event-stream');
+    requestHeaders.putIfAbsent(
+      'Accept',
+      () => 'application/json, text/event-stream',
+    );
 
     final response = await http.post(
       Uri.parse(url),

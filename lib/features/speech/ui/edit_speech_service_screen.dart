@@ -1,13 +1,15 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/llm/llm.dart';
 import 'package:multigateway/core/speech/speech.dart';
+import 'package:multigateway/features/speech/ui/widgets/stt_configuration_section.dart';
+import 'package:multigateway/features/speech/ui/widgets/tts_configuration_section.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
-import 'package:multigateway/shared/widgets/common_dropdown.dart';
-import 'package:multigateway/shared/widgets/custom_text_field.dart';
 import 'package:uuid/uuid.dart';
 
+/// Màn hình chỉnh sửa speech service
 class EditSpeechServiceScreen extends StatefulWidget {
   const EditSpeechServiceScreen({super.key});
 
@@ -25,8 +27,6 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
   // Provider TTS
   List<LlmProviderInfo> _availableProviders = [];
   String? _selectedProviderId;
-
-  // ElevenLabs
 
   // Voice
   String? _selectedVoiceId;
@@ -57,23 +57,20 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
     final repository = await LlmProviderInfoStorage.init();
     final providers = repository.getItems();
     setState(() {
-      // Get all providers - TTS capability will be determined by provider type
       _availableProviders = providers.toList();
     });
   }
 
   String _getSystemLocale() {
     try {
-      final locale = Platform.localeName; // e.g., "en_US", "vi_VN"
-      return locale.replaceAll('_', '-'); // Convert to "en-US", "vi-VN"
+      final locale = Platform.localeName;
+      return locale.replaceAll('_', '-');
     } catch (e) {
-      return 'en-US'; // Default fallback
+      return 'en-US';
     }
   }
 
   List<String> _getSystemVoices(String locale) {
-    // Generate system voices based on locale
-    // Format: locale#gender_number-local
     return [
       '$locale#male_1-local',
       '$locale#male_2-local',
@@ -94,7 +91,7 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
     await Future.delayed(const Duration(milliseconds: 300));
 
     List<String> voices = [];
-    
+
     if (_selectedType == ServiceType.system) {
       final locale = _getSystemLocale();
       voices = _getSystemVoices(locale);
@@ -104,7 +101,7 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
           (p) => p.name == _selectedProviderId,
           orElse: () => _availableProviders.first,
         );
-        
+
         if (provider.type == ProviderType.openai) {
           voices = _getOpenAIVoices();
         }
@@ -129,7 +126,6 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
       return;
     }
 
-    // Determine final voice ID
     String? finalVoiceId;
     if (_useCustomVoice && _customVoiceController.text.isNotEmpty) {
       finalVoiceId = _customVoiceController.text.trim();
@@ -139,12 +135,10 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
 
     final repository = await SpeechServiceStorage.init();
 
-    // Build TTS/STT objects according to current models
     final tts = TextToSpeech(
       type: _selectedType,
-      provider: _selectedType == ServiceType.provider
-          ? _selectedProviderId
-          : null,
+      provider:
+          _selectedType == ServiceType.provider ? _selectedProviderId : null,
       modelName: null,
       voiceId: finalVoiceId,
       settings: const {},
@@ -184,7 +178,7 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
         elevation: 0,
         child: TabBar(
           controller: _tabController,
-          tabs: [
+          tabs: const [
             Tab(icon: Icon(Icons.record_voice_over), text: 'TTS'),
             Tab(icon: Icon(Icons.mic), text: 'STT'),
           ],
@@ -195,81 +189,34 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
         bottom: true,
         child: TabBarView(
           controller: _tabController,
-          children: [_buildTTSTab(), _buildSTTTab()],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTTSTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        CustomTextField(controller: _nameController, label: tl('Service Name')),
-        const SizedBox(height: 16),
-        CommonDropdown<ServiceType>(
-          value: _selectedType,
-          labelText: tl('Service Type'),
-          options: ServiceType.values.map((type) {
-            return DropdownOption<ServiceType>(
-              value: type,
-              label: type.name.toUpperCase(),
-              icon: Icon(
-                type == ServiceType.system ? Icons.settings : Icons.cloud,
-              ),
-            );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _selectedType = value;
-                _selectedVoiceId = null;
-                _availableVoices = [];
-              });
-            }
-          },
-        ),
-        const SizedBox(height: 16),
-        if (_selectedType == ServiceType.provider) ...[
-          CommonDropdown<String>(
-            value: _selectedProviderId,
-            labelText: tl('Provider'),
-            options: _availableProviders.map((p) {
-              final iconData = p.type == ProviderType.googleai
-                  ? Icons.cloud
-                  : p.type == ProviderType.openai
-                  ? Icons.api
-                  : p.type == ProviderType.anthropic
-                  ? Icons.psychology_alt
-                  : Icons.memory;
-              return DropdownOption<String>(
-                value: p.name,
-                label: p.name,
-                icon: Icon(iconData),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedProviderId = value;
-                _selectedVoiceId = null;
-                _availableVoices = [];
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-        ],
-
-        // Voice selection section
-        Row(
           children: [
-            Expanded(
-              child: Text(
-                tl('Voice'),
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-            ),
-            TextButton.icon(
-              onPressed: () {
+            TtsConfigurationSection(
+              nameController: _nameController,
+              selectedType: _selectedType,
+              availableProviders: _availableProviders,
+              selectedProviderId: _selectedProviderId,
+              useCustomVoice: _useCustomVoice,
+              customVoiceController: _customVoiceController,
+              selectedVoiceId: _selectedVoiceId,
+              availableVoices: _availableVoices,
+              isLoadingVoices: _isLoadingVoices,
+              onTypeChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedType = value;
+                    _selectedVoiceId = null;
+                    _availableVoices = [];
+                  });
+                }
+              },
+              onProviderChanged: (value) {
+                setState(() {
+                  _selectedProviderId = value;
+                  _selectedVoiceId = null;
+                  _availableVoices = [];
+                });
+              },
+              onToggleCustomVoice: () {
                 setState(() {
                   _useCustomVoice = !_useCustomVoice;
                   if (_useCustomVoice) {
@@ -277,101 +224,17 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
                   }
                 });
               },
-              icon: Icon(_useCustomVoice ? Icons.list : Icons.edit),
-              label: Text(_useCustomVoice ? tl('Use Preset') : tl('Custom')),
+              onVoiceChanged: (value) {
+                setState(() {
+                  _selectedVoiceId = value;
+                });
+              },
+              onFetchVoices: _fetchVoices,
             ),
+            const SttConfigurationSection(),
           ],
         ),
-        const SizedBox(height: 8),
-        
-        if (_useCustomVoice) ...[
-          CustomTextField(
-            controller: _customVoiceController,
-            label: tl('Custom Voice ID'),
-            hint: tl('Enter voice ID manually'),
-          ),
-        ] else ...[
-          Row(
-            children: [
-              Expanded(
-                child: _isLoadingVoices
-                    ? const LinearProgressIndicator()
-                    : CommonDropdown<String>(
-                        value: _selectedVoiceId,
-                        labelText: tl('Select Voice'),
-                        options: _availableVoices.map((voice) {
-                          return DropdownOption<String>(
-                            value: voice,
-                            label: voice,
-                            icon: const Icon(Icons.record_voice_over),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedVoiceId = value;
-                          });
-                        },
-                      ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: tl('Fetch Voices'),
-                onPressed: _fetchVoices,
-              ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildSTTTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text(
-          tl('Speech to Text Configuration'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.mic, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: 12),
-                  Text(
-                    tl('System Speech Recognition'),
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                tl(
-                  'Currently using system default speech recognition service.',
-                ),
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

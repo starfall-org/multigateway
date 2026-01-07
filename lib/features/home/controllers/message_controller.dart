@@ -194,7 +194,7 @@ class MessageController extends ChangeNotifier {
 
       if (context != null && context.mounted) {
         final prefs = await PreferencesStorage.instance;
-        if (prefs.currentPreferences.debugMode) {
+        if (context.mounted && prefs.currentPreferences.debugMode) {
           ErrorDebugDialog.show(context, error: e, stackTrace: stackTrace);
         }
       }
@@ -265,7 +265,7 @@ class MessageController extends ChangeNotifier {
 
       if (context != null && context.mounted) {
         final prefs = await PreferencesStorage.instance;
-        if (prefs.currentPreferences.debugMode) {
+        if (context.mounted && prefs.currentPreferences.debugMode) {
           ErrorDebugDialog.show(context, error: e, stackTrace: stackTrace);
         }
       }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:multigateway/app/translate/tl.dart';
-import 'package:multigateway/features/settings/ui/controllers/preferences_controller.dart';
+import 'package:multigateway/features/settings/controllers/preferences_controller.dart';
 import 'package:multigateway/features/settings/ui/widgets/settings_card.dart';
 import 'package:multigateway/features/settings/ui/widgets/settings_section_header.dart';
 import 'package:multigateway/features/settings/ui/widgets/settings_tile.dart';

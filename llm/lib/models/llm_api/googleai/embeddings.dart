@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
-import 'generate_content.dart';
+import 'package:llm/models/llm_api/googleai/generate_content.dart';
 
 part 'embeddings.g.dart';
 

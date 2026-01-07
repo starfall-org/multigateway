@@ -13,7 +13,7 @@ class ModelSelectionController extends ChangeNotifier {
 
   StreamSubscription? _providerSubscription;
   List<LlmProviderInfo> providers = [];
-  Map<String, List<AIModel>> providerModels = {};
+  Map<String, List<LegacyAiModel>> providerModels = {};
 
   /// DEPRECATED: Use LlmProviderInfoStorage,
   final Map<String, bool> providerCollapsed = {}; // true = collapsed
@@ -29,7 +29,7 @@ class ModelSelectionController extends ChangeNotifier {
     });
   }
 
-  AIModel? get selectedAIModel {
+  LegacyAiModel? get selectedLegacyAiModel {
     if (selectedProviderName == null || selectedModelName == null) return null;
     try {
       final provider = providers.firstWhere(

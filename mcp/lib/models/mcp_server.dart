@@ -1,8 +1,7 @@
-import 'package:uuid/uuid.dart';
 import 'package:json_annotation/json_annotation.dart';
-
-import 'mcp_core.dart';
-import 'mcp_http.dart';
+import 'package:mcp/models/mcp_core.dart';
+import 'package:mcp/models/mcp_http.dart';
+import 'package:uuid/uuid.dart';
 
 export 'mcp_core.dart';
 export 'mcp_http.dart';

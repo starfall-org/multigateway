@@ -79,7 +79,8 @@ class ChatController extends ChangeNotifier {
   String? get selectedProviderName =>
       modelSelectionController.selectedProviderName;
   String? get selectedModelName => modelSelectionController.selectedModelName;
-  dynamic get selectedAIModel => modelSelectionController.selectedAIModel;
+  dynamic get selectedLegacyAiModel =>
+      modelSelectionController.selectedLegacyAiModel;
 
   Future<void> initChat() => sessionController.initChat();
   Future<void> createNewSession() => sessionController.createNewSession();
@@ -105,8 +106,8 @@ class ChatController extends ChangeNotifier {
       attachmentController.removeAttachmentAt(index);
   void setInspectingAttachments(List<String> attachments) =>
       attachmentController.setInspectingAttachments(attachments);
-  void openAttachmentsSidebar(List<String> attachments) =>
-      attachmentController.openAttachmentsSidebar(attachments);
+  void openFilesDialog(List<String> attachments) =>
+      attachmentController.openFilesDialog(attachments);
   void openEndDrawer() => navigator.openEndDrawer();
 
   void selectModel(String providerName, String modelName) {

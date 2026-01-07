@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
-import 'mcp_core.dart';
+import 'package:mcp/models/mcp_core.dart';
 
 part 'mcp_response.g.dart';
 

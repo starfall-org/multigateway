@@ -3,7 +3,7 @@ import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
 
-class EditMcpServerViewModel extends ChangeNotifier {
+class EditMcpServerController extends ChangeNotifier {
   // Repository
   late McpServerInfoStorage _repository;
 
@@ -23,7 +23,7 @@ class EditMcpServerViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isEditMode => _editingServerId != null;
 
-  EditMcpServerViewModel() {
+  EditMcpServerController() {
     _initRepository();
   }
 
@@ -141,7 +141,7 @@ class EditMcpServerViewModel extends ChangeNotifier {
             ? urlController.text.trim()
             : null,
         headersMap.isNotEmpty ? headersMap : null,
-        null, // stdioConfig - TODO: implement if needed
+        null, // stdioConfig 
       );
 
       await _repository.saveItem(serverInfo);

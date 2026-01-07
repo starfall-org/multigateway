@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:llm/llm.dart';
+import 'package:llm/models/llm_model/basic_model.dart';
+import 'package:llm/models/llm_model/googleai_model.dart';
+import 'package:llm/models/llm_model/ollama_model.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
 import 'package:multigateway/features/settings/ui/widgets/settings_card.dart';
 import 'package:multigateway/shared/widgets/common_dropdown.dart';
 import 'package:multigateway/shared/widgets/item_card.dart';
 
-
 class ModelsDrawer extends StatefulWidget {
-  final List<AIModel> availableModels;
-  final List<AIModel> selectedModels;
-  final AIModel? selectedModelToAdd;
+  final List<dynamic>
+  availableModels; // Can be BasicModel, OllamaModel, GoogleAiModel
+  final List<dynamic>
+  selectedModels; // Can be BasicModel, OllamaModel, GoogleAiModel
+  final dynamic selectedModelToAdd;
   final bool isFetchingModels;
   final Function() onFetchModels;
-  final Function(AIModel?) onUpdateSelectedModel;
+  final Function(dynamic) onUpdateSelectedModel;
   final Function() onAddModel;
   final Function(String) onRemoveModel;
-  final Function(AIModel) onShowCapabilities;
+  final Function(dynamic) onShowCapabilities;
 
   const ModelsDrawer({
     super.key,
@@ -35,13 +39,21 @@ class ModelsDrawer extends StatefulWidget {
 }
 
 class _ModelsDrawerState extends State<ModelsDrawer> {
+  // Helper to get model name from any model type
+  String _getModelName(dynamic model) {
+    if (model is BasicModel) return model.id;
+    if (model is OllamaModel) return model.name;
+    if (model is GoogleAiModel) return model.name;
+    if (model is LegacyAiModel) return model.name;
+    return 'unknown';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      width: MediaQuery.of(context).size.width, // Tối đa chiều ngang
+      width: MediaQuery.of(context).size.width,
       child: SizedBox(
-        height:
-            MediaQuery.of(context).size.height * 0.5, // Mặc định 1/2 chiều dọc
+        height: MediaQuery.of(context).size.height * 0.5,
         child: Column(
           children: [
             // Header
@@ -178,13 +190,13 @@ class _ModelsDrawerState extends State<ModelsDrawer> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      CommonDropdown<AIModel>(
+                      CommonDropdown<dynamic>(
                         value: widget.selectedModelToAdd,
                         options: widget.availableModels.map((model) {
-                          return DropdownOption<AIModel>(
+                          return DropdownOption<dynamic>(
                             value: model,
-                            label: model.name,
-                            icon: const Icon(Icons.smart_toy),
+                            label: _getModelName(model),
+                            icon: const Icon(Icons.token), // Use Icons.token
                           );
                         }).toList(),
                         onChanged: widget.onUpdateSelectedModel,
@@ -260,15 +272,17 @@ class _ModelsDrawerState extends State<ModelsDrawer> {
                                   const SizedBox(height: 8),
                               itemBuilder: (context, index) {
                                 final model = widget.selectedModels[index];
+                                final modelName = _getModelName(model);
+
                                 return ItemCard(
                                   layout: ItemCardLayout.list,
-                                  title: model.name,
+                                  title: modelName,
                                   icon: CircleAvatar(
                                     backgroundColor: Theme.of(
                                       context,
                                     ).colorScheme.primaryContainer,
                                     child: Icon(
-                                      Icons.smart_toy,
+                                      Icons.token, // Use Icons.token
                                       color: Theme.of(
                                         context,
                                       ).colorScheme.onPrimaryContainer,
@@ -299,7 +313,7 @@ class _ModelsDrawerState extends State<ModelsDrawer> {
                                           ).colorScheme.error,
                                         ),
                                         onPressed: () =>
-                                            widget.onRemoveModel(model.name),
+                                            widget.onRemoveModel(modelName),
                                       ),
                                     ],
                                   ),

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
-
 import 'package:multigateway/core/speech/speech.dart';
+import 'package:multigateway/features/speech/ui/edit_speech_service_screen.dart';
+import 'package:multigateway/features/speech/ui/widgets/service_list_tile.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
 
-
+/// Màn hình quản lý speech services
 class SpeechServicesPage extends StatefulWidget {
   const SpeechServicesPage({super.key});
 
@@ -31,17 +32,59 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
     });
   }
 
-  Future<void> _deleteService(String id) async {
+  Future<void> _deleteService(String id, String name) async {
     await _repository.deleteItem(id);
     _loadServices();
+    if (mounted) {
+      context.showSuccessSnackBar(tl('$name deleted'));
+    }
+  }
+
+  void _onReorder(int oldIndex, int newIndex) {
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final SpeechService item = _profiles.removeAt(oldIndex);
+      _profiles.insert(newIndex, item);
+    });
+    _repository.saveOrder(_profiles.map((e) => e.id).toList());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(tl('TTS Services')),
-        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.7),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              tl('TTS Services'),
+              style: TextStyle(
+                color: Theme.of(context).textTheme.titleLarge?.color,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              tl('Manage speech services'),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        elevation: 0.5,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -63,71 +106,28 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
         top: false,
         bottom: true,
         child: _isLoading
-            ? Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator())
             : _profiles.isEmpty
-            ? Center(child: Text(tl('No TTS profiles configured')))
-            : ReorderableListView.builder(
-                itemCount: _profiles.length,
-                onReorder: _onReorder,
-                itemBuilder: (context, index) =>
-                    _buildServiceTile(_profiles[index]),
-              ),
+                ? Center(child: Text(tl('No TTS profiles configured')))
+                : ReorderableListView.builder(
+                    itemCount: _profiles.length,
+                    onReorder: _onReorder,
+                    itemBuilder: (context, index) {
+                      final profile = _profiles[index];
+                      return ServiceListTile(
+                        key: ValueKey(profile.id),
+                        service: profile,
+                        onTap: () {
+                          // Edit functionality could be added here
+                        },
+                        onDismissed: () => _deleteService(
+                          profile.id,
+                          profile.name,
+                        ),
+                      );
+                    },
+                  ),
       ),
     );
-  }
-
-  void _onReorder(int oldIndex, int newIndex) {
-    setState(() {
-      if (oldIndex < newIndex) {
-        newIndex -= 1;
-      }
-      final SpeechService item = _profiles.removeAt(oldIndex);
-      _profiles.insert(newIndex, item);
-    });
-    _repository.saveOrder(_profiles.map((e) => e.id).toList());
-  }
-
-  Widget _buildServiceTile(SpeechService profile) {
-    return Dismissible(
-      key: ValueKey(profile.id),
-      background: Container(
-        color: Theme.of(context).colorScheme.error,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
-      ),
-      direction: DismissDirection.endToStart,
-      onDismissed: (direction) {
-        _deleteService(profile.id);
-        context.showSuccessSnackBar(tl('${profile.name} deleted'));
-      },
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-          child: Icon(
-            _getServiceIcon(profile.tts.type),
-            color: Theme.of(context).colorScheme.onSecondaryContainer,
-          ),
-        ),
-        title: Text(profile.name),
-        subtitle: Text(profile.tts.type.name.toUpperCase()),
-        trailing: Icon(
-          Icons.chevron_right,
-          color: Theme.of(context).disabledColor,
-        ),
-        onTap: () async {
-          // Edit functionality could be added here
-        },
-      ),
-    );
-  }
-
-  IconData _getServiceIcon(ServiceType type) {
-    switch (type) {
-      case ServiceType.system:
-        return Icons.settings_voice;
-      case ServiceType.provider:
-        return Icons.cloud;
-    }
   }
 }

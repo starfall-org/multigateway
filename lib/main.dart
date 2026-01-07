@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:multigateway/app/app.dart';
-import 'package:multigateway/firebase_options.dart'; 
-import 'package:multigateway/shared/utils/icon_builder.dart';
-
 import 'package:multigateway/app/storage/appearance_storage.dart';
+import 'package:multigateway/firebase_options.dart';
+import 'package:multigateway/shared/utils/icon_builder.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

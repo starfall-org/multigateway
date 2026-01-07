@@ -1,4 +1,4 @@
-import 'mcp_jsonrpc.dart';
+import 'package:mcp/models/mcp_jsonrpc.dart';
 
 /// Client initialization request
 class InitializeRequest extends MCPRequest {

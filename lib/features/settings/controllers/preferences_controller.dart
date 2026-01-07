@@ -3,7 +3,7 @@ import 'package:multigateway/app/models/preferences_setting.dart';
 import 'package:multigateway/app/storage/preferences_storage.dart';
 
 class PreferencesController extends ChangeNotifier {
-  final PreferencesStorage _preferencesSp;
+  PreferencesStorage? _preferencesSp;
 
   bool _autoDetect = true;
   String _selectedLanguage = 'auto';
@@ -12,6 +12,7 @@ class PreferencesController extends ChangeNotifier {
   bool _hideStatusBar = false;
   bool _hideNavigationBar = false;
   bool _debugMode = false;
+  bool _isInitialized = false;
 
   final List<Map<String, dynamic>> supportedLanguages = [
     {'code': 'auto', 'name': 'System Language', 'flag': '🌐'},
@@ -26,10 +27,20 @@ class PreferencesController extends ChangeNotifier {
     {'code': 'es', 'name': 'Spanish', 'flag': '🇪🇸'},
   ];
 
-  PreferencesController()
-      : _preferencesSp = PreferencesStorage.instance {
-    _loadPreferences();
-    _loadPreferencesSetting();
+  PreferencesController() {
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    try {
+      _preferencesSp = await PreferencesStorage.instance;
+      _isInitialized = true;
+      _loadPreferences();
+      _loadPreferencesSetting();
+    } catch (e) {
+      // Ghi log lỗi nếu cần thiết
+      debugPrint('Error initializing PreferencesController: $e');
+    }
   }
 
   bool get autoDetect => _autoDetect;
@@ -39,16 +50,21 @@ class PreferencesController extends ChangeNotifier {
   bool get hideStatusBar => _hideStatusBar;
   bool get hideNavigationBar => _hideNavigationBar;
   bool get debugMode => _debugMode;
+  bool get isInitialized => _isInitialized;
 
   void _loadPreferences() {
-    final languageSetting = _preferencesSp.currentPreferences.languageSetting;
+    if (_preferencesSp == null) return;
+    
+    final languageSetting = _preferencesSp!.currentPreferences.languageSetting;
     _autoDetect = languageSetting.autoDetect;
     _selectedLanguage = languageSetting.languageCode;
     notifyListeners();
   }
 
   void _loadPreferencesSetting() {
-    final appPrefs = _preferencesSp.currentPreferences;
+    if (_preferencesSp == null) return;
+    
+    final appPrefs = _preferencesSp!.currentPreferences;
     _persistChatSelection = appPrefs.persistChatSelection;
     _vibrationSettings = appPrefs.vibrationSettings;
     _hideStatusBar = appPrefs.hideStatusBar;
@@ -64,7 +80,9 @@ class PreferencesController extends ChangeNotifier {
     bool? hideNavigationBar,
     bool? debugMode,
   }) async {
-    final newPrefs = _preferencesSp.currentPreferences.copyWith(
+    if (_preferencesSp == null) return;
+    
+    final newPrefs = _preferencesSp!.currentPreferences.copyWith(
       persistChatSelection: persistChatSelection,
       vibrationSettings: vibrationSettings,
       hideStatusBar: hideStatusBar,
@@ -83,7 +101,7 @@ class PreferencesController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _preferencesSp.updatePreferences(newPrefs);
+      await _preferencesSp!.updatePreferences(newPrefs);
     } catch (_) {
       // Revert changes on error
       _loadPreferencesSetting();
@@ -91,13 +109,15 @@ class PreferencesController extends ChangeNotifier {
   }
 
   Future<void> selectLanguage(String languageCode) async {
+    if (_preferencesSp == null) return;
+    
     try {
       _selectedLanguage = languageCode;
       _autoDetect = languageCode == 'auto';
       notifyListeners();
 
       if (languageCode == 'auto') {
-        await _preferencesSp.setAutoDetectLanguage(true);
+        await _preferencesSp!.setAutoDetectLanguage(true);
       } else {
         String? countryCode;
         if (languageCode.contains('_')) {
@@ -106,7 +126,7 @@ class PreferencesController extends ChangeNotifier {
           languageCode = parts[0];
         }
 
-        await _preferencesSp.setLanguage(languageCode, countryCode: countryCode);
+        await _preferencesSp!.setLanguage(languageCode, countryCode: countryCode);
       }
     } catch (e) {
       _loadPreferences();
@@ -115,7 +135,11 @@ class PreferencesController extends ChangeNotifier {
   }
 
   Locale getNewLocale() {
-    final languageSetting = _preferencesSp.currentPreferences.languageSetting;
+    if (_preferencesSp == null) {
+      return WidgetsBinding.instance.platformDispatcher.locale;
+    }
+    
+    final languageSetting = _preferencesSp!.currentPreferences.languageSetting;
     Locale newLocale;
 
     if (languageSetting.autoDetect || languageSetting.languageCode == 'auto') {

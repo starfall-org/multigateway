@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
-import '../../llm_model/basic_model.dart';
+import 'package:llm/models/llm_model/basic_model.dart';
 
 part 'models.g.dart';
 

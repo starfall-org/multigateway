@@ -3,9 +3,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
+import 'package:multigateway/shared/widgets/app_snackbar.dart';
 import 'package:uuid/uuid.dart';
 
-class AddAgentViewModel extends ChangeNotifier {
+class AddAgentController extends ChangeNotifier {
   // Controllers
   final TextEditingController nameController = TextEditingController();
   final TextEditingController promptController = TextEditingController();
@@ -64,7 +65,7 @@ class AddAgentViewModel extends ChangeNotifier {
 
   Future<void> _loadMcpServers() async {
     final mcpRepo = await McpServerInfoStorage.init();
-    availableMcpServers = mcpRepo.getItems();
+    availableMcpServers = mcpRepo.getItems().cast<McpServer>();
     notifyListeners();
   }
 

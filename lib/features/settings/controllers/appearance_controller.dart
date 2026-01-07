@@ -2,47 +2,55 @@ import 'package:flutter/material.dart';
 import 'package:multigateway/app/models/appearance_setting.dart';
 import 'package:multigateway/app/storage/appearance_storage.dart';
 
-enum ColorType {
-  primary,
-  secondary,
-  background,
-  surface,
-  text,
-  textHint,
-}
+enum ColorType { primary, secondary, background, surface, text, textHint }
 
-class AppearanceViewModel extends ChangeNotifier {
-  final AppearanceStorage _repository;
-  AppearanceSetting settings;
+class AppearanceController extends ChangeNotifier {
+  late final AppearanceStorage _repository;
+  late AppearanceSetting settings;
+  bool _isInitialized = false;
 
-  AppearanceViewModel()
-    : _repository = AppearanceStorage.instance,
-      settings = AppearanceStorage.instance.currentTheme;
+  AppearanceController() {
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    _repository = await AppearanceStorage.instance;
+    settings = _repository.currentTheme;
+    _isInitialized = true;
+    notifyListeners();
+  }
 
   Future<void> updateSelection(ThemeSelection selection) async {
+    if (!_isInitialized) await _initialize();
     // Keep themeMode in sync for non-custom selections
     ThemeMode mode = settings.themeMode;
     bool shouldResetColors = false;
-    
+
     switch (selection) {
       case ThemeSelection.system:
         mode = ThemeMode.system;
-        shouldResetColors = settings.selection != ThemeSelection.system && settings.selection != ThemeSelection.custom;
+        shouldResetColors =
+            settings.selection != ThemeSelection.system &&
+            settings.selection != ThemeSelection.custom;
         break;
       case ThemeSelection.light:
         mode = ThemeMode.light;
-        shouldResetColors = settings.selection != ThemeSelection.light && settings.selection != ThemeSelection.custom;
+        shouldResetColors =
+            settings.selection != ThemeSelection.light &&
+            settings.selection != ThemeSelection.custom;
         break;
       case ThemeSelection.dark:
         mode = ThemeMode.dark;
-        shouldResetColors = settings.selection != ThemeSelection.dark && settings.selection != ThemeSelection.custom;
+        shouldResetColors =
+            settings.selection != ThemeSelection.dark &&
+            settings.selection != ThemeSelection.custom;
         break;
       case ThemeSelection.custom:
         // keep current themeMode; custom only affects colors
         mode = settings.themeMode;
         break;
     }
-    
+
     AppearanceSetting newSettings;
     if (shouldResetColors) {
       // Reset màu sắc về mặc định cho theme mode mới
@@ -50,63 +58,37 @@ class AppearanceViewModel extends ChangeNotifier {
       newSettings = settings.copyWith(
         selection: selection,
         themeMode: mode,
-        primaryColor: defaultSettings.primaryColor,
-        secondaryColor: defaultSettings.secondaryColor,
-        backgroundColor: defaultSettings.backgroundColor,
-        surfaceColor: defaultSettings.surfaceColor,
-        textColor: defaultSettings.textColor,
-        textHintColor: defaultSettings.textHintColor,
+        colors: defaultSettings.colors,
       );
     } else {
-      newSettings = settings.copyWith(
-        selection: selection,
-        themeMode: mode,
-      );
+      newSettings = settings.copyWith(selection: selection, themeMode: mode);
     }
-    
+
     await _updateSettings(newSettings);
   }
 
   Future<void> updateColor(ColorType type, int colorValue) async {
-    AppearanceSetting newSettings;
-    switch (type) {
-      case ColorType.primary:
-        newSettings = settings.copyWith(primaryColor: colorValue);
-        break;
-      case ColorType.secondary:
-        newSettings = settings.copyWith(secondaryColor: colorValue);
-        break;
-      case ColorType.background:
-        newSettings = settings.copyWith(backgroundColor: colorValue);
-        break;
-      case ColorType.surface:
-        newSettings = settings.copyWith(surfaceColor: colorValue);
-        break;
-      case ColorType.text:
-        newSettings = settings.copyWith(textColor: colorValue);
-        break;
-      case ColorType.textHint:
-        newSettings = settings.copyWith(textHintColor: colorValue);
-        break;
-    }
+    final newColors = switch (type) {
+      ColorType.primary => settings.colors.copyWith(primaryColor: colorValue),
+      ColorType.secondary => settings.colors.copyWith(secondaryColor: colorValue),
+      ColorType.background => settings.colors.copyWith(backgroundColor: colorValue),
+      ColorType.surface => settings.colors.copyWith(surfaceColor: colorValue),
+      ColorType.text => settings.colors.copyWith(textColor: colorValue),
+      ColorType.textHint => settings.colors.copyWith(textHintColor: colorValue),
+    };
+    final newSettings = settings.copyWith(colors: newColors);
     await _updateSettings(newSettings);
   }
 
   int getColor(ColorType type) {
-    switch (type) {
-      case ColorType.primary:
-        return settings.primaryColor;
-      case ColorType.secondary:
-        return settings.secondaryColor;
-      case ColorType.background:
-        return settings.backgroundColor;
-      case ColorType.surface:
-        return settings.surfaceColor;
-      case ColorType.text:
-        return settings.textColor;
-      case ColorType.textHint:
-        return settings.textHintColor;
-    }
+    return switch (type) {
+      ColorType.primary => settings.colors.primaryColor,
+      ColorType.secondary => settings.colors.secondaryColor,
+      ColorType.background => settings.colors.backgroundColor,
+      ColorType.surface => settings.colors.surfaceColor,
+      ColorType.text => settings.colors.textColor,
+      ColorType.textHint => settings.colors.textHintColor,
+    };
   }
 
   Future<void> togglePureDark(bool value) async {
@@ -119,11 +101,11 @@ class AppearanceViewModel extends ChangeNotifier {
     await _updateSettings(newSettings);
   }
 
+  @Deprecated('removed')
   Future<void> updateSecondaryBackgroundMode(
     SecondaryBackgroundMode mode,
   ) async {
-    final newSettings = settings.copyWith(secondaryBackgroundMode: mode);
-    await _updateSettings(newSettings);
+    
   }
 
   Future<void> _updateSettings(AppearanceSetting newSettings) async {
@@ -132,4 +114,3 @@ class AppearanceViewModel extends ChangeNotifier {
     notifyListeners();
   }
 }
-

@@ -4,12 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
 import 'package:multigateway/features/mcp/ui/edit_mcpserver_screen.dart';
-import 'package:multigateway/shared/utils/icon_builder.dart';
+import 'package:multigateway/features/mcp/ui/widgets/mcp_server_card.dart';
+import 'package:multigateway/features/mcp/ui/widgets/mcp_server_tile.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
 import 'package:multigateway/shared/widgets/confirm_dialog.dart';
 import 'package:multigateway/shared/widgets/empty_state.dart';
-import 'package:multigateway/shared/widgets/item_card.dart';
-import 'package:multigateway/shared/widgets/resource_tile.dart';
 
 class McpServersPage extends StatefulWidget {
   const McpServersPage({super.key});
@@ -122,29 +121,21 @@ class _McpServersPageState extends State<McpServersPage> {
           fontSize: 20,
         ),
         actions: [
-          AddAction(
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const EditMcpServerscreen(),
-                ),
-              );
-              if (result == true) {
-                _loadServers();
-              }
-            },
+          // Add button
+          IconButton(
+            icon: const Icon(Icons.add),
             tooltip: tl('Add MCP Server'),
+            onPressed: () => _navigateToEdit(null),
           ),
-          ViewToggleAction(
-            isGrid: _isGridView,
-            onChanged: (val) {
+          // View toggle button
+          IconButton(
+            icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
+            tooltip: _isGridView ? tl('List view') : tl('Grid view'),
+            onPressed: () {
               setState(() {
-                _isGridView = val;
+                _isGridView = !_isGridView;
               });
             },
-            listTooltip: tl('List view'),
-            gridTooltip: tl('Grid view'),
           ),
         ],
       ),
@@ -183,15 +174,32 @@ class _McpServersPageState extends State<McpServersPage> {
                   childAspectRatio: 1.5,
                 ),
                 itemCount: _servers.length,
-                itemBuilder: (context, index) =>
-                    _buildServerCard(_servers[index]),
+                itemBuilder: (context, index) {
+                  final server = _servers[index];
+                  return McpServerCard(
+                    server: server,
+                    subtitle: _getServerSubtitle(server),
+                    onTap: () => _navigateToEdit(server),
+                    onEdit: () => _navigateToEdit(server),
+                    onDelete: () => _confirmDelete(server),
+                  );
+                },
               )
             : ReorderableListView.builder(
                 itemCount: _servers.length,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 onReorder: _onReorder,
-                itemBuilder: (context, index) =>
-                    _buildServerTile(_servers[index], index),
+                itemBuilder: (context, index) {
+                  final server = _servers[index];
+                  return McpServerTile(
+                    key: ValueKey(server.id),
+                    server: server,
+                    subtitle: _getServerSubtitle(server),
+                    onTap: () => _navigateToEdit(server),
+                    onEdit: () => _navigateToEdit(server),
+                    onDelete: () => _confirmDelete(server),
+                  );
+                },
               ),
       ),
     );
@@ -208,67 +216,16 @@ class _McpServersPageState extends State<McpServersPage> {
     _repository.saveOrder(_servers.map((e) => e.id).toList());
   }
 
-  Widget _buildServerTile(McpServerInfo server, int index) {
-    return ResourceTile(
-      key: ValueKey(server.id),
-      title: server.name,
-      subtitle: _getServerSubtitle(server),
-      leadingIcon: buildIcon(server.name),
-      onTap: () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EditMcpServerscreen(server: server),
-          ),
-        );
-        if (result == true) {
-          _loadServers();
-        }
-      },
-      onDelete: () => _confirmDelete(server),
-      onEdit: () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EditMcpServerscreen(server: server),
-          ),
-        );
-        if (result == true) {
-          _loadServers();
-        }
-      },
+  Future<void> _navigateToEdit(McpServerInfo? server) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditMcpServerscreen(server: server),
+      ),
     );
-  }
-
-  Widget _buildServerCard(McpServerInfo server) {
-    return ItemCard(
-      icon: buildIcon(server.name),
-      title: server.name,
-      subtitle: _getServerSubtitle(server),
-      onTap: () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EditMcpServerscreen(server: server),
-          ),
-        );
-        if (result == true) {
-          _loadServers();
-        }
-      },
-      onEdit: () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EditMcpServerscreen(server: server),
-          ),
-        );
-        if (result == true) {
-          _loadServers();
-        }
-      },
-      onDelete: () => _confirmDelete(server),
-    );
+    if (result == true) {
+      _loadServers();
+    }
   }
 
   Future<void> _confirmDelete(McpServerInfo server) async {

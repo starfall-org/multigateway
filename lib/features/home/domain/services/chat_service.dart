@@ -17,7 +17,7 @@ class ChatService {
     }
     try {
       final mcpServerStorage = await McpServerInfoStorage.init();
-      final mcpService = MCPService();
+      final mcpClient = McpClient();
 
       final servers = profile.activeMcpServers
           .map((i) => mcpServerStorage.getItem(i.id))
@@ -45,7 +45,7 @@ class ChatService {
         final fetchedLists = await Future.wait(
           servers.map((s) async {
             try {
-              final tools = await mcpService.fetchTools(s);
+              final tools = await mcpClient.fetchTools(s);
               final updatedServer = s.copyWith(tools: tools);
               await mcpServerStorage.saveItem(updatedServer as McpServerInfo);
               return updatedServer;
@@ -59,8 +59,10 @@ class ChatService {
         Future(() async {
           for (final s in servers) {
             try {
-              final tools = await mcpService.fetchTools(s);
-              await mcpServerStorage.saveItem(s.copyWith(tools: tools) as McpServerInfo);
+              final tools = await mcpClient.fetchTools(s);
+              await mcpServerStorage.saveItem(
+                s.copyWith(tools: tools) as McpServerInfo,
+              );
             } catch (_) {}
           }
         });
@@ -81,7 +83,7 @@ class ChatService {
 
     final aiModels = providerModels.toAiModels();
     final lower = modelName.toLowerCase();
-    AIModel? selectedModel;
+    LegacyAiModel? selectedModel;
     for (final m in aiModels) {
       if (m.name.toLowerCase() == lower) {
         selectedModel = m;

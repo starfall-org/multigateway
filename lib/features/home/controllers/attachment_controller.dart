@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
 
-
 /// Controller responsible for attachment management
 class AttachmentController extends ChangeNotifier {
   final List<String> pendingAttachments = [];
@@ -27,9 +26,7 @@ class AttachmentController extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       if (context.mounted) {
-        context.showErrorSnackBar(
-          tl('Unable to pick files: ${e.toString()}'),
-        );
+        context.showErrorSnackBar(tl('Unable to pick files: ${e.toString()}'));
       }
     }
   }
@@ -48,9 +45,7 @@ class AttachmentController extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       if (context.mounted) {
-        context.showErrorSnackBar(
-          tl('Unable to pick files: ${e.toString()}'),
-        );
+        context.showErrorSnackBar(tl('Unable to pick files: ${e.toString()}'));
       }
     }
   }
@@ -73,7 +68,7 @@ class AttachmentController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void openAttachmentsSidebar(List<String> attachments) {
+  void openFilesDialog(List<String> attachments) {
     setInspectingAttachments(attachments);
   }
 

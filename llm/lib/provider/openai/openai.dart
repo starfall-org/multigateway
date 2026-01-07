@@ -2,15 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-
-import '../../models/llm_api/openai/audio_speech.dart';
-import '../../models/llm_api/openai/chat_completions.dart';
-import '../../models/llm_api/openai/embeddings.dart';
-import '../../models/llm_api/openai/image_generations.dart';
-import '../../models/llm_api/openai/models.dart';
-import '../../models/llm_api/openai/videos.dart';
-import '../base.dart';
-import '../../models/llm_api/openai/responses.dart';
+import 'package:llm/models/llm_api/openai/audio_speech.dart';
+import 'package:llm/models/llm_api/openai/chat_completions.dart';
+import 'package:llm/models/llm_api/openai/embeddings.dart';
+import 'package:llm/models/llm_api/openai/image_generations.dart';
+import 'package:llm/models/llm_api/openai/models.dart';
+import 'package:llm/models/llm_api/openai/responses.dart';
+import 'package:llm/models/llm_api/openai/videos.dart';
+import 'package:llm/models/llm_model/github_model.dart';
+import 'package:llm/provider/base.dart';
 
 class OpenAiProvider extends LlmProviderBase {
   final String responsesPath;
@@ -197,11 +197,32 @@ class OpenAiProvider extends LlmProviderBase {
   Future<OpenAiModels> listModels() async {
     final res = await http.get(uri(modelsPath), headers: getHeaders());
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      final j = jsonDecode(res.body) as Map<String, dynamic>;
+      final j = jsonDecode(res.body);
+      if (j is List) {
+        final j2 = {"models": j, "object": "list"} as Map<String, dynamic>;
+        return OpenAiModels.fromJson(j2);
+      }
       return OpenAiModels.fromJson(j);
     }
     throw Exception(
-      'OpenAiProvider list models error ${res.statusCode}: ${res.body}',
+      'OpenAiProvider.listModels error ${res.statusCode}: ${res.body}',
+    );
+  }
+
+  Future<List<GitHubModel>> gitHubCatalogModels() async {
+    Map<String, String> ghHeaders = getHeaders();
+    ghHeaders['Accept'] = 'application/vnd.github+json';
+    ghHeaders['X-GitHub-Api-Version'] = '2022-11-28';
+    final res = await http.get(
+      uri('https://models.github.ai/catalog/models'),
+      headers: ghHeaders,
+    );
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      final j = jsonDecode(res.body);
+      return j.map((e) => GitHubModel.fromJson(e)).toList();
+    }
+    throw Exception(
+      'OpenAiProvider.gitHubCatalogModels error ${res.statusCode}: ${res.body}',
     );
   }
 
@@ -219,7 +240,7 @@ class OpenAiProvider extends LlmProviderBase {
       return OpenAiEmbeddings.fromJson(j);
     }
     throw Exception(
-      'OpenAiProvider embed error ${res.statusCode}: ${res.body}',
+      'OpenAiProvider.embeddings error ${res.statusCode}: ${res.body}',
     );
   }
 }

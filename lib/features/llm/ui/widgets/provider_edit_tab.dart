@@ -8,12 +8,12 @@ import 'package:multigateway/shared/widgets/custom_text_field.dart';
 
 /// Widget tab chỉnh sửa thông tin provider
 class ProviderEditTab extends StatelessWidget {
-  final AddProviderViewModel viewModel;
+  final AddProviderController controller;
   final ValueChanged<ProviderType> onTypeChanged;
 
   const ProviderEditTab({
     super.key,
-    required this.viewModel,
+    required this.controller,
     required this.onTypeChanged,
   });
 
@@ -23,81 +23,78 @@ class ProviderEditTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         CommonDropdown<ProviderType>(
-          value: viewModel.selectedType,
+          value: controller.selectedType,
           labelText: tl('Compatibility'),
           options: ProviderType.values.map((type) {
             return DropdownOption<ProviderType>(
               value: type,
               label: type.name,
               icon: buildLogoIcon(
-                viewModel.vertexAI
+                controller.vertexAI
                     ? 'vertex-color'
-                    : viewModel.azureAI
-                        ? 'azure-color'
-                        : type == ProviderType.openai
-                            ? 'openai'
-                            : type == ProviderType.googleai
-                                ? 'aistudio'
-                                : type == ProviderType.anthropic
-                                    ? 'anthropic'
-                                    : 'ollama',
+                    : controller.azureAI
+                    ? 'azure-color'
+                    : type == ProviderType.openai
+                    ? 'openai'
+                    : type == ProviderType.googleai
+                    ? 'aistudio'
+                    : type == ProviderType.anthropic
+                    ? 'anthropic'
+                    : 'ollama',
                 size: 24,
               ),
             );
           }).toList(),
           onChanged: (value) {
             if (value != null) {
-              viewModel.updateSelectedType(value);
+              controller.updateSelectedType(value);
               onTypeChanged(value);
             }
           },
         ),
-        if (viewModel.selectedType == ProviderType.openai)
+        if (controller.selectedType == ProviderType.openai)
           CheckboxListTile(
             title: Text(tl('Azure AI')),
-            value: viewModel.azureAI,
+            value: controller.azureAI,
             onChanged: (value) {
               if (value != null) {
-                viewModel.updateAzureAI(value);
+                controller.updateAzureAI(value);
               }
             },
             controlAffinity: ListTileControlAffinity.leading,
           ),
-        if (viewModel.selectedType == ProviderType.googleai)
+        if (controller.selectedType == ProviderType.googleai)
           CheckboxListTile(
             title: Text(tl('Vertex AI')),
-            value: viewModel.vertexAI,
+            value: controller.vertexAI,
             onChanged: (value) {
               if (value != null) {
-                viewModel.updateVertexAI(value);
+                controller.updateVertexAI(value);
               }
             },
             controlAffinity: ListTileControlAffinity.leading,
           ),
         const SizedBox(height: 16),
-        CustomTextField(
-          controller: viewModel.nameController,
-          label: 'Name',
-        ),
+        CustomTextField(controller: controller.nameController, label: 'Name'),
         const SizedBox(height: 16),
         CustomTextField(
-          controller: viewModel.apiKeyController,
+          controller: controller.apiKeyController,
           label: 'API Key',
           obscureText: true,
         ),
         const SizedBox(height: 16),
         CustomTextField(
-          controller: viewModel.baseUrlController,
+          controller: controller.baseUrlController,
           label: 'Base URL',
         ),
         const SizedBox(height: 8),
-        if (viewModel.selectedType == ProviderType.openai)
+        if (controller.selectedType == ProviderType.openai)
           CheckboxListTile(
             title: Text(tl('Responses API')),
-            value: viewModel.responsesApi,
+            value: controller.responsesApi,
             onChanged: (value) {
               if (value != null) {
-                viewModel.updateResponsesApi(value);
+                controller.updateResponsesApi(value);
               }
             },
             controlAffinity: ListTileControlAffinity.leading,

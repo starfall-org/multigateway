@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-
-import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
 import 'package:multigateway/core/llm/models/llm_provider_info.dart';
 
 class ModelPickerSheet extends StatelessWidget {
   final List<LlmProviderInfo> providers;
-  final Map<String, List<AIModel>> providerModels;
+  final Map<String, List<LegacyAiModel>> providerModels;
   final Map<String, bool> providerCollapsed;
   final String? selectedProviderName;
   final String? selectedModelName;
@@ -145,7 +144,7 @@ class ModelPickerSheet extends StatelessWidget {
       case ProviderType.googleai:
         return Icons.android;
       case ProviderType.openai:
-        return Icons.smart_toy;
+        return Icons.token; // Changed from Icons.smart_toy
       case ProviderType.anthropic:
         return Icons.psychology;
       case ProviderType.ollama:
@@ -157,7 +156,7 @@ class ModelPickerSheet extends StatelessWidget {
   static void show(
     BuildContext context, {
     required List<LlmProviderInfo> providers,
-    required Map<String, List<AIModel>> providerModels,
+    required Map<String, List<LegacyAiModel>> providerModels,
     required Map<String, bool> providerCollapsed,
     String? selectedProviderName,
     String? selectedModelName,

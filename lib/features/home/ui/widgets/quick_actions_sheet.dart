@@ -1,27 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/features/home/controllers/chat_controller.dart';
+import 'package:multigateway/features/home/ui/widgets/quick_actions_widgets/built_in_tool_tile.dart';
+import 'package:multigateway/features/home/ui/widgets/quick_actions_widgets/mcp_server_tile.dart';
+import 'package:multigateway/features/home/ui/widgets/quick_actions_widgets/section_header.dart';
 
 class QuickActionsSheet extends StatefulWidget {
-  final ChatController viewModel;
+  final ChatController controller;
 
-  const QuickActionsSheet({super.key, required this.viewModel});
+  const QuickActionsSheet({super.key, required this.controller});
 
   @override
   State<QuickActionsSheet> createState() => _QuickActionsSheetState();
 
   /// Static method to show the drawer as a modal bottom sheet
-  static void show(BuildContext context, ChatController viewModel) {
+  static void show(BuildContext context, ChatController controller) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => QuickActionsSheet(viewModel: viewModel),
+      builder: (ctx) => QuickActionsSheet(controller: controller),
     );
   }
 }
@@ -32,16 +34,13 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
   @override
   void initState() {
     super.initState();
-    // Ensure we have MCP servers loaded
-    widget.viewModel.loadMcpServers();
-    // Create a local copy or just reference if we update directly via viewModel
-    // Since ChatProfile is immutable, we will create modified copies and send to updateProfile
-    _profile = widget.viewModel.selectedProfile!;
+    widget.controller.loadMcpServers();
+    _profile = widget.controller.selectedProfile!;
   }
 
   void _updateProfile() {
-    widget.viewModel.updateProfile(_profile);
-    setState(() {}); // Rebuild UI
+    widget.controller.updateProfile(_profile);
+    setState(() {});
   }
 
   void _toggleBuiltInTool(String toolId, bool enabled) {
@@ -52,7 +51,6 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
       current.remove(toolId);
     }
 
-    // Create new profile with updated tools
     _profile = ChatProfile(
       id: _profile.id,
       name: _profile.name,
@@ -69,15 +67,8 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
     );
 
     if (enabled) {
-      // Add server if not present, enable all tools by default or none?
-      // Usually all tools.
       if (!currentServers.any((s) => s.id == serverId)) {
-        // Find the server definition to get all tool names?
-        // Or just add it and let the service handle tool discovery.
-        // For simplicity, we add it with empty tools first or we need to know available tools.
-        // The ActiveMcpServer model requires activeToolIds.
-        // If we enable a server, we should probably enable its tools.
-        final serverDef = widget.viewModel.McpServers.firstWhere(
+        final serverDef = widget.controller.mcpServers.firstWhere(
           (s) => s.id == serverId,
         );
         final allToolNames = serverDef.tools.map((t) => t.name).toList();
@@ -174,14 +165,13 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
 
             Expanded(
               child: ListenableBuilder(
-                listenable: widget.viewModel,
+                listenable: widget.controller,
                 builder: (context, _) {
-                  // Re-fetch profile in case it changed externally
-                  if (widget.viewModel.selectedProfile != null) {
-                    _profile = widget.viewModel.selectedProfile!;
+                  if (widget.controller.selectedProfile != null) {
+                    _profile = widget.controller.selectedProfile!;
                   }
 
-                  final model = widget.viewModel.selectedAIModel;
+                  final model = widget.controller.selectedLegacyAiModel;
                   final tools = model?.builtInTools;
 
                   return ListView(
@@ -191,34 +181,52 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
                           (tools.googleSearch ||
                               tools.codeExecution ||
                               tools.urlContext)) ...[
-                        _buildSectionHeader('Built-in Tools'),
+                        const SectionHeader(title: 'Built-in Tools'),
                         if (tools.googleSearch)
-                          _buildBuiltInToolTile(
-                            'Google Search',
-                            'google_search',
-                            Icons.search,
-                            'Search the web for up-to-date information.',
+                          BuiltInToolTile(
+                            title: 'Google Search',
+                            id: 'google_search',
+                            icon: Icons.search,
+                            subtitle:
+                                'Search the web for up-to-date information.',
+                            isEnabled: _profile.activeBuiltInTools.contains(
+                              'google_search',
+                            ),
+                            onChanged: (val) =>
+                                _toggleBuiltInTool('google_search', val),
                           ),
                         if (tools.codeExecution)
-                          _buildBuiltInToolTile(
-                            'Code Execution',
-                            'code_execution',
-                            Icons.code,
-                            'Execute Python code to solve complex problems.',
+                          BuiltInToolTile(
+                            title: 'Code Execution',
+                            id: 'code_execution',
+                            icon: Icons.code,
+                            subtitle:
+                                'Execute Python code to solve complex problems.',
+                            isEnabled: _profile.activeBuiltInTools.contains(
+                              'code_execution',
+                            ),
+                            onChanged: (val) =>
+                                _toggleBuiltInTool('code_execution', val),
                           ),
                         if (tools.urlContext)
-                          _buildBuiltInToolTile(
-                            'URL Context',
-                            'url_context',
-                            Icons.link,
-                            'Access and read content from specific URLs.',
+                          BuiltInToolTile(
+                            title: 'URL Context',
+                            id: 'url_context',
+                            icon: Icons.link,
+                            subtitle:
+                                'Access and read content from specific URLs.',
+                            isEnabled: _profile.activeBuiltInTools.contains(
+                              'url_context',
+                            ),
+                            onChanged: (val) =>
+                                _toggleBuiltInTool('url_context', val),
                           ),
                         const Divider(),
                       ],
 
                       // Section: MCP Servers
-                      _buildSectionHeader('MCP Servers'),
-                      if (widget.viewModel.McpServers.isEmpty)
+                      const SectionHeader(title: 'MCP Servers'),
+                      if (widget.controller.mcpServers.isEmpty)
                         Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Text(
@@ -232,8 +240,13 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
                           ),
                         ),
 
-                      ...widget.viewModel.McpServers.map((server) {
-                        return _buildMcpServerTile(server);
+                      ...widget.controller.mcpServers.map((server) {
+                        return McpServerTile(
+                          server: server,
+                          profile: _profile,
+                          onServerToggle: _toggleMcpServer,
+                          onToolToggle: _toggleMcpTool,
+                        );
                       }),
                     ],
                   );
@@ -243,90 +256,6 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBuiltInToolTile(
-    String title,
-    String id,
-    IconData icon,
-    String subtitle,
-  ) {
-    final isEnabled = _profile.activeBuiltInTools.contains(id);
-
-    return SwitchListTile(
-      title: Row(
-        children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface),
-          const SizedBox(width: 12),
-          Text(title),
-        ],
-      ),
-      subtitle: Text(subtitle, style: TextStyle(fontSize: 12)),
-      value: isEnabled,
-      onChanged: (val) => _toggleBuiltInTool(id, val),
-    );
-  }
-
-  Widget _buildMcpServerTile(McpServer server) {
-    final isActive = _profile.activeMcpServerIds.contains(server.id);
-
-    return Column(
-      children: [
-        SwitchListTile(
-          title: Text(server.name),
-          subtitle: Text(server.httpConfig?.url ?? 'Stdio/Local Server'),
-          secondary: const Icon(Icons.dns_outlined),
-          value: isActive,
-          onChanged: (val) => _toggleMcpServer(server.id, val),
-        ),
-        if (isActive)
-          Padding(
-            padding: const EdgeInsets.only(left: 16.0),
-            child: Column(
-              children: server.tools.map((tool) {
-                final activeServer = _profile.activeMcpServers.firstWhere(
-                  (s) => s.id == server.id,
-                );
-                final isToolEnabled = activeServer.activeToolIds.contains(
-                  tool.name,
-                );
-
-                return CheckboxListTile(
-                  title: Text(tool.name, style: const TextStyle(fontSize: 14)),
-                  subtitle: tool.description != null
-                      ? Text(
-                          tool.description!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12),
-                        )
-                      : null,
-                  value: isToolEnabled,
-                  dense: true,
-                  visualDensity: VisualDensity.compact,
-                  contentPadding: const EdgeInsets.only(left: 40, right: 16),
-                  onChanged: (val) =>
-                      _toggleMcpTool(server.id, tool.name, val ?? false),
-                );
-              }).toList(),
-            ),
-          ),
-      ],
     );
   }
 }

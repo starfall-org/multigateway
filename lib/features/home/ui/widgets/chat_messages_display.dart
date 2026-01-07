@@ -8,7 +8,7 @@ class ChatMessagesDisplay extends StatelessWidget {
   final List<ChatMessage> messages;
   final ScrollController scrollController;
 
-  // Callbacks để liên kết với ViewModel/Screen
+  // Callbacks để liên kết với Controller/Screen
   final void Function(ChatMessage message)? onCopy;
   final void Function(ChatMessage message)? onEdit;
   final void Function(ChatMessage message)? onDelete;
@@ -39,7 +39,7 @@ class ChatMessagesDisplay extends StatelessWidget {
       itemBuilder: (context, index) {
         final message = messages[index];
         final isUser = message.role == ChatRole.user;
-        
+
         return isUser
             ? UserMessageCard(
                 message: message,

@@ -1,28 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:llm/llm.dart';
+import 'package:llm/models/llm_model/basic_model.dart';
+import 'package:llm/models/llm_model/googleai_model.dart';
+import 'package:llm/models/llm_model/ollama_model.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/features/llm/controllers/edit_provider_controller.dart';
 import 'package:multigateway/features/llm/ui/widgets/model_card.dart';
 import 'package:multigateway/features/settings/ui/widgets/settings_card.dart';
 
 class FetchModelsSheet extends StatelessWidget {
-  final AddProviderViewModel viewModel;
-  final Function(AIModel) onShowCapabilities;
+  final AddProviderController controller;
+  final Function(dynamic) onShowCapabilities; // Accept any model type
 
   const FetchModelsSheet({
     super.key,
-    required this.viewModel,
+    required this.controller,
     required this.onShowCapabilities,
   });
+
+  // Helper to get model name from any model type
+  String _getModelName(dynamic model) {
+    if (model is BasicModel) return model.id;
+    if (model is OllamaModel) return model.name;
+    if (model is GoogleAiModel) return model.name;
+    return 'unknown';
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: viewModel,
+      listenable: controller,
       builder: (context, _) {
-        final availableModels = viewModel.availableModels;
-        final selectedModels = viewModel.selectedModels;
-        final isFetchingModels = viewModel.isFetchingModels;
+        final availableModels = controller.availableModels;
+        final selectedModels = controller.selectedModels;
+        final isFetchingModels = controller.isFetchingModels;
 
         return Container(
           height: MediaQuery.of(context).size.height * 0.85,
@@ -102,7 +112,7 @@ class FetchModelsSheet extends StatelessWidget {
                               ),
                             ),
                             ElevatedButton.icon(
-                              onPressed: () => viewModel.fetchModels(context),
+                              onPressed: () => controller.fetchModels(context),
                               icon: const Icon(Icons.refresh, size: 16),
                               label: Text(tl('Fetch')),
                             ),
@@ -146,8 +156,9 @@ class FetchModelsSheet extends StatelessWidget {
                               const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final model = availableModels[index];
+                            final modelName = _getModelName(model);
                             final isSelected = selectedModels.any(
-                              (AIModel m) => m.name == model.name,
+                              (m) => _getModelName(m) == modelName,
                             );
 
                             return ModelCard(
@@ -163,9 +174,9 @@ class FetchModelsSheet extends StatelessWidget {
                                 ),
                                 onPressed: () {
                                   if (isSelected) {
-                                    viewModel.removeModelDirectly(model);
+                                    controller.removeModelDirectly(model);
                                   } else {
-                                    viewModel.addModelDirectly(model);
+                                    controller.addModelDirectly(model);
                                   }
                                 },
                               ),

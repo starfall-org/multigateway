@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-Future<bool> testOpenAIModel(
+Future<bool> testOpenLegacyAiModel(
   String modelId,
   String baseUrl,
   Map<String, String> headers,
@@ -71,7 +71,7 @@ Future<bool> testAnthropicModel(
   }
 }
 
-Future<bool> testGoogleGenAIModel(
+Future<bool> testGoogleGenLegacyAiModel(
   String modelId,
   String baseUrl,
   Map<String, String> headers,
