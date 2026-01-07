@@ -6,10 +6,13 @@ import 'package:multigateway/core/storage/base.dart';
 class SpeechServiceStorage extends HiveBaseStorage<SpeechService> {
   static const String _prefix = 'speech_service';
 
+  static SpeechServiceStorage? _instance;
+
   SpeechServiceStorage();
 
-  static Future<SpeechServiceStorage> init() async {
-    return SpeechServiceStorage();
+  static SpeechServiceStorage get instance {
+    _instance ??= SpeechServiceStorage();
+    return _instance!;
   }
 
   @override

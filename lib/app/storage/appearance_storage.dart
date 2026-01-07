@@ -28,20 +28,19 @@ class AppearanceStorage extends SharedPreferencesBase<AppearanceSetting> {
     }
   }
 
+  static Future<AppearanceStorage>? _instanceFuture;
   static AppearanceStorage? _instance;
 
-  static Future<AppearanceStorage> init() async {
+  static Future<AppearanceStorage> get instance async {
     if (_instance != null) return _instance!;
-    final prefs = await SharedPreferences.getInstance();
-    _instance = AppearanceStorage(prefs);
+    _instanceFuture ??= _createInstance();
+    _instance = await _instanceFuture!;
     return _instance!;
   }
 
-  static AppearanceStorage get instance {
-    if (_instance == null) {
-      throw Exception('AppearanceStorage not initialized. Call init() first.');
-    }
-    return _instance!;
+  static Future<AppearanceStorage> _createInstance() async {
+    final prefs = await SharedPreferences.getInstance();
+    return AppearanceStorage(prefs);
   }
 
   @override

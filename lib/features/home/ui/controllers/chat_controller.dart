@@ -5,6 +5,7 @@ import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
+import 'package:multigateway/core/mcp/storage/mcp_server_info_storage.dart';
 import 'package:multigateway/features/home/domain/domain.dart';
 import 'package:multigateway/features/home/ui/controllers/attachment_controller.dart';
 import 'package:multigateway/features/home/ui/controllers/chat_controller_parts/chat_navigation_interface.dart';
@@ -24,7 +25,7 @@ class ChatController extends ChangeNotifier {
 
   final ChatNavigationInterface navigator;
   final PreferencesStorage preferencesSp;
-  final TTSService ttsService;
+  final SpeechManager speechManager;
 
   // Sub-controllers
   late final SessionController sessionController;
@@ -39,8 +40,8 @@ class ChatController extends ChangeNotifier {
     required ChatProfileStorage aiProfileRepository,
     required LlmProviderInfoStorage llmProviderInfoStorage,
     required this.preferencesSp,
-    required McpServerStorage mcpServerStorage,
-    required this.ttsService,
+    required McpServerInfoStorage mcpServerStorage,
+    required this.speechManager,
   }) {
     // Initialize sub-controllers
     sessionController = SessionController(conversationRepository: conversationRepository);
@@ -51,7 +52,7 @@ class ChatController extends ChangeNotifier {
     );
     profileController = ProfileController(
       aiProfileRepository: aiProfileRepository,
-      McpServerStorage: McpServerStorage,
+      mcpServerStorage: mcpServerStorage,
     );
 
     // Listen to sub-controllers changes
@@ -305,21 +306,6 @@ class ChatController extends ChangeNotifier {
 
   Future<void> clearChat() => sessionController.clearChat();
 
-  Future<void> speakLastModelMessage() async {
-    if (currentSession == null || currentSession!.messages.isEmpty) return;
-    final lastModel = currentSession!.messages.lastWhere(
-      (m) => m.role == ChatRole.model,
-      orElse: () => ChatMessage(
-        id: '',
-        role: ChatRole.model,
-        content: '',
-        timestamp: DateTime.now(),
-      ),
-    );
-    if (lastModel.content.isEmpty) return;
-    await ttsService.speak(lastModel.content);
-  }
-
   Future<void> copyMessage(BuildContext context, dynamic message) =>
       messageController.copyMessage(context, message);
 
@@ -411,7 +397,7 @@ class ChatController extends ChangeNotifier {
 
     textController.dispose();
     scrollController.dispose();
-    ttsService.stop();
+    speechManager.stop();
     super.dispose();
   }
 }

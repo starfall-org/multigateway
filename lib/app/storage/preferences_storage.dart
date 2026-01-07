@@ -27,20 +27,19 @@ class PreferencesStorage extends SharedPreferencesBase<PreferencesSetting> {
     }
   }
 
+  static Future<PreferencesStorage>? _instanceFuture;
   static PreferencesStorage? _instance;
 
-  static Future<PreferencesStorage> init() async {
+  static Future<PreferencesStorage> get instance async {
     if (_instance != null) return _instance!;
-    final prefs = await SharedPreferences.getInstance();
-    _instance = PreferencesStorage(prefs);
+    _instanceFuture ??= _createInstance();
+    _instance = await _instanceFuture!;
     return _instance!;
   }
 
-  static PreferencesStorage get instance {
-    if (_instance == null) {
-      throw Exception('PreferencesStorage not initialized. Call init() first.');
-    }
-    return _instance!;
+  static Future<PreferencesStorage> _createInstance() async {
+    final prefs = await SharedPreferences.getInstance();
+    return PreferencesStorage(prefs);
   }
 
   @override

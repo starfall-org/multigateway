@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:multigateway/app/config/services.dart';
+import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Widget helper để điều chỉnh màu nền icon theo theme
@@ -27,13 +27,13 @@ Widget _buildThemeAwareImage({
   );
 }
 
-void initIcons() {
-  final hasInitialized =
-      AppServices.instance.preferencesSp.currentPreferences.hasInitializedIcons;
+Future<void> initIcons() async {
+  final preferencesSp = await PreferencesStorage.instance;
+  final hasInitialized = preferencesSp.currentPreferences.hasInitializedIcons;
   if (!hasInitialized) {
     // Run in background, don't await
     _cacheAllIcons().then((_) async {
-      await AppServices.instance.preferencesSp.setInitializedIcons(true);
+      await (await PreferencesStorage.instance).setInitializedIcons(true);
     });
   }
 }

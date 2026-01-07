@@ -9,10 +9,13 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
   static const String _prefix = 'chat_profile';
   static const String _selectedKey = '__selected_id__';
 
+  static ChatProfileStorage? _instance;
+
   ChatProfileStorage();
 
-  static Future<ChatProfileStorage> init() async {
-    return ChatProfileStorage();
+  static ChatProfileStorage get instance {
+    _instance ??= ChatProfileStorage();
+    return _instance!;
   }
 
   @override
