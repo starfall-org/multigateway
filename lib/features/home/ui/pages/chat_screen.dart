@@ -6,7 +6,6 @@ import 'package:multigateway/core/chat/storage/conversation_storage.dart';
 import 'package:multigateway/core/llm/storage/llm_provider_info_storage.dart';
 import 'package:multigateway/core/mcp/storage/mcp_server_info_storage.dart';
 import 'package:multigateway/core/profile/storage/chat_profile_storage.dart';
-import 'package:multigateway/core/speech/tts_service.dart';
 import 'package:multigateway/features/home/ui/controllers/chat_controller.dart';
 import 'package:multigateway/features/home/ui/controllers/chat_controller_parts/chat_navigation_interface.dart';
 import 'package:multigateway/features/home/ui/views/menu_view.dart';
@@ -66,11 +65,6 @@ class _ChatPageState extends State<ChatPage>
       final pInfStorage = LlmProviderInfoStorage.instance;
       final mcpServerStorage = McpServerInfoStorage.instance;
 
-      // Create TTSService instance
-      final ttsService = TTSService(
-        storage: SpeechServiceStorage.instance,
-      );
-
       // Initialize controller
       _viewModel = ChatController(
         navigator: this,
@@ -79,7 +73,6 @@ class _ChatPageState extends State<ChatPage>
         llmProviderInfoStorage: pInfStorage,
         preferencesSp: preferencesSp,
         mcpServerStorage: mcpServerStorage,
-        ttsService: ttsService,
       );
 
       // Wait for all initialization to complete
@@ -358,7 +351,7 @@ class _ChatPageState extends State<ChatPage>
         _buildAttachmentViewDialog(context),
       },
       onRegenerate: () => _viewModel.regenerateLast(context),
-      onRead: (m) => _viewModel.ttsService.speak(m.content),
+      onRead: null,
       onSwitchVersion: (m, idx) => _viewModel.switchMessageVersion(m, idx),
     );
   }
