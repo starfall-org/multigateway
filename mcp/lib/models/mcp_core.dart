@@ -27,18 +27,22 @@ class JsonSchema {
     this.additionalProperties,
   });
 
-  factory JsonSchema.fromJson(Map<String, dynamic> json) => _$JsonSchemaFromJson(json);
+  factory JsonSchema.fromJson(Map<String, dynamic> json) =>
+      _$JsonSchemaFromJson(json);
   Map<String, dynamic> toJson() => _$JsonSchemaToJson(this);
 
   static Map<String, JsonSchemaProperty>? _propertiesFromJson(dynamic json) {
     if (json == null) return null;
     if (json is! Map) return null;
     return (json as Map<String, dynamic>).map(
-      (k, v) => MapEntry(k, JsonSchemaProperty.fromJson(v as Map<String, dynamic>)),
+      (k, v) =>
+          MapEntry(k, JsonSchemaProperty.fromJson(v as Map<String, dynamic>)),
     );
   }
 
-  static Map<String, dynamic>? _propertiesToJson(Map<String, JsonSchemaProperty>? properties) {
+  static Map<String, dynamic>? _propertiesToJson(
+    Map<String, JsonSchemaProperty>? properties,
+  ) {
     return properties?.map((k, v) => MapEntry(k, v.toJson()));
   }
 }
@@ -62,7 +66,8 @@ class JsonSchemaProperty {
     this.items,
   });
 
-  factory JsonSchemaProperty.fromJson(Map<String, dynamic> json) => _$JsonSchemaPropertyFromJson(json);
+  factory JsonSchemaProperty.fromJson(Map<String, dynamic> json) =>
+      _$JsonSchemaPropertyFromJson(json);
   Map<String, dynamic> toJson() => _$JsonSchemaPropertyToJson(this);
 }
 
@@ -91,7 +96,8 @@ class McpTool {
     this.enabled = true,
   });
 
-  factory McpTool.fromJson(Map<String, dynamic> json) => _$McpToolFromJson(json);
+  factory McpTool.fromJson(Map<String, dynamic> json) =>
+      _$McpToolFromJson(json);
   Map<String, dynamic> toJson() => _$McpToolToJson(this);
 }
 
@@ -119,7 +125,8 @@ class McpResource {
     this.mimeType,
   });
 
-  factory McpResource.fromJson(Map<String, dynamic> json) => _$McpResourceFromJson(json);
+  factory McpResource.fromJson(Map<String, dynamic> json) =>
+      _$McpResourceFromJson(json);
   Map<String, dynamic> toJson() => _$McpResourceToJson(this);
 }
 
@@ -143,7 +150,8 @@ class McpPromptArgument {
     this.required = false,
   });
 
-  factory McpPromptArgument.fromJson(Map<String, dynamic> json) => _$McpPromptArgumentFromJson(json);
+  factory McpPromptArgument.fromJson(Map<String, dynamic> json) =>
+      _$McpPromptArgumentFromJson(json);
   Map<String, dynamic> toJson() => _$McpPromptArgumentToJson(this);
 }
 
@@ -163,7 +171,8 @@ class MCPPrompt {
 
   const MCPPrompt({required this.name, this.description, this.arguments});
 
-  factory MCPPrompt.fromJson(Map<String, dynamic> json) => _$MCPPromptFromJson(json);
+  factory MCPPrompt.fromJson(Map<String, dynamic> json) =>
+      _$MCPPromptFromJson(json);
   Map<String, dynamic> toJson() => _$MCPPromptToJson(this);
 }
 
@@ -194,24 +203,10 @@ class McpServerCapabilities {
     this.logging = false,
   });
 
-  factory McpServerCapabilities.fromJson(Map<String, dynamic> json) {
-    // Special handling: if key exists, it's true
-    return McpServerCapabilities(
-      tools: json.containsKey('tools'),
-      resources: json.containsKey('resources'),
-      prompts: json.containsKey('prompts'),
-      logging: json.containsKey('logging'),
-    );
-  }
+  factory McpServerCapabilities.fromJson(Map<String, dynamic> json) =>
+      _$McpServerCapabilitiesFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    final json = <String, dynamic>{};
-    if (tools) json['tools'] = {};
-    if (resources) json['resources'] = {};
-    if (prompts) json['prompts'] = {};
-    if (logging) json['logging'] = {};
-    return json;
-  }
+  Map<String, dynamic> toJson() => _$McpServerCapabilitiesToJson(this);
 }
 
 /// Information about an MCP implementation (client or server)
@@ -222,7 +217,8 @@ class McpImplementation {
 
   const McpImplementation({required this.name, required this.version});
 
-  factory McpImplementation.fromJson(Map<String, dynamic> json) => _$McpImplementationFromJson(json);
+  factory McpImplementation.fromJson(Map<String, dynamic> json) =>
+      _$McpImplementationFromJson(json);
   Map<String, dynamic> toJson() => _$McpImplementationToJson(this);
 }
 
@@ -256,7 +252,8 @@ class McpTextContent extends McpContent {
   @override
   Map<String, dynamic> toJson() => _$McpTextContentToJson(this);
 
-  factory McpTextContent.fromJson(Map<String, dynamic> json) => _$McpTextContentFromJson(json);
+  factory McpTextContent.fromJson(Map<String, dynamic> json) =>
+      _$McpTextContentFromJson(json);
 }
 
 /// Image content
@@ -270,7 +267,8 @@ class McpImageContent extends McpContent {
   @override
   Map<String, dynamic> toJson() => _$McpImageContentToJson(this);
 
-  factory McpImageContent.fromJson(Map<String, dynamic> json) => _$McpImageContentFromJson(json);
+  factory McpImageContent.fromJson(Map<String, dynamic> json) =>
+      _$McpImageContentFromJson(json);
 }
 
 /// Content representing a resource
@@ -291,7 +289,8 @@ class McpResourceContent extends McpContent {
   @override
   Map<String, dynamic> toJson() => _$McpResourceContentToJson(this);
 
-  factory McpResourceContent.fromJson(Map<String, dynamic> json) => _$McpResourceContentFromJson(json);
+  factory McpResourceContent.fromJson(Map<String, dynamic> json) =>
+      _$McpResourceContentFromJson(json);
 }
 
 /// A message in a prompt or sampling context
@@ -303,9 +302,12 @@ class McpPromptMessage {
 
   const McpPromptMessage({required this.role, required this.content});
 
-  factory McpPromptMessage.fromJson(Map<String, dynamic> json) => _$McpPromptMessageFromJson(json);
+  factory McpPromptMessage.fromJson(Map<String, dynamic> json) =>
+      _$McpPromptMessageFromJson(json);
   Map<String, dynamic> toJson() => _$McpPromptMessageToJson(this);
 
-  static McpContent _contentFromJson(Map<String, dynamic> json) => McpContent.fromJson(json);
-  static Map<String, dynamic> _contentToJson(McpContent content) => content.toJson();
+  static McpContent _contentFromJson(Map<String, dynamic> json) =>
+      McpContent.fromJson(json);
+  static Map<String, dynamic> _contentToJson(McpContent content) =>
+      content.toJson();
 }
