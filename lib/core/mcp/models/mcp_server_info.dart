@@ -11,6 +11,7 @@ class McpServerInfo {
   final String name;
   final McpProtocol protocol;
   final String? url;
+  final Map<String, String>? headers;
   final StdioConfig? stdioConfig;
 
   McpServerInfo(
@@ -18,6 +19,7 @@ class McpServerInfo {
     this.name,
     this.protocol,
     this.url,
+    this.headers,
     this.stdioConfig,
   ) : id = id ?? Uuid().v4();
 

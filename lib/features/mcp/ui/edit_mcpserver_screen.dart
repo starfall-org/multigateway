@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/core.dart';
 import 'package:multigateway/features/mcp/controllers/edit_mcpserver_controller.dart';
 import 'package:multigateway/shared/widgets/common_dropdown.dart';
 import 'package:multigateway/shared/widgets/custom_text_field.dart';
 
 class EditMcpServerscreen extends StatefulWidget {
-  final McpServer? server;
+  final McpServerInfo? server;
 
   const EditMcpServerscreen({super.key, this.server});
 
@@ -73,11 +73,7 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
         bottom: true,
         child: TabBarView(
           controller: _tabController,
-          children: [
-            _buildConfigTab(),
-            _buildConnectionTab(),
-            _buildInfoTab(),
-          ],
+          children: [_buildConfigTab(), _buildConnectionTab(), _buildInfoTab()],
         ),
       ),
     );
@@ -88,11 +84,11 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
       padding: const EdgeInsets.all(16),
       children: [
         // Transport Type Selection
-        CommonDropdown<MCPTransportType>(
+        CommonDropdown<McpProtocol>(
           value: _viewModel.selectedTransport,
           labelText: tl('Transport Type'),
-          options: MCPTransportType.values.map((transport) {
-            return DropdownOption<MCPTransportType>(
+          options: McpProtocol.values.map((transport) {
+            return DropdownOption<McpProtocol>(
               value: transport,
               label: _getTransportLabel(transport),
               icon: _getTransportIcon(transport),
@@ -124,17 +120,6 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
           prefixIcon: Icons.dns_outlined,
         ),
 
-        const SizedBox(height: 16),
-
-        // Description (Optional)
-        CustomTextField(
-          controller: _viewModel.descriptionController,
-          label: tl('Description (Optional)'),
-          hint: tl('Describe what this server provides'),
-          prefixIcon: Icons.description_outlined,
-          maxLines: 3,
-        ),
-
         const SizedBox(height: 24),
       ],
     );
@@ -144,9 +129,8 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-
         // Connection Settings
-        if (_viewModel.selectedTransport != MCPTransportType.stdio) ...[
+        if (_viewModel.selectedTransport != McpProtocol.stdio) ...[
           Text(
             tl('Connection Settings'),
             style: Theme.of(
@@ -172,9 +156,9 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
             children: [
               Text(
                 tl('HTTP Headers'),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               IconButton(
                 icon: const Icon(Icons.add_circle_outline),
@@ -207,9 +191,7 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
                         'No headers configured. Add headers for authentication or other custom needs.',
                       ),
                       style: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 14,
                       ),
                     ),
@@ -242,8 +224,7 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
                                 color: Theme.of(context).colorScheme.error,
                                 size: 20,
                               ),
-                              onPressed: () =>
-                                  _viewModel.removeHeader(index),
+                              onPressed: () => _viewModel.removeHeader(index),
                               tooltip: tl('Remove Header'),
                             ),
                           ],
@@ -263,8 +244,7 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
                               child: CustomTextField(
                                 controller: header.value,
                                 label: tl('Header Value'),
-                                hint:
-                                    'Bearer token, application/json, etc.',
+                                hint: 'Bearer token, application/json, etc.',
                               ),
                             ),
                           ],
@@ -295,8 +275,9 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
                     const SizedBox(width: 12),
                     Text(
                       tl('STDIO Transport'),
-                      style: Theme.of(context).textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -336,7 +317,7 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
     Color color;
 
     switch (_viewModel.selectedTransport) {
-      case MCPTransportType.sse:
+      case McpProtocol.sse:
         title = tl('Server-Sent Events (SSE)');
         description = tl(
           'SSE provides real-time communication over HTTP. Best for servers that need to send continuous updates to clients.',
@@ -344,7 +325,7 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
         icon = Icons.stream;
         color = Theme.of(context).colorScheme.primary;
         break;
-      case MCPTransportType.streamable:
+      case McpProtocol.streamableHttp:
         title = tl('Streamable HTTP');
         description = tl(
           'Streamable HTTP is the recommended transport for new MCP implementations. It provides efficient bidirectional communication.',
@@ -352,7 +333,7 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
         icon = Icons.http;
         color = Theme.of(context).colorScheme.tertiary;
         break;
-      case MCPTransportType.stdio:
+      case McpProtocol.stdio:
         title = tl('Standard I/O (STDIO)');
         description = tl(
           'STDIO transport communicates through standard input/output. Perfect for local command-line tools and processes.',
@@ -394,35 +375,35 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
     );
   }
 
-  String _getTransportLabel(MCPTransportType transport) {
+  String _getTransportLabel(McpProtocol transport) {
     switch (transport) {
-      case MCPTransportType.sse:
+      case McpProtocol.sse:
         return tl('Server-Sent Events (SSE)');
-      case MCPTransportType.streamable:
+      case McpProtocol.streamableHttp:
         return tl('Streamable HTTP');
-      case MCPTransportType.stdio:
+      case McpProtocol.stdio:
         return tl('Standard I/O (STDIO)');
     }
   }
 
-  Icon _getTransportIcon(MCPTransportType transport) {
+  Icon _getTransportIcon(McpProtocol transport) {
     switch (transport) {
-      case MCPTransportType.sse:
+      case McpProtocol.sse:
         return const Icon(Icons.stream);
-      case MCPTransportType.streamable:
+      case McpProtocol.streamableHttp:
         return const Icon(Icons.http);
-      case MCPTransportType.stdio:
+      case McpProtocol.stdio:
         return const Icon(Icons.terminal);
     }
   }
 
-  String _getUrlHint(MCPTransportType transport) {
+  String _getUrlHint(McpProtocol transport) {
     switch (transport) {
-      case MCPTransportType.sse:
+      case McpProtocol.sse:
         return 'https://example.com/mcp/sse';
-      case MCPTransportType.streamable:
+      case McpProtocol.streamableHttp:
         return 'https://example.com/mcp/';
-      case MCPTransportType.stdio:
+      case McpProtocol.stdio:
         return '';
     }
   }

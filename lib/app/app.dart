@@ -6,14 +6,14 @@ import 'package:multigateway/app/config/theme.dart';
 import 'package:multigateway/app/storage/appearance_storage.dart';
 
 class MultiGatewayApp extends StatelessWidget {
-  const MultiGatewayApp({super.key});
+  final AppearanceStorage appearanceStorage;
+
+  const MultiGatewayApp({super.key, required this.appearanceStorage});
 
   @override
   Widget build(BuildContext context) {
-    final repository = AppearanceStorage.instance;
-
     return ValueListenableBuilder(
-      valueListenable: repository.themeNotifier,
+      valueListenable: appearanceStorage.themeNotifier,
       builder: (context, settings, _) {
         return DynamicColorBuilder(
           builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
@@ -42,7 +42,9 @@ class MultiGatewayApp extends StatelessWidget {
             // Apply custom text colors only if they match the current brightness
             // Otherwise use ColorScheme defaults (fixes black text in dark mode when using system theme)
             final Color customTextColor = Color(settings.colors.textColor);
-            final Color customTextHintColor = Color(settings.colors.textHintColor);
+            final Color customTextHintColor = Color(
+              settings.colors.textHintColor,
+            );
 
             final bool useCustomTextColor =
                 (lightScheme.brightness == Brightness.light &&

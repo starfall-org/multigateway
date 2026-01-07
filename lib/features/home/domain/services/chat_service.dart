@@ -1,20 +1,22 @@
 import 'dart:async';
 
 import 'package:llm/llm.dart';
-import 'package:llm/models/api/api.dart';
+import 'package:llm/models/llm_api/anthropic/messages.dart';
+import 'package:llm/models/llm_api/googleai/generate_content.dart';
+import 'package:llm/models/llm_api/ollama/chat.dart';
+import 'package:llm/models/llm_api/openai/chat_completions.dart' as openai;
 import 'package:mcp/mcp.dart';
-import 'package:multigateway/core/core.dart';
+import 'package:multigateway/core/core.dart' hide McpTool;
+import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
 
 class ChatService {
   // Thu thập MCP tools ưu tiên cache; cập nhật khi dùng.
-  static Future<List<AIToolFunction>> _collectMcpTools(
-    ChatProfile profile,
-  ) async {
+  static Future<List<McpTool>> _collectMcpTools(ChatProfile profile) async {
     if (profile.activeMcpServers.isEmpty) {
-      return const <AIToolFunction>[];
+      return const <McpTool>[];
     }
     try {
-      final mcpServerStorage = await McpServerStorage.init();
+      final mcpServerStorage = await McpServerInfoStorage.init();
       final mcpService = MCPService();
 
       final servers = profile.activeMcpServers
@@ -22,7 +24,7 @@ class ChatService {
           .whereType<McpServer>()
           .toList();
 
-      if (servers.isEmpty) return const <AIToolFunction>[];
+      if (servers.isEmpty) return const <McpTool>[];
 
       final allowedToolsMap = {
         for (var s in profile.activeMcpServers) s.id: s.activeToolIds.toSet(),
@@ -45,7 +47,7 @@ class ChatService {
             try {
               final tools = await mcpService.fetchTools(s);
               final updatedServer = s.copyWith(tools: tools);
-              await mcpServerStorage.saveItem(updatedServer);
+              await mcpServerStorage.saveItem(updatedServer as McpServerInfo);
               return updatedServer;
             } catch (_) {
               return s;
@@ -58,34 +60,29 @@ class ChatService {
           for (final s in servers) {
             try {
               final tools = await mcpService.fetchTools(s);
-              await mcpServerStorage.saveItem(s.copyWith(tools: tools));
+              await mcpServerStorage.saveItem(s.copyWith(tools: tools) as McpServerInfo);
             } catch (_) {}
           }
         });
       }
 
-      final map = <String, AIToolFunction>{};
-      for (final t in cachedTools) {
-        map[t.name] = AIToolFunction(
-          name: t.name,
-          description: t.description,
-          parameters: t.inputSchema.toJson(),
-        );
-      }
-      return map.values.toList();
+      return cachedTools;
     } catch (_) {
-      return const <AIToolFunction>[];
+      return const <McpTool>[];
     }
   }
 
-  static List<AIToolFunction> _collectGeminiBuiltinTools(
-    Provider provider,
+  static List<GeminiTool> _collectGeminiBuiltinTools(
+    LlmProviderModels? providerModels,
     String modelName,
     ChatProfile profile,
   ) {
+    if (providerModels == null) return const <GeminiTool>[];
+
+    final aiModels = providerModels.toAiModels();
     final lower = modelName.toLowerCase();
     AIModel? selectedModel;
-    for (final m in provider.models) {
+    for (final m in aiModels) {
       if (m.name.toLowerCase() == lower) {
         selectedModel = m;
         break;
@@ -102,36 +99,38 @@ class ChatService {
       supportsUrlContext = selectedModel.builtInTools!.urlContext;
     }
 
-    final builtin = <AIToolFunction>[];
+    final builtin = <GeminiTool>[];
 
     if (supportsSearch &&
         profile.activeBuiltInTools.contains('google_search')) {
       builtin.add(
-        const AIToolFunction(
-          name: '__google_search__',
-          description: '',
-          parameters: {},
+        GeminiTool(
+          functionDeclarations: [
+            GeminiFunctionDeclaration(
+              name: '__google_search__',
+              description: 'Google Search tool',
+              parameters: const {'type': 'object', 'properties': {}},
+            ),
+          ],
         ),
       );
     }
 
     if (supportsCode && profile.activeBuiltInTools.contains('code_execution')) {
-      builtin.add(
-        const AIToolFunction(
-          name: '__code_execution__',
-          description: '',
-          parameters: {},
-        ),
-      );
+      builtin.add(GeminiTool(codeExecution: const GeminiCodeExecution()));
     }
 
     if (supportsUrlContext &&
         profile.activeBuiltInTools.contains('url_context')) {
       builtin.add(
-        const AIToolFunction(
-          name: '__url_context__',
-          description: '',
-          parameters: {},
+        GeminiTool(
+          functionDeclarations: [
+            GeminiFunctionDeclaration(
+              name: '__url_context__',
+              description: 'URL Context tool',
+              parameters: const {'type': 'object', 'properties': {}},
+            ),
+          ],
         ),
       );
     }
@@ -148,6 +147,9 @@ class ChatService {
     List<String>? allowedToolNames,
   }) async* {
     final providerRepo = await LlmProviderInfoStorage.init();
+    final configRepo = await LlmProviderConfigStorage.init();
+    final modelsRepo = await LlmProviderModelsStorage.init();
+
     final providers = providerRepo.getItems();
     if (providers.isEmpty) {
       throw Exception(
@@ -155,10 +157,13 @@ class ChatService {
       );
     }
 
-    final provider = providers.firstWhere(
+    final providerInfo = providers.firstWhere(
       (p) => p.name == providerName,
       orElse: () => throw Exception('Provider "$providerName" not found.'),
     );
+
+    final providerConfig = configRepo.getItem(providerInfo.id);
+    final providerModels = modelsRepo.getItem(providerInfo.id);
 
     final messagesWithCurrent = [
       ...history,
@@ -178,177 +183,196 @@ class ChatService {
     }
 
     final systemInstruction = profile.config.systemPrompt;
+    final apiKey = providerInfo.auth.key ?? '';
 
-    switch (provider.type) {
+    switch (providerInfo.type) {
       case ProviderType.googleai:
         final builtinTools = _collectGeminiBuiltinTools(
-          provider,
+          providerModels,
           modelName,
           profile,
         );
-        final allTools = [...mcpTools, ...builtinTools];
 
-        final aiMessages = messagesWithCurrent
+        final geminiMcpTools = mcpTools
             .map(
-              (m) => AIMessage(
-                role: _mapRole(m.role, ProviderType.googleai),
-                content: [AIContent(type: AIContentType.text, text: m.content)],
+              (t) => GeminiTool(
+                functionDeclarations: [
+                  GeminiFunctionDeclaration(
+                    name: t.name,
+                    description: t.description,
+                    parameters: t.inputSchema.toJson(),
+                  ),
+                ],
               ),
             )
             .toList();
+        final allTools = [...geminiMcpTools, ...builtinTools];
 
-        if (systemInstruction.isNotEmpty && aiMessages.isNotEmpty) {
-          final firstUserMsg = aiMessages.firstWhere(
-            (m) => m.role == 'user',
-            orElse: () => aiMessages.first,
+        final aiMessages = messagesWithCurrent.map((m) {
+          return GeminiContent(
+            role: _mapRole(m.role, ProviderType.googleai),
+            parts: [GeminiPart(text: m.content)],
           );
-          final idx = aiMessages.indexOf(firstUserMsg);
-          aiMessages[idx] = AIMessage(
-            role: firstUserMsg.role,
-            content: [
-              AIContent(
-                type: AIContentType.text,
-                text:
-                    '$systemInstruction\n\n${firstUserMsg.content.first.text}',
-              ),
-            ],
-          );
-        }
+        }).toList();
 
-        final vx = provider.vertexAIConfig;
-        if (vx != null && vx.projectId.isNotEmpty) {
-          final vertex = GoogleVertexAI(
-            defaultModel: modelName,
-            provider: provider,
-            projectId: vx.projectId,
-            location: vx.location,
-          );
-          final aiRequest = AIRequest(
-            model: modelName,
-            messages: aiMessages,
-            tools: allTools,
-            stream: true,
-          );
-          await for (final resp in vertex.generateStream(aiRequest)) {
-            yield resp.text;
-          }
-        } else {
-          final studio = GoogleAIStudio(
-            defaultModel: modelName,
-            provider: provider,
-          );
-          final aiRequest = AIRequest(
-            model: modelName,
-            messages: aiMessages,
-            tools: allTools,
-            stream: true,
-          );
-          await for (final resp in studio.generateStream(aiRequest)) {
-            yield resp.text;
-          }
+        final studio = GoogleAiStudio(
+          apiKey: apiKey,
+          baseUrl: providerInfo.baseUrl,
+        );
+
+        final aiRequest = GeminiGenerateContentRequest(
+          contents: aiMessages,
+          tools: allTools.isNotEmpty ? allTools : null,
+          systemInstruction: systemInstruction.isNotEmpty
+              ? GeminiContent(
+                  role: 'system',
+                  parts: [GeminiPart(text: systemInstruction)],
+                )
+              : null,
+        );
+
+        await for (final resp in studio.generateContentStream(
+          model: modelName,
+          request: aiRequest,
+        )) {
+          final text =
+              resp.candidates?.firstOrNull?.content?.parts?.firstOrNull?.text;
+          if (text != null) yield text;
         }
         break;
 
       case ProviderType.openai:
-        final routes = provider.openAIRoutes;
-        final service = OpenAI(
-          baseUrl: provider.baseUrl,
-          apiKey: provider.apiKey!,
-          chatPath: routes.chatCompletion,
-          modelsPath: routes.modelsRouteOrUrl,
-          headers: provider.headers,
+        final service = OpenAiProvider(
+          baseUrl: providerInfo.baseUrl,
+          apiKey: apiKey,
+          chatPath:
+              providerConfig?.customChatCompletionUrl ?? '/chat/completions',
+          modelsPath: providerConfig?.customListModelsUrl ?? '/models',
+          headers: providerConfig?.headers?.cast<String, String>() ?? const {},
         );
 
-        final aiMessages = messagesWithCurrent
-            .map(
-              (m) => AIMessage(
-                role: _mapRole(m.role, ProviderType.openai),
-                content: [AIContent(type: AIContentType.text, text: m.content)],
-              ),
-            )
-            .toList();
+        final aiMessages = messagesWithCurrent.map((m) {
+          return openai.RequestMessage(
+            role: _mapRole(m.role, ProviderType.openai),
+            content: m.content,
+          );
+        }).toList();
 
         if (systemInstruction.isNotEmpty) {
           aiMessages.insert(
             0,
-            AIMessage(
-              role: 'system',
-              content: [
-                AIContent(type: AIContentType.text, text: systemInstruction),
-              ],
-            ),
+            openai.RequestMessage(role: 'system', content: systemInstruction),
           );
         }
 
-        final aiRequest = AIRequest(
+        final openaiTools = mcpTools
+            .map(
+              (t) => openai.Tool(
+                type: 'function',
+                function: openai.FunctionDefinition(
+                  name: t.name,
+                  description: t.description,
+                  parameters: t.inputSchema.toJson(),
+                ),
+              ),
+            )
+            .toList();
+
+        final aiRequest = openai.OpenAiChatCompletionsRequest(
           model: modelName,
           messages: aiMessages,
-          tools: mcpTools,
+          tools: openaiTools.isNotEmpty ? openaiTools : null,
           stream: true,
         );
 
-        final stream = service.generateStream(aiRequest);
-        await for (final resp in stream) {
-          yield resp.text;
+        await for (final resp in service.chatCompletionsStream(aiRequest)) {
+          final text = resp.choices?.firstOrNull?.delta?.content;
+          if (text != null) yield text;
         }
         break;
 
       case ProviderType.anthropic:
-        final service = Anthropic(
-          baseUrl: provider.baseUrl,
-          apiKey: provider.apiKey!,
-          headers: provider.headers,
+        final service = AnthropicProvider(
+          baseUrl: providerInfo.baseUrl,
+          apiKey: apiKey,
+          headers: providerConfig?.headers?.cast<String, String>() ?? const {},
         );
 
-        final aiMessages = messagesWithCurrent
+        final aiMessages = messagesWithCurrent.map((m) {
+          return AnthropicMessage(
+            role: _mapRole(m.role, ProviderType.anthropic),
+            content: m.content,
+          );
+        }).toList();
+
+        final anthropicTools = mcpTools
             .map(
-              (m) => AIMessage(
-                role: _mapRole(m.role, ProviderType.anthropic),
-                content: [AIContent(type: AIContentType.text, text: m.content)],
+              (t) => AnthropicTool(
+                name: t.name,
+                description: t.description,
+                inputSchema: t.inputSchema.toJson(),
               ),
             )
             .toList();
 
-        final aiRequest = AIRequest(
+        final aiRequest = AnthropicMessagesRequest(
           model: modelName,
           messages: aiMessages,
-          tools: mcpTools,
+          maxTokens: 4096, // Default or from config
+          system: systemInstruction.isNotEmpty ? systemInstruction : null,
+          tools: anthropicTools.isNotEmpty ? anthropicTools : null,
           stream: true,
-          extra: systemInstruction.isNotEmpty
-              ? {'system': systemInstruction}
-              : {},
         );
-        final stream = service.generateStream(aiRequest);
-        await for (final resp in stream) {
-          yield resp.text;
+
+        await for (final resp in service.messagesStream(aiRequest)) {
+          final text = resp.content.firstOrNull?.text;
+          if (text != null) yield text;
         }
         break;
 
       case ProviderType.ollama:
-        final service = Ollama(
-          baseUrl: provider.baseUrl,
-          apiKey: provider.apiKey!,
-          headers: provider.headers,
+        final service = OllamaProvider(
+          baseUrl: providerInfo.baseUrl,
+          apiKey: apiKey,
+          headers: providerConfig?.headers?.cast<String, String>() ?? const {},
         );
 
-        final aiMessages = messagesWithCurrent
+        final aiMessages = messagesWithCurrent.map((m) {
+          return OllamaMessage(
+            role: _mapRole(m.role, ProviderType.ollama),
+            content: m.content,
+          );
+        }).toList();
+
+        if (systemInstruction.isNotEmpty) {
+          aiMessages.insert(
+            0,
+            OllamaMessage(role: 'system', content: systemInstruction),
+          );
+        }
+
+        final ollamaTools = mcpTools
             .map(
-              (m) => AIMessage(
-                role: _mapRole(m.role, ProviderType.ollama),
-                content: [AIContent(type: AIContentType.text, text: m.content)],
+              (t) => OllamaTool(
+                function: OllamaFunction(
+                  name: t.name,
+                  description: t.description,
+                  parameters: t.inputSchema.toJson(),
+                ),
               ),
             )
             .toList();
 
-        final aiRequest = AIRequest(
+        final aiRequest = OllamaChatRequest(
           model: modelName,
           messages: aiMessages,
-          tools: mcpTools,
+          tools: ollamaTools.isNotEmpty ? ollamaTools : null,
           stream: true,
         );
-        final stream = service.generateStream(aiRequest);
-        await for (final resp in stream) {
-          yield resp.text;
+
+        await for (final resp in service.chatStream(aiRequest)) {
+          final text = resp.message?.content;
+          if (text != null) yield text;
         }
         break;
     }

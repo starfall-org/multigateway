@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'package:llm/llm.dart';
+import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/llm/models/llm_provider_info.dart';
 
 class ModelPickerSheet extends StatelessWidget {
-  final List<Provider> providers;
+  final List<LlmProviderInfo> providers;
+  final Map<String, List<AIModel>> providerModels;
   final Map<String, bool> providerCollapsed;
   final String? selectedProviderName;
   final String? selectedModelName;
@@ -15,6 +16,7 @@ class ModelPickerSheet extends StatelessWidget {
   const ModelPickerSheet({
     super.key,
     required this.providers,
+    required this.providerModels,
     required this.providerCollapsed,
     this.selectedProviderName,
     this.selectedModelName,
@@ -69,6 +71,7 @@ class ModelPickerSheet extends StatelessWidget {
                   shrinkWrap: true,
                   children: providers.map((provider) {
                     final collapsed = providerCollapsed[provider.name] ?? false;
+                    final models = providerModels[provider.id] ?? [];
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -99,7 +102,7 @@ class ModelPickerSheet extends StatelessWidget {
                               onToggleProvider(provider.name, !collapsed),
                         ),
                         if (!collapsed)
-                          ...provider.models.map((model) {
+                          ...models.map((model) {
                             final isSelected =
                                 selectedProviderName == provider.name &&
                                 selectedModelName == model.name;
@@ -153,7 +156,8 @@ class ModelPickerSheet extends StatelessWidget {
   /// Static method to show the drawer as a modal bottom sheet
   static void show(
     BuildContext context, {
-    required List<Provider> providers,
+    required List<LlmProviderInfo> providers,
+    required Map<String, List<AIModel>> providerModels,
     required Map<String, bool> providerCollapsed,
     String? selectedProviderName,
     String? selectedModelName,
@@ -171,6 +175,7 @@ class ModelPickerSheet extends StatelessWidget {
         height: MediaQuery.of(context).size.height * 0.6,
         child: ModelPickerSheet(
           providers: providers,
+          providerModels: providerModels,
           providerCollapsed: providerCollapsed,
           selectedProviderName: selectedProviderName,
           selectedModelName: selectedModelName,

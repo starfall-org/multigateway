@@ -7,12 +7,12 @@ import '../../models/llm_api/ollama/embed.dart';
 import '../../models/llm_api/ollama/tags.dart';
 import '../base.dart';
 
-class Ollama extends AIBaseApi {
+class OllamaProvider extends LlmProviderBase {
   final String chatPath;
   final String tagsPath;
   final String embeddingsPath;
 
-  Ollama({
+  OllamaProvider({
     super.apiKey = '',
     required super.baseUrl,
     this.chatPath = '/api/chat',
@@ -32,19 +32,23 @@ class Ollama extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return OllamaChatResponse.fromJson(j);
     }
-    throw Exception('Ollama chat error ${res.statusCode}: ${res.body}');
+    throw Exception('OllamaProvider chat error ${res.statusCode}: ${res.body}');
   }
 
-  Stream<OllamaChatStreamResponse> chatStream(OllamaChatRequest request) async* {
+  Stream<OllamaChatStreamResponse> chatStream(
+    OllamaChatRequest request,
+  ) async* {
     final payload = request.toJson();
     final rq = http.Request('POST', uri(chatPath))
       ..headers.addAll(getHeaders())
       ..body = jsonEncode(payload);
     final rs = await rq.send();
-    
+
     if (rs.statusCode < 200 || rs.statusCode >= 300) {
       final body = await rs.stream.bytesToString();
-      throw Exception('Ollama chat stream error ${rs.statusCode}: $body');
+      throw Exception(
+        'OllamaProvider chat stream error ${rs.statusCode}: $body',
+      );
     }
 
     await for (final chunk in rs.stream.transform(utf8.decoder)) {
@@ -71,7 +75,9 @@ class Ollama extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return OllamaTagsResponse.fromJson(j);
     }
-    throw Exception('Ollama list models error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'OllamaProvider list models error ${res.statusCode}: ${res.body}',
+    );
   }
 
   Future<OllamaEmbedResponse> embeddings(OllamaEmbedRequest request) async {
@@ -85,6 +91,8 @@ class Ollama extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return OllamaEmbedResponse.fromJson(j);
     }
-    throw Exception('Ollama embeddings error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'OllamaProvider embeddings error ${res.statusCode}: ${res.body}',
+    );
   }
 }

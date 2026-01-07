@@ -159,35 +159,6 @@ class ViewProfileDialog extends StatelessWidget {
                 profile.config.conversationLength.toString(),
               ),
 
-              const SizedBox(height: 32),
-
-              // Persistence
-              if (profile.persistChatSelection != null) ...[
-                _buildSectionHeader(
-                  context,
-                  'agents.persist_section_title',
-                  Icons.save_outlined,
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    profile.persistChatSelection!
-                        ? Icons.check_circle
-                        : Icons.cancel,
-                    color: profile.persistChatSelection!
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.error,
-                  ),
-                  title: Text(
-                    profile.persistChatSelection!
-                        ? 'agents.persist_force_on'
-                        : 'agents.persist_force_off',
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
-
               // MCP Servers
               if (profile.activeMcpServerIds.isNotEmpty) ...[
                 _buildSectionHeader(

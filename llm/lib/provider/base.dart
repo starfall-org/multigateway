@@ -1,9 +1,9 @@
-abstract class AIBaseApi {
+abstract class LlmProviderBase {
   final String apiKey;
   final String baseUrl;
   final Map<String, String> headers;
 
-  const AIBaseApi({
+  const LlmProviderBase({
     this.apiKey = '',
     required this.baseUrl,
     this.headers = const {},

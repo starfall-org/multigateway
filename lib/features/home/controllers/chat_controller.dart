@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:llm/llm.dart';
 import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
-import 'package:multigateway/core/mcp/storage/mcp_server_info_storage.dart';
-import 'package:multigateway/features/home/domain/domain.dart';
-import 'package:multigateway/features/home/ui/controllers/attachment_controller.dart';
-import 'package:multigateway/features/home/ui/controllers/chat_controller_parts/chat_navigation_interface.dart';
-import 'package:multigateway/features/home/ui/controllers/message_controller.dart';
-import 'package:multigateway/features/home/ui/controllers/model_selection_controller.dart';
-import 'package:multigateway/features/home/ui/controllers/profile_controller.dart';
+import 'package:multigateway/features/home/controllers/attachment_controller.dart';
+import 'package:multigateway/features/home/controllers/message_controller.dart';
+import 'package:multigateway/features/home/controllers/model_selection_controller.dart';
+import 'package:multigateway/features/home/controllers/profile_controller.dart';
 // Import các controller con
-import 'package:multigateway/features/home/ui/controllers/session_controller.dart';
+import 'package:multigateway/features/home/controllers/session_controller.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
 import 'package:uuid/uuid.dart';
 
@@ -39,16 +35,20 @@ class ChatController extends ChangeNotifier {
     required ConversationStorage conversationRepository,
     required ChatProfileStorage aiProfileRepository,
     required LlmProviderInfoStorage llmProviderInfoStorage,
+    required LlmProviderModelsStorage llmProviderModelsStorage,
     required this.preferencesSp,
     required McpServerInfoStorage mcpServerStorage,
     required this.speechManager,
   }) {
     // Initialize sub-controllers
-    sessionController = SessionController(conversationRepository: conversationRepository);
+    sessionController = SessionController(
+      conversationRepository: conversationRepository,
+    );
     messageController = MessageController();
     attachmentController = AttachmentController();
     modelSelectionController = ModelSelectionController(
-      llmProviderInfoStorage: llmProviderInfoStorage,
+      pInfStorage: llmProviderInfoStorage,
+      pModStorage: llmProviderModelsStorage,
     );
     profileController = ProfileController(
       aiProfileRepository: aiProfileRepository,
@@ -72,7 +72,7 @@ class ChatController extends ChangeNotifier {
       attachmentController.pendingAttachments;
   List<String> get inspectingAttachments =>
       attachmentController.inspectingAttachments;
-  List<Provider> get providers => modelSelectionController.providers;
+  List<LlmProviderInfo> get providers => modelSelectionController.providers;
   List<McpServer> get mcpServers => profileController.mcpServers;
   Map<String, bool> get providerCollapsed =>
       modelSelectionController.providerCollapsed;
@@ -109,28 +109,8 @@ class ChatController extends ChangeNotifier {
       attachmentController.openAttachmentsSidebar(attachments);
   void openEndDrawer() => navigator.openEndDrawer();
 
-  bool shouldPersistSelections() {
-    final prefs = preferencesSp.currentPreferences;
-    if (selectedProfile?.persistChatSelection != null) {
-      return selectedProfile!.persistChatSelection!;
-    }
-    return prefs.persistChatSelection;
-  }
-
   void selectModel(String providerName, String modelName) {
     modelSelectionController.selectModel(providerName, modelName);
-
-    // Persist selection into current conversation if preference allows
-    if (currentSession != null && shouldPersistSelections()) {
-      final updatedSession = currentSession!.copyWith(
-        providerName: providerName,
-        modelName: modelName,
-        updatedAt: DateTime.now(),
-      );
-      sessionController.updateSession(updatedSession);
-      // ignore: discarded_futures
-      sessionController.saveCurrentSession();
-    }
   }
 
   Future<void> handleSubmitted(String text, BuildContext context) async {
@@ -148,32 +128,12 @@ class ChatController extends ChangeNotifier {
     if (!context.mounted) return;
 
     final providersList = providerRepo.getItems();
-    final persist = shouldPersistSelections();
 
-    final selection = ChatLogicUtils.resolveProviderAndModel(
-      currentSession: currentSession,
-      persistSelection: persist,
-      selectedProvider: selectedProviderName,
-      selectedModel: selectedModelName,
-      providers: providersList,
-    );
-
-    final providerName = selection.provider;
-    final modelName = selection.model;
-
-    // If persistence is enabled and not loaded from session, store selection
-    if (currentSession != null &&
-        persist &&
-        (currentSession!.providerId.isEmpty ||
-            currentSession!.modelName.isEmpty)) {
-      final updatedSession = currentSession!.copyWith(
-        providerId: providerName,
-        modelName: modelName,
-        updatedAt: DateTime.now(),
-      );
-      sessionController.updateSession(updatedSession);
-      await sessionController.saveCurrentSession();
-    }
+    // Use default provider and model if available
+    final providerName =
+        selectedProviderName ??
+        (providersList.isNotEmpty ? providersList.first.name : '');
+    final modelName = selectedModelName ?? '';
 
     final profile =
         selectedProfile ??
@@ -183,11 +143,8 @@ class ChatController extends ChangeNotifier {
           config: LlmChatConfig(systemPrompt: '', enableStream: true),
         );
 
-    // Prepare allowed tool names if persistence is enabled
+    // Prepare allowed tool names
     List<String>? allowedToolNames;
-    if (persist) {
-      allowedToolNames = await profileController.snapshotEnabledToolNames(profile);
-    }
 
     if (!context.mounted) return;
 
@@ -222,35 +179,16 @@ class ChatController extends ChangeNotifier {
   Future<void> regenerateLast(BuildContext context) async {
     if (currentSession == null) return;
 
-    final providerRepo = await LlmProviderInfoStorage.init();
+    final providerRepo = LlmProviderInfoStorage.instance;
     if (!context.mounted) return;
 
     final providersList = providerRepo.getItems();
-    final persist = shouldPersistSelections();
 
-    final selection = ChatLogicUtils.resolveProviderAndModel(
-      currentSession: currentSession,
-      persistSelection: persist,
-      selectedProvider: selectedProviderName,
-      selectedModel: selectedModelName,
-      providers: providersList,
-    );
-
-    final providerName = selection.provider;
-    final modelName = selection.model;
-
-    if (currentSession != null &&
-        persist &&
-        (currentSession!.providerId.isEmpty ||
-            currentSession!.modelName.isEmpty)) {
-      final updatedSession = currentSession!.copyWith(
-        providerId: providerName,
-        modelName: modelName,
-        updatedAt: DateTime.now(),
-      );
-      sessionController.updateSession(updatedSession);
-      await sessionController.saveCurrentSession();
-    }
+    // Use default provider and model if available
+    final providerName =
+        selectedProviderName ??
+        (providersList.isNotEmpty ? providersList.first.name : '');
+    final modelName = selectedModelName ?? '';
 
     final profile =
         selectedProfile ??
@@ -260,11 +198,8 @@ class ChatController extends ChangeNotifier {
           config: LlmChatConfig(systemPrompt: '', enableStream: true),
         );
 
-    // Prepare allowed tool names if persistence is enabled
+    // Prepare allowed tool names
     List<String>? allowedToolNames;
-    if (persist) {
-      allowedToolNames = await profileController.snapshotEnabledToolNames(profile);
-    }
 
     if (!context.mounted) return;
 
@@ -400,4 +335,20 @@ class ChatController extends ChangeNotifier {
     speechManager.stop();
     super.dispose();
   }
+}
+
+abstract class ChatNavigationInterface {
+  void showSnackBar(String message);
+
+  Future<({String content, List<String> attachments, bool resend})?>
+  showEditMessageDialog({
+    required String initialContent,
+    required List<String> initialAttachments,
+  });
+
+  void openDrawer();
+  void openEndDrawer();
+  void closeEndDrawer();
+
+  String getTranslatedString(String key, {Map<String, String>? namedArgs});
 }

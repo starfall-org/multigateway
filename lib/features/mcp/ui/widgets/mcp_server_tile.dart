@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:mcp/models/mcp_server.dart';
+import 'package:multigateway/core/core.dart';
 
 class McpServerTile extends StatelessWidget {
-  final McpServer server;
+  final McpServerInfo server;
   final VoidCallback onDelete;
 
   const McpServerTile({
@@ -15,7 +15,7 @@ class McpServerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       title: Text(server.name),
-      subtitle: Text(server.description ?? ''),
+      subtitle: Text(server.protocol.name.toUpperCase()),
       trailing: IconButton(
         icon: const Icon(Icons.delete_outline),
         onPressed: onDelete,

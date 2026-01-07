@@ -13,6 +13,8 @@ class LlmProviderInfoStorage extends HiveBaseStorage<LlmProviderInfo> {
     return _instance!;
   }
 
+  static Future<LlmProviderInfoStorage> init() async => instance;
+
   @override
   String get prefix => _prefix;
 

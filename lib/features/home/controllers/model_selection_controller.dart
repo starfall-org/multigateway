@@ -1,22 +1,29 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:llm/llm.dart';
-import 'package:llm/models/llm_model/base.dart';
+import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
+import 'package:multigateway/core/llm/models/llm_provider_info.dart';
 import 'package:multigateway/core/llm/storage/llm_provider_info_storage.dart';
-
+import 'package:multigateway/core/llm/storage/llm_provider_models_storage.dart';
 
 /// Controller responsible for provider and model selection
 class ModelSelectionController extends ChangeNotifier {
   final LlmProviderInfoStorage pInfStorage;
+  final LlmProviderModelsStorage pModStorage;
 
   StreamSubscription? _providerSubscription;
-  List<Provider> providers = [];
+  List<LlmProviderInfo> providers = [];
+  Map<String, List<AIModel>> providerModels = {};
+
+  /// DEPRECATED: Use LlmProviderInfoStorage,
   final Map<String, bool> providerCollapsed = {}; // true = collapsed
   String? selectedProviderName;
   String? selectedModelName;
 
-  ModelSelectionController({required this.pInfStorage}) {
+  ModelSelectionController({
+    required this.pInfStorage,
+    required this.pModStorage,
+  }) {
     _providerSubscription = pInfStorage.changes.listen((_) {
       refreshProviders();
     });
@@ -28,7 +35,9 @@ class ModelSelectionController extends ChangeNotifier {
       final provider = providers.firstWhere(
         (p) => p.name == selectedProviderName,
       );
-      return provider.models.firstWhere((m) => m.name == selectedModelName);
+      final models = providerModels[provider.id];
+      if (models == null) return null;
+      return models.firstWhere((m) => m.name == selectedModelName);
     } catch (e) {
       return null;
     }
@@ -36,9 +45,16 @@ class ModelSelectionController extends ChangeNotifier {
 
   Future<void> refreshProviders() async {
     providers = pInfStorage.getItems();
-    // Initialize collapse map entries for unseen providers
+    providerModels.clear();
+
     for (final p in providers) {
       providerCollapsed.putIfAbsent(p.name, () => false);
+      final modelsObj = pModStorage.getItem(p.id);
+      if (modelsObj != null) {
+        providerModels[p.id] = modelsObj.toAiModels();
+      } else {
+        providerModels[p.id] = [];
+      }
     }
     notifyListeners();
   }

@@ -7,11 +7,19 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:multigateway/app/app.dart';
+import 'package:multigateway/app/storage/appearance_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final appearanceStorage = AppearanceStorage(prefs);
+
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MultiGatewayApp());
+    await tester.pumpWidget(
+      MultiGatewayApp(appearanceStorage: appearanceStorage),
+    );
 
     // Verify that our app title is present.
     // Note: The title in the AppBar is 'Chào Hỏi Và Hỗ Trợ'

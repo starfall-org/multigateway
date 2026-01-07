@@ -1,3 +1,5 @@
+import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
+import 'package:multigateway/core/llm/models/llm_provider_info.dart';
 import 'package:multigateway/core/chat/models/conversation.dart';
 
 class ChatLogicUtils {
@@ -5,17 +7,12 @@ class ChatLogicUtils {
   static String generateTitle(String text, List<String> files) {
     final base = text.isNotEmpty
         ? text
-        : (files.isNotEmpty
-              ? 'Attachments (${files.length})'
-              : 'New Chat');
+        : (files.isNotEmpty ? 'Attachments (${files.length})' : 'New Chat');
     return base.length > 30 ? '${base.substring(0, 30)}...' : base;
   }
 
   /// Định dạng nội dung tin nhắn kèm danh sách tệp đính kèm để gửi cho model
-  static String formatFilesForPrompt(
-    String text,
-    List<String> files,
-  ) {
+  static String formatFilesForPrompt(String text, List<String> files) {
     if (files.isEmpty) return text;
     final names = files.map((p) => p.split('/').last).join(', ');
     return '${text.isEmpty ? '' : '$text\n'}[Files: $names]';
@@ -27,7 +24,8 @@ class ChatLogicUtils {
     required bool persistSelection,
     required String? selectedProvider,
     required String? selectedModel,
-    required List<Provider> providers,
+    required List<LlmProviderInfo> providers,
+    required Map<String, List<AIModel>> providerModels,
   }) {
     if (persistSelection &&
         currentSession?.providerId != null &&
@@ -38,14 +36,15 @@ class ChatLogicUtils {
       );
     }
 
-    final providerName =
-        selectedProvider ?? (providers.isNotEmpty ? providers.first.name : '');
+    final provider = providers.isNotEmpty ? providers.first : null;
+    final providerName = selectedProvider ?? (provider?.name ?? '');
 
+    final firstProviderModels = provider != null
+        ? providerModels[provider.id] ?? []
+        : [];
     final modelName =
         selectedModel ??
-        ((providers.isNotEmpty && providers.first.models.isNotEmpty)
-            ? providers.first.models.first.name
-            : '');
+        (firstProviderModels.isNotEmpty ? firstProviderModels.first.name : '');
 
     return (provider: providerName, model: modelName);
   }

@@ -1,9 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/translate/tl.dart';
-import 'package:multigateway/core/mcp/storage/mcp_server_repository.dart';
+import 'package:multigateway/core/core.dart';
 import 'package:multigateway/features/mcp/ui/edit_mcpserver_screen.dart';
 import 'package:multigateway/shared/utils/icon_builder.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
@@ -20,10 +19,10 @@ class McpServersPage extends StatefulWidget {
 }
 
 class _McpServersPageState extends State<McpServersPage> {
-  List<McpServer> _servers = [];
+  List<McpServerInfo> _servers = [];
   bool _isLoading = true;
   bool _isGridView = false;
-  late McpServerStorage _repository;
+  late McpServerInfoStorage _repository;
 
   @override
   void initState() {
@@ -41,7 +40,7 @@ class _McpServersPageState extends State<McpServersPage> {
 
     try {
       // Add timeout to prevent infinite loading
-      _repository = await McpServerStorage.init().timeout(
+      _repository = await McpServerInfoStorage.init().timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           throw TimeoutException(
@@ -87,32 +86,25 @@ class _McpServersPageState extends State<McpServersPage> {
     }
   }
 
-  String _getServerSubtitle(McpServer server) {
+  String _getServerSubtitle(McpServerInfo server) {
     final List<String> parts = [];
 
     // Add transport type
-    switch (server.transport) {
-      case MCPTransportType.stdio:
+    switch (server.protocol) {
+      case McpProtocol.stdio:
         parts.add('STDIO');
         break;
-      case MCPTransportType.sse:
+      case McpProtocol.sse:
         parts.add('SSE');
         break;
-      case MCPTransportType.streamable:
+      case McpProtocol.streamableHttp:
         parts.add('Streamable');
         break;
     }
 
-    // Add tools/resources count
-    final toolCount = server.tools.length;
-    final resourceCount = server.resources.length;
-    final promptCount = server.prompts.length;
-
-    if (toolCount > 0) parts.add('$toolCount tools');
-    if (resourceCount > 0) parts.add('$resourceCount resources');
-    if (promptCount > 0) parts.add('$promptCount prompts');
-
-    return parts.isEmpty ? 'No capabilities' : parts.join(' • ');
+    // Note: Tool/resource counts would come from McpServerTools
+    // For now, just show the protocol
+    return parts.isEmpty ? 'No protocol' : parts.join(' • ');
   }
 
   @override
@@ -210,13 +202,13 @@ class _McpServersPageState extends State<McpServersPage> {
       if (oldIndex < newIndex) {
         newIndex -= 1;
       }
-      final McpServer item = _servers.removeAt(oldIndex);
+      final McpServerInfo item = _servers.removeAt(oldIndex);
       _servers.insert(newIndex, item);
     });
     _repository.saveOrder(_servers.map((e) => e.id).toList());
   }
 
-  Widget _buildServerTile(McpServer server, int index) {
+  Widget _buildServerTile(McpServerInfo server, int index) {
     return ResourceTile(
       key: ValueKey(server.id),
       title: server.name,
@@ -248,7 +240,7 @@ class _McpServersPageState extends State<McpServersPage> {
     );
   }
 
-  Widget _buildServerCard(McpServer server) {
+  Widget _buildServerCard(McpServerInfo server) {
     return ItemCard(
       icon: buildIcon(server.name),
       title: server.name,
@@ -279,7 +271,7 @@ class _McpServersPageState extends State<McpServersPage> {
     );
   }
 
-  Future<void> _confirmDelete(McpServer server) async {
+  Future<void> _confirmDelete(McpServerInfo server) async {
     final confirm = await ConfirmDialog.show(
       context,
       title: tl('Delete'),

@@ -13,6 +13,8 @@ class McpServerInfoStorage extends HiveBaseStorage<McpServerInfo> {
     return _instance!;
   }
 
+  static Future<McpServerInfoStorage> init() async => instance;
+
   @override
   String get prefix => _prefix;
 

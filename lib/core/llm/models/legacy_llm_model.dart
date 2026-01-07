@@ -1,4 +1,4 @@
-//WARNING: Do not modify this file
+//WARNING: legacy
 
 enum ModelType { chat, image, video, audio, embed, rerank }
 

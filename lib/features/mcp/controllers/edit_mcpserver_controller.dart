@@ -1,26 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
 
 class EditMcpServerViewModel extends ChangeNotifier {
   // Repository
-  late McpServerStorage _repository;
+  late McpServerInfoStorage _repository;
 
   // Form controllers
   final TextEditingController nameController = TextEditingController();
-  final TextEditingController descriptionController = TextEditingController();
   final TextEditingController urlController = TextEditingController();
 
   // State
-  MCPTransportType _selectedTransport = MCPTransportType.sse;
+  McpProtocol _selectedTransport = McpProtocol.sse;
   final List<HeaderPair> _headers = [];
   bool _isLoading = false;
   String? _editingServerId;
 
   // Getters
-  MCPTransportType get selectedTransport => _selectedTransport;
+  McpProtocol get selectedTransport => _selectedTransport;
   List<HeaderPair> get headers => _headers;
   bool get isLoading => _isLoading;
   bool get isEditMode => _editingServerId != null;
@@ -30,43 +28,43 @@ class EditMcpServerViewModel extends ChangeNotifier {
   }
 
   Future<void> _initRepository() async {
-    _repository = await McpServerStorage.init();
+    _repository = await McpServerInfoStorage.init();
   }
 
-  void initialize(McpServer? server) {
-    if (server != null) {
-      _editingServerId = server.id;
-      nameController.text = server.name;
-      descriptionController.text = server.description ?? '';
-      _selectedTransport = server.transport;
+  void initialize(McpServerInfo? serverInfo) {
+    if (serverInfo != null) {
+      _editingServerId = serverInfo.id;
+      nameController.text = serverInfo.name;
+      _selectedTransport = serverInfo.protocol;
 
-      if (server.httpConfig != null) {
-        urlController.text = server.httpConfig!.url;
-        _headers.clear();
-        server.httpConfig!.headers?.forEach((key, value) {
-          _headers.add(
-            HeaderPair(
-              TextEditingController(text: key),
-              TextEditingController(text: value),
-            ),
-          );
-        });
+      if (serverInfo.url != null) {
+        urlController.text = serverInfo.url!;
       }
+
+      _headers.clear();
+      serverInfo.headers?.forEach((key, value) {
+        _headers.add(
+          HeaderPair(
+            TextEditingController(text: key),
+            TextEditingController(text: value),
+          ),
+        );
+      });
       notifyListeners();
     } else {
       // Default values for new server
-      _selectedTransport = MCPTransportType.sse;
+      _selectedTransport = McpProtocol.sse;
       _headers.clear();
       addHeader(); // Add one empty header by default
     }
   }
 
-  void updateTransport(MCPTransportType transport) {
+  void updateTransport(McpProtocol transport) {
     if (_selectedTransport != transport) {
       _selectedTransport = transport;
 
       // Clear URL for stdio transport
-      if (transport == MCPTransportType.stdio) {
+      if (transport == McpProtocol.stdio) {
         urlController.clear();
         _headers.clear();
       } else if (_headers.isEmpty) {
@@ -95,13 +93,13 @@ class EditMcpServerViewModel extends ChangeNotifier {
       return tl('Please enter a server name');
     }
 
-    if (_selectedTransport != MCPTransportType.stdio &&
+    if (_selectedTransport != McpProtocol.stdio &&
         urlController.text.trim().isEmpty) {
       return tl('Please enter a server URL');
     }
 
     // Validate URL format for HTTP transports
-    if (_selectedTransport != MCPTransportType.stdio) {
+    if (_selectedTransport != McpProtocol.stdio) {
       final url = urlController.text.trim();
       final uri = Uri.tryParse(url);
       if (uri == null || !uri.hasAbsolutePath) {
@@ -135,31 +133,23 @@ class EditMcpServerViewModel extends ChangeNotifier {
         }
       }
 
-      final server = McpServer(
-        id:
-            _editingServerId ??
-            DateTime.now().millisecondsSinceEpoch.toString(),
-        name: nameController.text.trim(),
-        description: descriptionController.text.trim().isEmpty
-            ? null
-            : descriptionController.text.trim(),
-        transport: _selectedTransport,
-        httpConfig: _selectedTransport != MCPTransportType.stdio
-            ? MCPHttpConfig(
-                url: urlController.text.trim(),
-                headers: headersMap.isNotEmpty ? headersMap : null,
-              )
+      final serverInfo = McpServerInfo(
+        _editingServerId,
+        nameController.text.trim(),
+        _selectedTransport,
+        _selectedTransport != McpProtocol.stdio
+            ? urlController.text.trim()
             : null,
+        headersMap.isNotEmpty ? headersMap : null,
+        null, // stdioConfig - TODO: implement if needed
       );
 
-      if (isEditMode) {
-        await _repository.saveItem(server);
-        if (context.mounted) {
+      await _repository.saveItem(serverInfo);
+
+      if (context.mounted) {
+        if (isEditMode) {
           context.showSuccessSnackBar(tl('MCP server updated successfully'));
-        }
-      } else {
-        await _repository.saveItem(server);
-        if (context.mounted) {
+        } else {
           context.showSuccessSnackBar(tl('MCP server added successfully'));
         }
       }
@@ -180,7 +170,6 @@ class EditMcpServerViewModel extends ChangeNotifier {
   @override
   void dispose() {
     nameController.dispose();
-    descriptionController.dispose();
     urlController.dispose();
     for (final header in _headers) {
       header.dispose();

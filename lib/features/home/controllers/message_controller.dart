@@ -4,6 +4,7 @@ import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/features/home/domain/domain.dart';
+import 'package:multigateway/features/home/domain/utils/chat_logic_utils.dart';
 import 'package:multigateway/features/home/ui/widgets/edit_message_sheet.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
 import 'package:multigateway/shared/widgets/error_debug_dialog.dart';
@@ -192,7 +193,8 @@ class MessageController extends ChangeNotifier {
       debugPrint(stackTrace.toString());
 
       if (context != null && context.mounted) {
-        if (PreferencesStorage.instance.currentPreferences.debugMode) {
+        final prefs = await PreferencesStorage.instance;
+        if (prefs.currentPreferences.debugMode) {
           ErrorDebugDialog.show(context, error: e, stackTrace: stackTrace);
         }
       }
@@ -262,7 +264,8 @@ class MessageController extends ChangeNotifier {
       debugPrint(stackTrace.toString());
 
       if (context != null && context.mounted) {
-        if (PreferencesStorage.instance.currentPreferences.debugMode) {
+        final prefs = await PreferencesStorage.instance;
+        if (prefs.currentPreferences.debugMode) {
           ErrorDebugDialog.show(context, error: e, stackTrace: stackTrace);
         }
       }
@@ -332,7 +335,7 @@ class MessageController extends ChangeNotifier {
 
       if (enableStream) {
         await _handleStreamResponse(
-          userText: userText,
+          userText: userText ?? '',
           history: history,
           profile: profile,
           providerName: providerName,
@@ -347,7 +350,7 @@ class MessageController extends ChangeNotifier {
         );
       } else {
         await _handleNonStreamResponse(
-          userText: userText,
+          userText: userText ?? '',
           history: history,
           profile: profile,
           providerName: providerName,
@@ -439,9 +442,6 @@ class MessageController extends ChangeNotifier {
         files: newAttachments,
         reasoningContent: original.reasoningContent,
         toolCall: original.toolCall,
-      ),
-    );
-        files: original.files,
       ),
     );
     msgs[idx] = updated;

@@ -12,7 +12,7 @@ import '../../models/llm_api/openai/videos.dart';
 import '../base.dart';
 import '../../models/llm_api/openai/responses.dart';
 
-class OpenAI extends AIBaseApi {
+class OpenAiProvider extends LlmProviderBase {
   final String responsesPath;
   final String chatPath;
   final String modelsPath;
@@ -22,7 +22,7 @@ class OpenAI extends AIBaseApi {
   final String videosPath;
   final String audioSpeechPath;
 
-  OpenAI({
+  OpenAiProvider({
     super.apiKey = '',
     required super.baseUrl,
     this.responsesPath = '/responses',
@@ -47,7 +47,9 @@ class OpenAI extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return OpenAiResponses.fromJson(j);
     }
-    throw Exception('OpenAI responses error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'OpenAiProvider responses error ${res.statusCode}: ${res.body}',
+    );
   }
 
   Future<OpenAiChatCompletions> chatCompletions(
@@ -63,7 +65,7 @@ class OpenAI extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return OpenAiChatCompletions.fromJson(j);
     }
-    throw Exception('OpenAI error ${res.statusCode}: ${res.body}');
+    throw Exception('OpenAiProvider error ${res.statusCode}: ${res.body}');
   }
 
   Stream<OpenAiResponses> responsesStream(
@@ -77,7 +79,9 @@ class OpenAI extends AIBaseApi {
 
     if (rs.statusCode < 200 || rs.statusCode >= 300) {
       final body = await rs.stream.bytesToString();
-      throw Exception('OpenAI responses stream error ${rs.statusCode}: $body');
+      throw Exception(
+        'OpenAiProvider responses stream error ${rs.statusCode}: $body',
+      );
     }
 
     await for (final chunk in rs.stream.transform(utf8.decoder)) {
@@ -113,7 +117,7 @@ class OpenAI extends AIBaseApi {
 
     if (rs.statusCode < 200 || rs.statusCode >= 300) {
       final body = await rs.stream.bytesToString();
-      throw Exception('OpenAI stream error ${rs.statusCode}: $body');
+      throw Exception('OpenAiProvider stream error ${rs.statusCode}: $body');
     }
 
     await for (final chunk in rs.stream.transform(utf8.decoder)) {
@@ -150,7 +154,9 @@ class OpenAI extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return OpenAiImagesGenerations.fromJson(j);
     }
-    throw Exception('OpenAI images error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'OpenAiProvider images error ${res.statusCode}: ${res.body}',
+    );
   }
 
   Future<OpenAiAudioSpeech> audioSpeech(
@@ -167,7 +173,9 @@ class OpenAI extends AIBaseApi {
       final b64 = base64Encode(bytes);
       return OpenAiAudioSpeech(audioContent: b64);
     }
-    throw Exception('OpenAI audio speech error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'OpenAiProvider audio speech error ${res.statusCode}: ${res.body}',
+    );
   }
 
   Future<OpenAiVideos> videos(OpenAiVideosRequest request) async {
@@ -181,7 +189,9 @@ class OpenAI extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return OpenAiVideos.fromJson(j);
     }
-    throw Exception('OpenAI videos error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'OpenAiProvider videos error ${res.statusCode}: ${res.body}',
+    );
   }
 
   Future<OpenAiModels> listModels() async {
@@ -190,7 +200,9 @@ class OpenAI extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return OpenAiModels.fromJson(j);
     }
-    throw Exception('OpenAI list models error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'OpenAiProvider list models error ${res.statusCode}: ${res.body}',
+    );
   }
 
   Future<OpenAiEmbeddings> embeddings({
@@ -206,6 +218,8 @@ class OpenAI extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return OpenAiEmbeddings.fromJson(j);
     }
-    throw Exception('OpenAI embed error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'OpenAiProvider embed error ${res.statusCode}: ${res.body}',
+    );
   }
 }

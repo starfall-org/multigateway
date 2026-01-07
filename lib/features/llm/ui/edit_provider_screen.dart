@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:llm/llm.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/llm/models/llm_provider_info.dart';
+import 'package:multigateway/core/llm/storage/llm_provider_config_storage.dart';
+import 'package:multigateway/core/llm/storage/llm_provider_models_storage.dart';
 import 'package:multigateway/features/llm/controllers/edit_provider_controller.dart';
 import 'package:multigateway/features/llm/ui/widgets/edit_model_sheet.dart';
 import 'package:multigateway/features/llm/ui/widgets/fetch_models_sheet.dart';
@@ -11,9 +13,9 @@ import 'package:multigateway/shared/widgets/common_dropdown.dart';
 import 'package:multigateway/shared/widgets/custom_text_field.dart';
 
 class AddProviderScreen extends StatefulWidget {
-  final Provider? provider;
+  final LlmProviderInfo? providerInfo;
 
-  const AddProviderScreen({super.key, this.provider});
+  const AddProviderScreen({super.key, this.providerInfo});
 
   @override
   State<AddProviderScreen> createState() => _AddProviderScreenState();
@@ -29,10 +31,28 @@ class _AddProviderScreenState extends State<AddProviderScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
-      setState(() {}); // Rebuild to show/hide FAB based on tab
+      setState(() {});
     });
     _viewModel = AddProviderViewModel();
-    _viewModel.initialize(widget.provider);
+    _initViewModel();
+  }
+
+  Future<void> _initViewModel() async {
+    if (widget.providerInfo != null) {
+      final configStorage = await LlmProviderConfigStorage.init();
+      final modelsStorage = await LlmProviderModelsStorage.init();
+
+      final config = configStorage.getItem(widget.providerInfo!.id);
+      final models = modelsStorage.getItem(widget.providerInfo!.id);
+
+      _viewModel.initialize(
+        providerInfo: widget.providerInfo,
+        providerConfig: config,
+        providerModels: models,
+      );
+    } else {
+      _viewModel.initialize();
+    }
   }
 
   @override
@@ -63,7 +83,7 @@ class _AddProviderScreenState extends State<AddProviderScreen>
           : FloatingActionButton.extended(
               onPressed: () => _viewModel.saveProvider(
                 context,
-                existingProvider: widget.provider,
+                existingProvider: widget.providerInfo,
               ),
               label: const Text('Save'),
               icon: const Icon(Icons.save),

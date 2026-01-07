@@ -1,39 +1,23 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/core/chat/storage/conversation_storage.dart';
 import 'package:multigateway/core/llm/storage/llm_provider_info_storage.dart';
+import 'package:multigateway/core/llm/storage/llm_provider_models_storage.dart';
 import 'package:multigateway/core/mcp/storage/mcp_server_info_storage.dart';
 import 'package:multigateway/core/profile/storage/chat_profile_storage.dart';
 import 'package:multigateway/core/speech/speech.dart';
-import 'package:multigateway/features/home/ui/controllers/chat_controller.dart';
-import 'package:multigateway/features/home/ui/controllers/chat_controller_parts/chat_navigation_interface.dart';
+import 'package:multigateway/features/home/controllers/chat_controller.dart';
+import 'package:multigateway/features/home/controllers/chat_navigation_interface.dart';
 import 'package:multigateway/features/home/ui/views/menu_view.dart';
 import 'package:multigateway/features/home/ui/widgets/chat_messages_display.dart';
+import 'package:multigateway/features/home/ui/widgets/chat_screen_widgets/agent_avatar_button.dart';
 import 'package:multigateway/features/home/ui/widgets/conversations_drawer.dart';
 import 'package:multigateway/features/home/ui/widgets/edit_message_sheet.dart';
 import 'package:multigateway/features/home/ui/widgets/model_picker_sheet.dart';
 import 'package:multigateway/features/home/ui/widgets/quick_actions_sheet.dart';
 import 'package:multigateway/features/home/ui/widgets/user_input_area.dart';
-import 'package:multigateway/shared/widgets/app_dialog.dart';
+import 'package:multigateway/shared/widgets/app_snackbar.dart';
 import 'package:multigateway/shared/widgets/empty_state.dart';
-import 'package:multigateway/app/storage/preferences_storage.dart';
-
-/// Helper để tạo theme-aware image cho chat screen
-Widget _buildThemeAwareImageForChatScreen(BuildContext context, Widget child) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-
-  return ColorFiltered(
-    colorFilter: ColorFilter.mode(
-      isDark
-          ? Colors.white.withValues(alpha: 0.1)
-          : Colors.black.withValues(alpha: 0.1),
-      BlendMode.overlay,
-    ),
-    child: child,
-  );
-}
 
 /// Màn hình chat chính cho ứng dụng
 class ChatPage extends StatefulWidget {
@@ -64,6 +48,7 @@ class _ChatPageState extends State<ChatPage>
       final conversationRepository = ConversationStorage.instance;
       final aiProfileRepository = ChatProfileStorage.instance;
       final pInfStorage = LlmProviderInfoStorage.instance;
+      final pModStorage = LlmProviderModelsStorage.instance;
       final mcpServerStorage = McpServerInfoStorage.instance;
 
       // Create SpeechManager instance
@@ -77,6 +62,7 @@ class _ChatPageState extends State<ChatPage>
         conversationRepository: conversationRepository,
         aiProfileRepository: aiProfileRepository,
         llmProviderInfoStorage: pInfStorage,
+        llmProviderModelsStorage: pModStorage,
         preferencesSp: preferencesSp,
         mcpServerStorage: mcpServerStorage,
         speechManager: speechManager,
@@ -93,16 +79,7 @@ class _ChatPageState extends State<ChatPage>
       }
     }
 
-    // Restore sidebar state
-    if (!mounted) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_viewModel.preferencesSp.currentPreferences.activeSidebar == 'left') {
-        _scaffoldKey.currentState?.openDrawer();
-      } else if (_viewModel.preferencesSp.currentPreferences.activeSidebar == 'right') {
-        _scaffoldKey.currentState?.openEndDrawer();
-      }
-    });
+    // Không restore sidebar state - để sidebar đóng mỗi khi khởi động
   }
 
   @override
@@ -175,26 +152,6 @@ class _ChatPageState extends State<ChatPage>
         // Giao diện chính của chat
         return Scaffold(
           key: _scaffoldKey,
-          onDrawerChanged: (isOpen) {
-            if (isOpen) {
-              _viewModel.preferencesSp.setActiveSidebar('left');
-            } else {
-              if (_viewModel.preferencesSp.currentPreferences.activeSidebar ==
-                  'left') {
-                _viewModel.preferencesSp.setActiveSidebar(null);
-              }
-            }
-          },
-          onEndDrawerChanged: (isOpen) {
-            if (isOpen) {
-              _viewModel.preferencesSp.setActiveSidebar('right');
-            } else {
-              if (_viewModel.preferencesSp.currentPreferences.activeSidebar ==
-                  'right') {
-                _viewModel.preferencesSp.setActiveSidebar(null);
-              }
-            }
-          },
           appBar: AppBar(
             leading: IconButton(
               icon: Icon(
@@ -230,7 +187,12 @@ class _ChatPageState extends State<ChatPage>
             ),
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             elevation: 0.5,
-            actions: [_buildAgentAvatar(context)],
+            actions: [
+              AgentAvatarButton(
+                profileName: _viewModel.selectedProfile?.name,
+                onTap: () => _scaffoldKey.currentState?.openEndDrawer(),
+              ),
+            ],
           ),
           // Drawer bên trái chứa danh sách cuộc trò chuyện
           drawer: ConversationsDrawer(
@@ -258,7 +220,25 @@ class _ChatPageState extends State<ChatPage>
                 child: SafeArea(
                   top: false,
                   bottom: false,
-                  child: _buildMessageList(),
+                  child: (_viewModel.currentSession?.messages.isEmpty ?? true)
+                      ? EmptyState(
+                          icon: Icons.chat_bubble_outline,
+                          message: 'Start a conversation!',
+                        )
+                      : ChatMessagesDisplay(
+                          messages: _viewModel.currentSession!.messages,
+                          scrollController: _viewModel.scrollController,
+                          onCopy: (m) => _viewModel.copyMessage(context, m),
+                          onEdit: (m) => _viewModel.openEditMessageDialog(context, m),
+                          onDelete: (m) => _viewModel.deleteMessage(m),
+                          onOpenAttachmentsSidebar: (files) {
+                            _viewModel.openAttachmentsSidebar(files);
+                            // TODO: Show attachment dialog
+                          },
+                          onRegenerate: () => _viewModel.regenerateLast(context),
+                          onRead: (m) => _viewModel.speechManager.speak(m.content ?? ''),
+                          onSwitchVersion: (m, idx) => _viewModel.switchMessageVersion(m, idx),
+                        ),
                 ),
               ),
               // Thanh tiến trình khi AI đang tạo phản hồi
@@ -292,41 +272,13 @@ class _ChatPageState extends State<ChatPage>
     );
   }
 
-  // Xây dựng avatar của agent được chọn trong thanh AppBar
-  Widget _buildAgentAvatar(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        _scaffoldKey.currentState?.openEndDrawer();
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-        child: CircleAvatar(
-          radius: 18,
-          backgroundColor: Theme.of(
-            context,
-          ).colorScheme.primary.withValues(alpha: 0.1),
-          child: Text(
-            ((_viewModel.selectedProfile?.name.isNotEmpty == true
-                    ? _viewModel.selectedProfile!.name[0]
-                    : 'A'))
-                .toUpperCase(),
-            style: TextStyle(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   // Mở drawer chọn model AI
   void _openModelPicker(BuildContext context) {
     ModelPickerSheet.show(
       context,
       providers: _viewModel.providers,
       providerCollapsed: _viewModel.providerCollapsed,
+      providerModels: _viewModel.modelSelectionController.providerModels,
       selectedProviderName: _viewModel.selectedProviderName,
       selectedModelName: _viewModel.selectedModelName,
       onToggleProvider: (providerName, collapsed) {
@@ -336,171 +288,5 @@ class _ChatPageState extends State<ChatPage>
         _viewModel.selectModel(providerName, modelName);
       },
     );
-  }
-
-  // Xây dựng danh sách tin nhắn hoặc hiển thị trạng thái rỗng
-  Widget _buildMessageList() {
-    if (_viewModel.currentSession?.messages.isEmpty ?? true) {
-      return EmptyState(
-        icon: Icons.chat_bubble_outline,
-        message: 'Start a conversation!',
-      );
-    }
-
-    return ChatMessagesDisplay(
-      messages: _viewModel.currentSession!.messages,
-      scrollController: _viewModel.scrollController,
-      onCopy: (m) => _viewModel.copyMessage(context, m),
-      onEdit: (m) => _viewModel.openEditMessageDialog(context, m),
-      onDelete: (m) => _viewModel.deleteMessage(m),
-      onOpenAttachmentsSidebar: (files) => {
-        _viewModel.openAttachmentsSidebar(files),
-        _buildAttachmentViewDialog(context),
-      },
-      onRegenerate: () => _viewModel.regenerateLast(context),
-      onRead: (m) => _viewModel.speechManager.speak(m.content ?? ''),
-      onSwitchVersion: (m, idx) => _viewModel.switchMessageVersion(m, idx),
-    );
-  }
-
-  // Xây dựng drawer bên phải hiển thị danh sách tệp đính kèm
-  Widget _buildAttachmentViewDialog(BuildContext context) {
-    return AppDialog(
-      title: Text(tl('Attachments')),
-      content: SafeArea(
-        child: Column(
-          children: [
-            // Header của drawer đính kèm
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 8, 8),
-              child: Row(
-                children: [
-                  Text(
-                    tl(
-                      'Attachments (${_viewModel.inspectingAttachments.length})',
-                    ),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    tooltip: tl('Close'),
-                    onPressed: () {
-                      _scaffoldKey.currentState?.closeEndDrawer();
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            // Danh sách tệp đính kèm
-            Expanded(
-              child: _viewModel.inspectingAttachments.isEmpty
-                  ? EmptyState(
-                      icon: Icons.attach_file,
-                      message: 'No attachments',
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: _viewModel.inspectingAttachments.length,
-                      separatorBuilder: (_, _) => const Divider(height: 12),
-                      itemBuilder: (ctx, i) {
-                        final path = _viewModel.inspectingAttachments[i];
-                        return _attachmentTile(context, path);
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Xây dựng tile hiển thị thông tin tệp đính kèm
-  Widget _attachmentTile(BuildContext context, String path) {
-    final name = path.split('/').last;
-    int sizeBytes = 0;
-    try {
-      sizeBytes = File(path).lengthSync();
-    } catch (_) {}
-    final sizeText = _formatBytes(sizeBytes);
-    final isImg = _isImagePath(path);
-
-    Widget leading;
-    if (isImg) {
-      // Hiển thị ảnh thumbnail cho tệp ảnh
-      leading = ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          width: 48,
-          height: 48,
-          color: Theme.of(context).colorScheme.surface,
-          child: _buildThemeAwareImageForChatScreen(
-            context,
-            Image.file(
-              File(path),
-              fit: BoxFit.cover,
-              errorBuilder: (c, e, s) => _fallbackIcon(context),
-            ),
-          ),
-        ),
-      );
-    } else {
-      // Hiển thị icon mặc định cho tệp không phải ảnh
-      leading = _fallbackIcon(context);
-    }
-
-    return ListTile(
-      leading: leading,
-      title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: sizeBytes > 0 ? Text(sizeText) : null,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      onTap: () {
-        // (Optional) Preview action can be added later
-      },
-    );
-  }
-
-  // Icon mặc định cho các tệp không phải ảnh
-  Widget _fallbackIcon(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(
-        Icons.insert_drive_file,
-        color: Theme.of(context).iconTheme.color,
-      ),
-    );
-  }
-
-  // Định dạng kích thước tệp từ bytes sang định dạng dễ đọc (KB, MB, GB...)
-  String _formatBytes(int bytes, [int decimals = 1]) {
-    if (bytes <= 0) return '0 B';
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    int i = 0;
-    double v = bytes.toDouble();
-    while (v >= 1024 && i < sizes.length - 1) {
-      v /= 1024;
-      i++;
-    }
-    return '${v.toStringAsFixed(decimals)} ${sizes[i]}';
-  }
-
-  // Kiểm tra xem đường dẫn tệp có phải là ảnh hay không
-  bool _isImagePath(String path) {
-    final lower = path.toLowerCase();
-    return lower.endsWith('.png') ||
-        lower.endsWith('.jpg') ||
-        lower.endsWith('.jpeg') ||
-        lower.endsWith('.gif') ||
-        lower.endsWith('.webp') ||
-        lower.endsWith('.bmp');
   }
 }

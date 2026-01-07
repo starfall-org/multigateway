@@ -7,15 +7,21 @@ part of 'chat_profile.dart';
 // **************************************************************************
 
 ChatProfile _$ChatProfileFromJson(Map<String, dynamic> json) => ChatProfile(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      icon: json['icon'] as String?,
-      config: LlmChatConfig.fromJson(json['config'] as Map<String, dynamic>),
-      activeMcpServers: (json['active_mcp_servers'] as List<dynamic>?)
-              ?.map((e) => ActiveMcpServer.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          const [],
-    );
+  id: json['id'] as String,
+  name: json['name'] as String,
+  icon: json['icon'] as String?,
+  config: LlmChatConfig.fromJson(json['config'] as Map<String, dynamic>),
+  activeMcpServers:
+      (json['active_mcp_servers'] as List<dynamic>?)
+          ?.map((e) => ActiveMcpServer.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  activeBuiltInTools:
+      (json['active_built_in_tools'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
+);
 
 Map<String, dynamic> _$ChatProfileToJson(ChatProfile instance) =>
     <String, dynamic>{
@@ -23,8 +29,10 @@ Map<String, dynamic> _$ChatProfileToJson(ChatProfile instance) =>
       'name': instance.name,
       'icon': instance.icon,
       'config': instance.config.toJson(),
-      'active_mcp_servers':
-          instance.activeMcpServers.map((e) => e.toJson()).toList(),
+      'active_mcp_servers': instance.activeMcpServers
+          .map((e) => e.toJson())
+          .toList(),
+      'active_built_in_tools': instance.activeBuiltInTools,
     };
 
 LlmChatConfig _$LlmChatConfigFromJson(Map<String, dynamic> json) =>
@@ -40,7 +48,7 @@ LlmChatConfig _$LlmChatConfigFromJson(Map<String, dynamic> json) =>
       customThinkingTokens: (json['custom_thinking_tokens'] as num?)?.toInt(),
       thinkingLevel:
           $enumDecodeNullable(_$ThinkingLevelEnumMap, json['thinking_level']) ??
-              ThinkingLevel.auto,
+          ThinkingLevel.auto,
     );
 
 Map<String, dynamic> _$LlmChatConfigToJson(LlmChatConfig instance) =>

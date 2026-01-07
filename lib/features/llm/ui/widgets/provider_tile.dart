@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/llm/models/llm_provider_info.dart';
 import 'package:multigateway/shared/utils/icon_builder.dart';
-import 'package:multigateway/shared/widgets/item_card.dart';
+import 'package:multigateway/shared/widgets/resource_tile.dart';
 
-/// Widget hiển thị provider dạng card trong grid view
-class ProviderCard extends StatelessWidget {
+/// Widget hiển thị provider dạng tile trong list view
+class ProviderTile extends StatelessWidget {
   final LlmProviderInfo provider;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const ProviderCard({
+  const ProviderTile({
     super.key,
     required this.provider,
     required this.onTap,
@@ -21,13 +21,14 @@ class ProviderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ItemCard(
-      icon: buildIcon(provider.name),
+    return ResourceTile(
+      key: ValueKey(provider.id),
       title: provider.name,
-      subtitle: tl('${provider.type.name} Compatible'),
+      subtitle: tl('${provider.type.name} Provider'),
+      leadingIcon: buildIcon(provider.name),
       onTap: onTap,
-      onEdit: onEdit,
       onDelete: onDelete,
+      onEdit: onEdit,
     );
   }
 }

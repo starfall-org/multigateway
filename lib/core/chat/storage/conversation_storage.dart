@@ -15,6 +15,8 @@ class ConversationStorage extends HiveBaseStorage<Conversation> {
     return _instance!;
   }
 
+  static Future<ConversationStorage> init() async => instance;
+
   @override
   String get prefix => _prefix;
 

@@ -12,6 +12,9 @@ McpServerInfo _$McpServerInfoFromJson(Map<String, dynamic> json) =>
       json['name'] as String,
       $enumDecode(_$McpProtocolEnumMap, json['protocol']),
       json['url'] as String?,
+      (json['headers'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, e as String),
+      ),
       json['stdio_config'] == null
           ? null
           : StdioConfig.fromJson(json['stdio_config'] as Map<String, dynamic>),
@@ -23,6 +26,7 @@ Map<String, dynamic> _$McpServerInfoToJson(McpServerInfo instance) =>
       'name': instance.name,
       'protocol': _$McpProtocolEnumMap[instance.protocol]!,
       'url': instance.url,
+      'headers': instance.headers,
       'stdio_config': instance.stdioConfig?.toJson(),
     };
 

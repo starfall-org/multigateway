@@ -1,5 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
+part 'mcp_server_tools.g.dart';
+
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class McpServerTools {
   final String id;

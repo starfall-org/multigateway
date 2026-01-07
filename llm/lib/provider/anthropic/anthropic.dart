@@ -6,12 +6,12 @@ import '../../models/llm_api/anthropic/messages.dart';
 import '../../models/llm_api/anthropic/models.dart';
 import '../base.dart';
 
-class Anthropic extends AIBaseApi {
+class AnthropicProvider extends LlmProviderBase {
   final String messagesPath;
   final String modelsPath;
   final String anthropicVersion;
 
-  Anthropic({
+  AnthropicProvider({
     super.apiKey = '',
     required super.baseUrl,
     this.messagesPath = '/messages',
@@ -31,7 +31,9 @@ class Anthropic extends AIBaseApi {
     };
   }
 
-  Future<AnthropicMessagesResponse> messages(AnthropicMessagesRequest request) async {
+  Future<AnthropicMessagesResponse> messages(
+    AnthropicMessagesRequest request,
+  ) async {
     final payload = request.toJson();
     final res = await http.post(
       uri(messagesPath),
@@ -42,10 +44,14 @@ class Anthropic extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return AnthropicMessagesResponse.fromJson(j);
     }
-    throw Exception('Anthropic messages error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'AnthropicProvider messages error ${res.statusCode}: ${res.body}',
+    );
   }
 
-  Stream<AnthropicMessagesResponse> messagesStream(AnthropicMessagesRequest request) async* {
+  Stream<AnthropicMessagesResponse> messagesStream(
+    AnthropicMessagesRequest request,
+  ) async* {
     final payload = request.toJson();
     final rq = http.Request('POST', uri(messagesPath))
       ..headers.addAll(getHeaders())
@@ -54,7 +60,9 @@ class Anthropic extends AIBaseApi {
 
     if (rs.statusCode < 200 || rs.statusCode >= 300) {
       final body = await rs.stream.bytesToString();
-      throw Exception('Anthropic messages stream error ${rs.statusCode}: $body');
+      throw Exception(
+        'AnthropicProvider messages stream error ${rs.statusCode}: $body',
+      );
     }
 
     await for (final chunk in rs.stream.transform(utf8.decoder)) {
@@ -71,7 +79,8 @@ class Anthropic extends AIBaseApi {
           final j = jsonDecode(data) as Map<String, dynamic>;
           final type = j['type'] as String? ?? j['event'] as String? ?? '';
           if (type == 'content_block_delta') {
-            final delta = (j['delta'] as Map?)?.cast<String, dynamic>() ?? const {};
+            final delta =
+                (j['delta'] as Map?)?.cast<String, dynamic>() ?? const {};
             if ((delta['type'] as String? ?? '') == 'text_delta') {
               final t = delta['text'] as String? ?? '';
               if (t.isNotEmpty) {
@@ -90,7 +99,8 @@ class Anthropic extends AIBaseApi {
               }
             }
           } else if (type == 'message_delta') {
-            final delta = (j['delta'] as Map?)?.cast<String, dynamic>() ?? const {};
+            final delta =
+                (j['delta'] as Map?)?.cast<String, dynamic>() ?? const {};
             final stop = delta['stop_reason'] as String?;
             if (stop != null) {
               final response = AnthropicMessagesResponse(
@@ -119,6 +129,8 @@ class Anthropic extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return AnthropicModels.fromJson(j);
     }
-    throw Exception('Anthropic list models error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'AnthropicProvider list models error ${res.statusCode}: ${res.body}',
+    );
   }
 }

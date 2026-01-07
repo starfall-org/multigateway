@@ -12,6 +12,7 @@ class ChatProfile {
   final String? icon;
   final LlmChatConfig config;
   final List<ActiveMcpServer> activeMcpServers;
+  final List<String> activeBuiltInTools;
 
   ChatProfile({
     required this.id,
@@ -19,10 +20,29 @@ class ChatProfile {
     this.icon,
     required this.config,
     this.activeMcpServers = const [],
+    this.activeBuiltInTools = const [],
   });
 
   List<String> get activeMcpServerIds =>
       activeMcpServers.map((e) => e.id).toList();
+
+  ChatProfile copyWith({
+    String? id,
+    String? name,
+    String? icon,
+    LlmChatConfig? config,
+    List<ActiveMcpServer>? activeMcpServers,
+    List<String>? activeBuiltInTools,
+  }) {
+    return ChatProfile(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      icon: icon ?? this.icon,
+      config: config ?? this.config,
+      activeMcpServers: activeMcpServers ?? this.activeMcpServers,
+      activeBuiltInTools: activeBuiltInTools ?? this.activeBuiltInTools,
+    );
+  }
 
   factory ChatProfile.fromJson(Map<String, dynamic> json) =>
       _$ChatProfileFromJson(json);

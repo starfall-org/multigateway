@@ -1,17 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:llm/llm.dart';
 import 'package:multigateway/app/translate/tl.dart';
-import 'package:multigateway/core/llm/data/provider_info_storage.dart';
+import 'package:multigateway/core/llm/models/llm_provider_info.dart';
+import 'package:multigateway/core/llm/storage/llm_provider_info_storage.dart';
 import 'package:multigateway/features/llm/ui/edit_provider_screen.dart';
-import 'package:multigateway/features/llm/ui/views/edit_provider_screen.dart';
-import 'package:multigateway/shared/utils/icon_builder.dart';
+import 'package:multigateway/features/llm/ui/widgets/provider_card.dart';
+import 'package:multigateway/features/llm/ui/widgets/provider_tile.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
 import 'package:multigateway/shared/widgets/confirm_dialog.dart';
 import 'package:multigateway/shared/widgets/empty_state.dart';
-import 'package:multigateway/shared/widgets/item_card.dart';
-import 'package:multigateway/shared/widgets/resource_tile.dart';
 
 class AiProvidersPage extends StatefulWidget {
   const AiProvidersPage({super.key});
@@ -21,7 +19,7 @@ class AiProvidersPage extends StatefulWidget {
 }
 
 class _AiProvidersPageState extends State<AiProvidersPage> {
-  List<Provider> _providers = [];
+  List<LlmProviderInfo> _providers = [];
   bool _isLoading = true;
   bool _isGridView = false;
   late LlmProviderInfoStorage _repository;
@@ -74,12 +72,12 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
     }
   }
 
-  Future<void> _deleteProvider(String name) async {
+  Future<void> _deleteProvider(String id) async {
     try {
-      await _repository.deleteProvider(name);
-      await _loadProviders(); // Use await to ensure proper sequencing
+      await _repository.deleteItem(id);
+      await _loadProviders();
       if (mounted) {
-        context.showSuccessSnackBar(tl('Provider $name has been deleted'));
+        context.showSuccessSnackBar(tl('Provider has been deleted'));
       }
     } catch (e) {
       if (mounted) {
@@ -94,24 +92,19 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
       appBar: AppBar(
         title: Text(tl('Providers')),
         actions: [
-          AddAction(
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AddProviderScreen(),
-                ),
-              );
-              if (result == true) {
-                _loadProviders();
-              }
-            },
+          // Add button
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: tl('Add Provider'),
+            onPressed: () => _navigateToEdit(null),
           ),
-          ViewToggleAction(
-            isGrid: _isGridView,
-            onChanged: (val) {
+          // View toggle button
+          IconButton(
+            icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
+            tooltip: _isGridView ? tl('List View') : tl('Grid View'),
+            onPressed: () {
               setState(() {
-                _isGridView = val;
+                _isGridView = !_isGridView;
               });
             },
           ),
@@ -148,15 +141,30 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
                   childAspectRatio: 1.5,
                 ),
                 itemCount: _providers.length,
-                itemBuilder: (context, index) =>
-                    _buildProviderCard(_providers[index]),
+                itemBuilder: (context, index) {
+                  final provider = _providers[index];
+                  return ProviderCard(
+                    provider: provider,
+                    onTap: () => _navigateToEdit(provider),
+                    onEdit: () => _navigateToEdit(provider),
+                    onDelete: () => _confirmDelete(provider),
+                  );
+                },
               )
             : ReorderableListView.builder(
                 itemCount: _providers.length,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 onReorder: _onReorder,
-                itemBuilder: (context, index) =>
-                    _buildProviderTile(_providers[index], index),
+                itemBuilder: (context, index) {
+                  final provider = _providers[index];
+                  return ProviderTile(
+                    key: ValueKey(provider.id),
+                    provider: provider,
+                    onTap: () => _navigateToEdit(provider),
+                    onEdit: () => _navigateToEdit(provider),
+                    onDelete: () => _confirmDelete(provider),
+                  );
+                },
               ),
       ),
     );
@@ -167,76 +175,25 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
       if (oldIndex < newIndex) {
         newIndex -= 1;
       }
-      final Provider item = _providers.removeAt(oldIndex);
+      final LlmProviderInfo item = _providers.removeAt(oldIndex);
       _providers.insert(newIndex, item);
     });
-    _repository.saveOrder(_providers.map((e) => e.name).toList());
+    _repository.saveOrder(_providers.map((e) => e.id).toList());
   }
 
-  Widget _buildProviderTile(Provider provider, int index) {
-    return ResourceTile(
-      key: ValueKey(provider.name),
-      title: provider.name,
-      subtitle: '${provider.models.length} models',
-      leadingIcon: buildIcon(provider.name),
-      onTap: () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AddProviderScreen(provider: provider),
-          ),
-        );
-        if (result == true) {
-          _loadProviders();
-        }
-      },
-      onDelete: () => _confirmDelete(provider),
-      onEdit: () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AddProviderScreen(provider: provider),
-          ),
-        );
-        if (result == true) {
-          _loadProviders();
-        }
-      },
+  Future<void> _navigateToEdit(LlmProviderInfo? provider) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddProviderScreen(providerInfo: provider),
+      ),
     );
+    if (result == true) {
+      _loadProviders();
+    }
   }
 
-  Widget _buildProviderCard(Provider provider) {
-    return ItemCard(
-      icon: buildIcon(provider.name),
-      title: provider.name,
-      subtitle: tl('${provider.type.name} Compatible'),
-      onTap: () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AddProviderScreen(provider: provider),
-          ),
-        );
-        if (result == true) {
-          _loadProviders();
-        }
-      },
-      onEdit: () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AddProviderScreen(provider: provider),
-          ),
-        );
-        if (result == true) {
-          _loadProviders();
-        }
-      },
-      onDelete: () => _confirmDelete(provider),
-    );
-  }
-
-  Future<void> _confirmDelete(Provider provider) async {
+  Future<void> _confirmDelete(LlmProviderInfo provider) async {
     final confirm = await ConfirmDialog.show(
       context,
       title: tl('Delete'),
@@ -246,9 +203,7 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
     );
 
     if (confirm == true) {
-      _deleteProvider(
-        provider.name,
-      ); // Using name as ID based on repo implementation
+      _deleteProvider(provider.id);
     }
   }
 }

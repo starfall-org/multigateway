@@ -7,17 +7,18 @@ import '../../models/llm_api/googleai/embeddings.dart';
 import '../../models/llm_api/googleai/models.dart';
 import '../base.dart';
 
-class GoogleAIStudio extends AIBaseApi {
+class GoogleAiStudio extends LlmProviderBase {
   final String generateContentPath;
   final String streamGenerateContentPath;
   final String embeddingsPath;
   final String modelsPath;
 
-  GoogleAIStudio({
+  GoogleAiStudio({
     super.apiKey = '',
     required super.baseUrl,
     this.generateContentPath = '/v1beta/models/{model}:generateContent',
-    this.streamGenerateContentPath = '/v1beta/models/{model}:streamGenerateContent',
+    this.streamGenerateContentPath =
+        '/v1beta/models/{model}:streamGenerateContent',
     this.embeddingsPath = '/v1beta/models/{model}:embedContent',
     this.modelsPath = '/v1beta/models',
     super.headers = const {},
@@ -25,22 +26,22 @@ class GoogleAIStudio extends AIBaseApi {
 
   @override
   Map<String, String> getHeaders({Map<String, String> overrides = const {}}) {
-    return {
-      'Content-Type': 'application/json',
-      ...headers,
-      ...overrides,
-    };
+    return {'Content-Type': 'application/json', ...headers, ...overrides};
   }
 
-  Uri _buildUri(String pathTemplate, String model, {Map<String, String>? queryParams}) {
+  Uri _buildUri(
+    String pathTemplate,
+    String model, {
+    Map<String, String>? queryParams,
+  }) {
     final path = pathTemplate.replaceAll('{model}', model);
     final baseUri = uri(path);
-    
+
     final params = <String, String>{
       if (apiKey.isNotEmpty) 'key': apiKey,
       ...?queryParams,
     };
-    
+
     return baseUri.replace(queryParameters: params);
   }
 
@@ -58,7 +59,9 @@ class GoogleAIStudio extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return GeminiGenerateContentResponse.fromJson(j);
     }
-    throw Exception('GoogleAI generateContent error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'GoogleAI generateContent error ${res.statusCode}: ${res.body}',
+    );
   }
 
   Stream<GeminiGenerateContentResponse> generateContentStream({
@@ -66,14 +69,24 @@ class GoogleAIStudio extends AIBaseApi {
     required GeminiGenerateContentRequest request,
   }) async* {
     final payload = request.toJson();
-    final rq = http.Request('POST', _buildUri(streamGenerateContentPath, model, queryParams: {'alt': 'sse'}))
-      ..headers.addAll(getHeaders())
-      ..body = jsonEncode(payload);
+    final rq =
+        http.Request(
+            'POST',
+            _buildUri(
+              streamGenerateContentPath,
+              model,
+              queryParams: {'alt': 'sse'},
+            ),
+          )
+          ..headers.addAll(getHeaders())
+          ..body = jsonEncode(payload);
     final rs = await rq.send();
 
     if (rs.statusCode < 200 || rs.statusCode >= 300) {
       final body = await rs.stream.bytesToString();
-      throw Exception('GoogleAI generateContentStream error ${rs.statusCode}: $body');
+      throw Exception(
+        'GoogleAI generateContentStream error ${rs.statusCode}: $body',
+      );
     }
 
     await for (final chunk in rs.stream.transform(utf8.decoder)) {
@@ -109,7 +122,9 @@ class GoogleAIStudio extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return GeminiEmbeddingsResponse.fromJson(j);
     }
-    throw Exception('GoogleAI embedContent error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'GoogleAI embedContent error ${res.statusCode}: ${res.body}',
+    );
   }
 
   Future<GeminiBatchEmbeddingsResponse> batchEmbedContents({
@@ -126,7 +141,9 @@ class GoogleAIStudio extends AIBaseApi {
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       return GeminiBatchEmbeddingsResponse.fromJson(j);
     }
-    throw Exception('GoogleAI batchEmbedContents error ${res.statusCode}: ${res.body}');
+    throw Exception(
+      'GoogleAI batchEmbedContents error ${res.statusCode}: ${res.body}',
+    );
   }
 
   Future<GeminiModelsResponse> listModels({
@@ -138,7 +155,7 @@ class GoogleAIStudio extends AIBaseApi {
       if (pageSize != null) 'pageSize': pageSize.toString(),
       if (pageToken != null) 'pageToken': pageToken,
     };
-    
+
     final res = await http.get(
       uri(modelsPath).replace(queryParameters: queryParams),
       headers: getHeaders(),
@@ -151,10 +168,8 @@ class GoogleAIStudio extends AIBaseApi {
   }
 
   Future<GeminiModel> getModel({required String model}) async {
-    final queryParams = <String, String>{
-      if (apiKey.isNotEmpty) 'key': apiKey,
-    };
-    
+    final queryParams = <String, String>{if (apiKey.isNotEmpty) 'key': apiKey};
+
     final res = await http.get(
       uri('/v1beta/models/$model').replace(queryParameters: queryParams),
       headers: getHeaders(),

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mcp/mcp.dart';
+import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
-import 'package:multigateway/features/home/ui/controllers/chat_controller.dart';
+import 'package:multigateway/features/home/controllers/chat_controller.dart';
 
 class QuickActionsSheet extends StatefulWidget {
   final ChatController viewModel;
@@ -56,11 +57,8 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
       id: _profile.id,
       name: _profile.name,
       config: _profile.config,
-      profileConversations: _profile.profileConversations,
-      conversationIds: _profile.conversationIds,
       activeMcpServers: _profile.activeMcpServers,
       activeBuiltInTools: current,
-      persistChatSelection: _profile.persistChatSelection,
     );
     _updateProfile();
   }
@@ -96,11 +94,8 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
       id: _profile.id,
       name: _profile.name,
       config: _profile.config,
-      profileConversations: _profile.profileConversations,
-      conversationIds: _profile.conversationIds,
       activeMcpServers: currentServers,
       activeBuiltInTools: _profile.activeBuiltInTools,
-      persistChatSelection: _profile.persistChatSelection,
     );
     _updateProfile();
   }
@@ -130,11 +125,8 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
         id: _profile.id,
         name: _profile.name,
         config: _profile.config,
-        profileConversations: _profile.profileConversations,
-        conversationIds: _profile.conversationIds,
         activeMcpServers: currentServers,
         activeBuiltInTools: _profile.activeBuiltInTools,
-        persistChatSelection: _profile.persistChatSelection,
       );
       _updateProfile();
     }

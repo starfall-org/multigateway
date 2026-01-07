@@ -63,7 +63,7 @@ class AddAgentViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadMcpServers() async {
-    final mcpRepo = await McpServerStorage.init();
+    final mcpRepo = await McpServerInfoStorage.init();
     availableMcpServers = mcpRepo.getItems();
     notifyListeners();
   }

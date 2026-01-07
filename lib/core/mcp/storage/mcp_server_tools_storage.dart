@@ -4,11 +4,16 @@ import 'package:multigateway/core/storage/base.dart';
 class McpServerToolsStorage extends HiveBaseStorage<McpServerTools> {
   static const String _prefix = 'mcp_server_tools';
 
+  static McpServerToolsStorage? _instance;
+
   McpServerToolsStorage();
 
-  static Future<McpServerToolsStorage> init() async {
-    return McpServerToolsStorage();
+  static McpServerToolsStorage get instance {
+    _instance ??= McpServerToolsStorage();
+    return _instance!;
   }
+
+  static Future<McpServerToolsStorage> init() async => instance;
 
   @override
   String get prefix => _prefix;

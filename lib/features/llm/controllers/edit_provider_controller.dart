@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:llm/llm.dart';
-import 'package:llm/models/llm_model/base.dart';
+import 'package:multigateway/core/llm/models/legacy_llm_model.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
+import 'package:uuid/uuid.dart';
+import 'package:multigateway/core/llm/models/llm_provider_info.dart';
+import 'package:multigateway/core/llm/models/llm_provider_config.dart';
+import 'package:multigateway/core/llm/models/llm_provider_models.dart';
+import 'package:llm/models/llm_model/basic_model.dart';
+import 'package:llm/models/llm_model/ollama_model.dart';
+import 'package:llm/models/llm_model/googleai_model.dart';
+import 'package:llm/models/llm_model/github_model.dart';
+import 'package:multigateway/core/llm/storage/llm_provider_info_storage.dart';
+import 'package:multigateway/core/llm/storage/llm_provider_config_storage.dart';
+import 'package:multigateway/core/llm/storage/llm_provider_models_storage.dart';
 
 class HeaderPair {
   final TextEditingController key = TextEditingController();
@@ -25,15 +36,17 @@ class AddProviderViewModel extends ChangeNotifier {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController apiKeyController = TextEditingController();
   final TextEditingController baseUrlController = TextEditingController();
-  final TextEditingController openAIChatCompletionsRouteController = TextEditingController();
-  final TextEditingController openAIModelsRouteOrUrlController = TextEditingController();
+  final TextEditingController openAIChatCompletionsRouteController =
+      TextEditingController();
+  final TextEditingController openAIModelsRouteOrUrlController =
+      TextEditingController();
 
   // State
   ProviderType selectedType = ProviderType.openai;
   bool vertexAI = false;
   bool azureAI = false;
   bool responsesApi = false;
-  
+
   // Headers
   final List<HeaderPair> headers = [];
 
@@ -42,35 +55,46 @@ class AddProviderViewModel extends ChangeNotifier {
   List<AIModel> selectedModels = [];
   bool isFetchingModels = false;
 
-  void initialize(Provider? provider) {
-    if (provider != null) {
-      nameController.text = provider.name;
-      apiKeyController.text = provider.apiKey ?? '';
-      baseUrlController.text = provider.baseUrl;
-      selectedType = provider.type;
-      
-      // Headers
-      provider.headers.forEach((k, v) {
-        headers.add(HeaderPair(k: k, v: v));
-      });
+  void initialize({
+    LlmProviderInfo? providerInfo,
+    LlmProviderConfig? providerConfig,
+    LlmProviderModels? providerModels,
+  }) {
+    if (providerInfo != null) {
+      nameController.text = providerInfo.name;
+      apiKeyController.text = providerInfo.auth.key ?? '';
+      baseUrlController.text = providerInfo.baseUrl;
+      selectedType = providerInfo.type;
 
-      // Special handling based on type
-      if (provider.type == ProviderType.openai) {
-        openAIChatCompletionsRouteController.text = provider.openAIRoutes.chatCompletion ?? '';
-        openAIModelsRouteOrUrlController.text = provider.openAIRoutes.modelsRouteOrUrl ?? '';
-        // Heuristic for Azure?
-        if (provider.baseUrl.contains('azure')) {
+      if (providerConfig != null) {
+        responsesApi = providerConfig.responsesApi;
+        // Headers
+        providerConfig.headers?.forEach((k, v) {
+          headers.add(HeaderPair(k: k, v: v.toString()));
+        });
+
+        openAIChatCompletionsRouteController.text =
+            providerConfig.customChatCompletionUrl ?? '';
+        openAIModelsRouteOrUrlController.text =
+            providerConfig.customListModelsUrl ?? '';
+      }
+
+      // Special handling based on type/URL
+      if (providerInfo.type == ProviderType.openai) {
+        if (providerInfo.baseUrl.contains('azure')) {
           azureAI = true;
         }
-      } else if (provider.type == ProviderType.googleai) {
-        if (provider.vertexAIConfig != null) {
-          vertexAI = true;
+      } else if (providerInfo.type == ProviderType.googleai) {
+        if (providerInfo.baseUrl.contains('googleapis.com')) {
+          vertexAI = false;
         }
       }
 
-      selectedModels = List.from(provider.models);
+      if (providerModels != null) {
+        selectedModels = providerModels.toAiModels();
+      }
     } else {
-       baseUrlController.text = 'https://api.openai.com/v1';
+      baseUrlController.text = 'https://api.openai.com/v1';
     }
   }
 
@@ -138,7 +162,7 @@ class AddProviderViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   void updateModel(AIModel oldModel, AIModel newModel) {
     final index = selectedModels.indexWhere((m) => m.name == oldModel.name);
     if (index != -1) {
@@ -148,10 +172,10 @@ class AddProviderViewModel extends ChangeNotifier {
   }
 
   void addNewCustomModel() {
-     final newModel = AIModel(
+    final newModel = AIModel(
       name: 'custom-${DateTime.now().millisecondsSinceEpoch}',
       displayName: 'New Model',
-      type: ModelType.chat, 
+      type: ModelType.chat,
     );
     selectedModels.add(newModel);
     notifyListeners();
@@ -161,47 +185,92 @@ class AddProviderViewModel extends ChangeNotifier {
     isFetchingModels = true;
     notifyListeners();
     try {
-       // Basic fetch implementation could go here
-       availableModels = []; 
+      // Basic fetch implementation could go here
+      availableModels = [];
     } catch (e) {
-      if(context.mounted) context.showErrorSnackBar(e.toString());
+      if (context.mounted) context.showErrorSnackBar(e.toString());
     } finally {
       isFetchingModels = false;
       notifyListeners();
     }
   }
 
-  Future<void> saveProvider(BuildContext context, {Provider? existingProvider}) async {
+  Future<void> saveProvider(
+    BuildContext context, {
+    LlmProviderInfo? existingProvider,
+  }) async {
     final name = nameController.text.trim();
     if (name.isEmpty) {
       context.showErrorSnackBar(tl('Name is required'));
       return;
     }
 
-    final headerMap = <String, String>{};
-    for(var h in headers) {
-      if(h.key.text.isNotEmpty) headerMap[h.key.text] = h.value.text;
+    final id = existingProvider?.id ?? Uuid().v4();
+
+    final headerMap = <String, dynamic>{};
+    for (var h in headers) {
+      if (h.key.text.isNotEmpty) headerMap[h.key.text] = h.value.text;
     }
 
-    final provider = Provider(
+    final providerInfo = LlmProviderInfo(
+      id: id,
       name: name,
-      baseUrl: baseUrlController.text.trim(),
-      apiKey: apiKeyController.text.trim().isEmpty ? null : apiKeyController.text.trim(),
       type: selectedType,
-      headers: headerMap,
-      models: selectedModels,
-      openAIRoutes: OpenAIRoutes(
-        chatCompletion: openAIChatCompletionsRouteController.text.trim().isEmpty ? '/chat/completions' : openAIChatCompletionsRouteController.text.trim(),
-        modelsRouteOrUrl: openAIModelsRouteOrUrlController.text.trim().isEmpty ? '/models' : openAIModelsRouteOrUrlController.text.trim(),
+      auth: Authorization(
+        type: AuthMethod.apiKey,
+        key: apiKeyController.text.trim().isEmpty
+            ? null
+            : apiKeyController.text.trim(),
       ),
-      vertexAIConfig: vertexAI ? VertexAIConfig(projectId: '', location: '') : null,
+      baseUrl: baseUrlController.text.trim(),
     );
 
-    final storage = await LlmProviderInfoStorage.init();
-    await storage.saveItem(provider); 
+    final providerConfig = LlmProviderConfig(
+      id: id,
+      headers: headerMap,
+      responsesApi: responsesApi,
+      customChatCompletionUrl:
+          openAIChatCompletionsRouteController.text.trim().isEmpty
+          ? null
+          : openAIChatCompletionsRouteController.text.trim(),
+      customListModelsUrl: openAIModelsRouteOrUrlController.text.trim().isEmpty
+          ? null
+          : openAIModelsRouteOrUrlController.text.trim(),
+    );
+
+    // Filter models into categories
+    final basicModels = <BasicModel>[];
+    final ollamaModels = <OllamaModel>[];
+    final googleAiModels = <GoogleAiModel>[];
+    final githubModels = <GitHubModel>[];
+
+    // For now, let's treat all added models as BasicModel for simplicity,
+    // or we could try to preserve their original types if we had them.
+    // Since selectedModels are AIModel, we map them back to BasicModel.
+    for (var m in selectedModels) {
+      basicModels.add(
+        BasicModel(id: m.name, displayName: m.displayName, ownedBy: 'user'),
+      );
+    }
+
+    final providerModels = LlmProviderModels(
+      id: id,
+      basicModels: basicModels,
+      ollamaModels: ollamaModels,
+      googleAiModels: googleAiModels,
+      githubModels: githubModels,
+    );
+
+    final infoStorage = await LlmProviderInfoStorage.init();
+    final configStorage = await LlmProviderConfigStorage.init();
+    final modelsStorage = await LlmProviderModelsStorage.init();
+
+    await infoStorage.saveItem(providerInfo);
+    await configStorage.saveItem(providerConfig);
+    await modelsStorage.saveItem(providerModels);
 
     if (context.mounted) {
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     }
   }
 
@@ -213,7 +282,7 @@ class AddProviderViewModel extends ChangeNotifier {
     openAIChatCompletionsRouteController.dispose();
     openAIModelsRouteOrUrlController.dispose();
     for (var h in headers) {
-       h.dispose();
+      h.dispose();
     }
     super.dispose();
   }
