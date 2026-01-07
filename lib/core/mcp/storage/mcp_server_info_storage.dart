@@ -4,10 +4,13 @@ import 'package:multigateway/core/storage/base.dart';
 class McpServerInfoStorage extends HiveBaseStorage<McpServerInfo> {
   static const String _prefix = 'mcp_server_info';
 
+  static McpServerInfoStorage? _instance;
+
   McpServerInfoStorage();
 
-  static Future<McpServerInfoStorage> init() async {
-    return McpServerInfoStorage();
+  static McpServerInfoStorage get instance {
+    _instance ??= McpServerInfoStorage();
+    return _instance!;
   }
 
   @override

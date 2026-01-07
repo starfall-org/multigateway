@@ -4,10 +4,13 @@ import 'package:multigateway/core/storage/base.dart';
 class LlmProviderInfoStorage extends HiveBaseStorage<LlmProviderInfo> {
   static const String _prefix = 'llm_provider_info';
 
+  static LlmProviderInfoStorage? _instance;
+
   LlmProviderInfoStorage();
 
-  static Future<LlmProviderInfoStorage> init() async {
-    return LlmProviderInfoStorage();
+  static LlmProviderInfoStorage get instance {
+    _instance ??= LlmProviderInfoStorage();
+    return _instance!;
   }
 
   @override

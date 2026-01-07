@@ -6,10 +6,13 @@ import 'package:multigateway/core/storage/base.dart';
 class ConversationStorage extends HiveBaseStorage<Conversation> {
   static const String _prefix = 'conversation';
 
+  static ConversationStorage? _instance;
+
   ConversationStorage();
 
-  static Future<ConversationStorage> init() async {
-    return ConversationStorage();
+  static ConversationStorage get instance {
+    _instance ??= ConversationStorage();
+    return _instance!;
   }
 
   @override

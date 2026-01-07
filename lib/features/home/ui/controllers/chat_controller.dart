@@ -5,6 +5,7 @@ import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
+import 'package:multigateway/core/mcp/storage/mcp_server_info_storage.dart';
 import 'package:multigateway/features/home/domain/domain.dart';
 import 'package:multigateway/features/home/ui/controllers/attachment_controller.dart';
 import 'package:multigateway/features/home/ui/controllers/chat_controller_parts/chat_navigation_interface.dart';
@@ -39,7 +40,7 @@ class ChatController extends ChangeNotifier {
     required ChatProfileStorage aiProfileRepository,
     required LlmProviderInfoStorage llmProviderInfoStorage,
     required this.preferencesSp,
-    required McpServerStorage mcpServerStorage,
+    required McpServerInfoStorage mcpServerStorage,
     required this.ttsService,
   }) {
     // Initialize sub-controllers
@@ -51,7 +52,7 @@ class ChatController extends ChangeNotifier {
     );
     profileController = ProfileController(
       aiProfileRepository: aiProfileRepository,
-      McpServerStorage: McpServerStorage,
+      mcpServerStorage: mcpServerStorage,
     );
 
     // Listen to sub-controllers changes

@@ -1,8 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:multigateway/app/config/services.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/chat/storage/conversation_storage.dart';
+import 'package:multigateway/core/llm/storage/llm_provider_info_storage.dart';
+import 'package:multigateway/core/mcp/storage/mcp_server_info_storage.dart';
+import 'package:multigateway/core/profile/storage/chat_profile_storage.dart';
+import 'package:multigateway/core/speech/tts_service.dart';
 import 'package:multigateway/features/home/ui/controllers/chat_controller.dart';
 import 'package:multigateway/features/home/ui/controllers/chat_controller_parts/chat_navigation_interface.dart';
 import 'package:multigateway/features/home/ui/views/menu_view.dart';
@@ -14,6 +18,7 @@ import 'package:multigateway/features/home/ui/widgets/quick_actions_sheet.dart';
 import 'package:multigateway/features/home/ui/widgets/user_input_area.dart';
 import 'package:multigateway/shared/widgets/app_dialog.dart';
 import 'package:multigateway/shared/widgets/empty_state.dart';
+import 'package:multigateway/app/storage/preferences_storage.dart';
 
 /// Helper để tạo theme-aware image cho chat screen
 Widget _buildThemeAwareImageForChatScreen(BuildContext context, Widget child) {
@@ -47,16 +52,6 @@ class _ChatPageState extends State<ChatPage>
   @override
   void initState() {
     super.initState();
-    final services = AppServices.instance;
-    _viewModel = ChatController(
-      navigator: this,
-      chatRepository: services.chatRepository,
-      aiProfileRepository: services.aiProfileRepository,
-      pInfStorage: services.pInfStorage,
-      preferencesSp: services.preferencesSp,
-      McpServerStorage: services.McpServerStorage,
-      ttsService: services.ttsService,
-    );
     // Call async initialization without blocking initState
     _initializeViewModel();
   }
@@ -64,26 +59,47 @@ class _ChatPageState extends State<ChatPage>
   // Properly initialize async operations
   Future<void> _initializeViewModel() async {
     try {
+      // Wait for all storage to initialize
+      final preferencesSp = await PreferencesStorage.instance;
+      final conversationRepository = ConversationStorage.instance;
+      final aiProfileRepository = ChatProfileStorage.instance;
+      final pInfStorage = LlmProviderInfoStorage.instance;
+      final mcpServerStorage = McpServerInfoStorage.instance;
+
+      // Create TTSService instance
+      final ttsService = TTSService(
+        storage: SpeechServiceStorage.instance,
+      );
+
+      // Initialize controller
+      _viewModel = ChatController(
+        navigator: this,
+        conversationRepository: conversationRepository,
+        aiProfileRepository: aiProfileRepository,
+        llmProviderInfoStorage: pInfStorage,
+        preferencesSp: preferencesSp,
+        mcpServerStorage: mcpServerStorage,
+        ttsService: ttsService,
+      );
+
       // Wait for all initialization to complete
       await _viewModel.initChat();
       await _viewModel.loadSelectedProfile();
       await _viewModel.refreshProviders();
     } catch (e) {
       // Ensure loading state is cleared even on error
-      _viewModel.clearLoadingState();
       if (mounted) {
         showSnackBar('Error initializing chat: $e');
       }
     }
 
     // Restore sidebar state
+    if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final activeSidebar =
-          _viewModel.preferencesSp.currentPreferences.activeSidebar;
-      if (activeSidebar == 'left') {
+      if (_viewModel.preferencesSp.currentPreferences.activeSidebar == 'left') {
         _scaffoldKey.currentState?.openDrawer();
-      } else if (activeSidebar == 'right') {
+      } else if (_viewModel.preferencesSp.currentPreferences.activeSidebar == 'right') {
         _scaffoldKey.currentState?.openEndDrawer();
       }
     });

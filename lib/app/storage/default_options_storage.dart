@@ -8,6 +8,7 @@ class DefaultOptionsStorage extends SharedPreferencesBase<DefaultOptions> {
   static const String _prefix = 'default_models';
   static const String _itemId = 'default_models_config';
 
+  static Future<DefaultOptionsStorage>? _instanceFuture;
   static DefaultOptionsStorage? _instance;
 
   final ValueNotifier<DefaultOptions> modelsNotifier = ValueNotifier(
@@ -29,20 +30,16 @@ class DefaultOptionsStorage extends SharedPreferencesBase<DefaultOptions> {
     });
   }
 
-  static Future<DefaultOptionsStorage> init() async {
+  static Future<DefaultOptionsStorage> get instance async {
     if (_instance != null) return _instance!;
-    final prefs = await SharedPreferences.getInstance();
-    _instance = DefaultOptionsStorage(prefs);
+    _instanceFuture ??= _createInstance();
+    _instance = await _instanceFuture!;
     return _instance!;
   }
 
-  static DefaultOptionsStorage get instance {
-    if (_instance == null) {
-      throw Exception(
-        'DefaultOptionsStorage not initialized. Call init() first.',
-      );
-    }
-    return _instance!;
+  static Future<DefaultOptionsStorage> _createInstance() async {
+    final prefs = await SharedPreferences.getInstance();
+    return DefaultOptionsStorage(prefs);
   }
 
   void _loadInitial() {
