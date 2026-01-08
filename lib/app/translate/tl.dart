@@ -13,7 +13,10 @@ class TranslationManager extends ChangeNotifier {
     return _instance!;
   }
 
-  TranslationManager._internal();
+  TranslationManager._internal() {
+    // Load cache từ persistent storage khi khởi tạo
+    _loadCacheFromStorage();
+  }
 
   final GoogleTranslator _translator = GoogleTranslator();
 
@@ -22,6 +25,24 @@ class TranslationManager extends ChangeNotifier {
 
   /// Map lưu các bản dịch đã hoàn thành (in-memory cache cho realtime update)
   final Map<String, String> _translatedTexts = {};
+
+  /// Load tất cả bản dịch từ persistent storage vào memory
+  Future<void> _loadCacheFromStorage() async {
+    try {
+      final translationCacheRepo = TranslationCacheStorage.instance;
+      final cachedEntries = translationCacheRepo.getItems();
+      
+      for (final entry in cachedEntries) {
+        final cacheKey = _getCacheKey(entry.originalText, entry.targetLanguage);
+        _translatedTexts[cacheKey] = entry.translatedText;
+      }
+      
+      debugPrint('Loaded ${cachedEntries.length} translations from cache');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to load translation cache: $e');
+    }
+  }
 
   /// Tạo cache key từ text và target language
   String _getCacheKey(String text, String targetLanguage) {
@@ -184,10 +205,22 @@ class TranslationManager extends ChangeNotifier {
   }
 
   /// Xóa cache và reset state
-  void clearCache() {
+  Future<void> clearCache() async {
     _translatedTexts.clear();
     _pendingRequests.clear();
+    
+    // Xóa persistent cache
+    final translationCacheRepo = TranslationCacheStorage.instance;
+    await translationCacheRepo.clearCache();
+    
     notifyListeners();
+  }
+
+  /// Reload cache từ storage (dùng khi thay đổi ngôn ngữ)
+  Future<void> reloadCache() async {
+    _translatedTexts.clear();
+    _pendingRequests.clear();
+    await _loadCacheFromStorage();
   }
 
   /// Kiểm tra xem có đang dịch text nào không

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:multigateway/app/models/preferences_setting.dart';
 import 'package:multigateway/app/storage/shared_prefs_base.dart';
+import 'package:multigateway/app/translate/tl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PreferencesStorage extends SharedPreferencesBase<PreferencesSetting> {
@@ -96,6 +97,9 @@ class PreferencesStorage extends SharedPreferencesBase<PreferencesSetting> {
         ),
       ),
     );
+    
+    // Reload translation cache khi thay đổi ngôn ngữ
+    await TranslationManager.instance.reloadCache();
   }
 
   Future<void> setAutoDetectLanguage(bool autoDetect) async {
@@ -106,6 +110,9 @@ class PreferencesStorage extends SharedPreferencesBase<PreferencesSetting> {
         ),
       ),
     );
+    
+    // Reload translation cache khi thay đổi chế độ auto detect
+    await TranslationManager.instance.reloadCache();
   }
 
   Locale getInitialLocale(Locale deviceLocale) {
