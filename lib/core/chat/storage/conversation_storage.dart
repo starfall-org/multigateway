@@ -15,7 +15,11 @@ class ConversationStorage extends HiveBaseStorage<Conversation> {
     return _instance!;
   }
 
-  static Future<ConversationStorage> init() async => instance;
+  static Future<ConversationStorage> init() async {
+    final instance = ConversationStorage();
+    await instance.ensureBoxReady();
+    return instance;
+  }
 
   @override
   String get prefix => _prefix;

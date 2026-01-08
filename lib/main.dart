@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:multigateway/app/app.dart';
 import 'package:multigateway/app/storage/appearance_storage.dart';
+import 'package:multigateway/app/storage/translation_cache_storage.dart';
 import 'package:multigateway/firebase_options.dart';
 import 'package:multigateway/shared/utils/icon_builder.dart';
 
@@ -17,6 +18,9 @@ Future<void> main() async {
 
   // Load settings
   final appearanceStorage = await AppearanceStorage.instance;
+
+  // Initialize translation cache storage
+  await TranslationCacheStorage.init();
 
   // Initialize icons (non-blocking)
   initIcons();

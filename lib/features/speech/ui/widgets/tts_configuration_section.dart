@@ -16,11 +16,21 @@ class TtsConfigurationSection extends StatelessWidget {
   final String? selectedVoiceId;
   final List<String> availableVoices;
   final bool isLoadingVoices;
+  final TextEditingController modelNameController;
+  final String? selectedLanguage;
+  final List<String> availableLanguages;
+  final double speechRate;
+  final double volume;
+  final double pitch;
   final ValueChanged<ServiceType?> onTypeChanged;
   final ValueChanged<String?> onProviderChanged;
   final VoidCallback onToggleCustomVoice;
   final ValueChanged<String?> onVoiceChanged;
   final VoidCallback onFetchVoices;
+  final ValueChanged<String?> onLanguageChanged;
+  final ValueChanged<double> onSpeechRateChanged;
+  final ValueChanged<double> onVolumeChanged;
+  final ValueChanged<double> onPitchChanged;
 
   const TtsConfigurationSection({
     super.key,
@@ -33,11 +43,21 @@ class TtsConfigurationSection extends StatelessWidget {
     required this.selectedVoiceId,
     required this.availableVoices,
     required this.isLoadingVoices,
+    required this.modelNameController,
+    required this.selectedLanguage,
+    required this.availableLanguages,
+    required this.speechRate,
+    required this.volume,
+    required this.pitch,
     required this.onTypeChanged,
     required this.onProviderChanged,
     required this.onToggleCustomVoice,
     required this.onVoiceChanged,
     required this.onFetchVoices,
+    required this.onLanguageChanged,
+    required this.onSpeechRateChanged,
+    required this.onVolumeChanged,
+    required this.onPitchChanged,
   });
 
   @override
@@ -84,6 +104,12 @@ class TtsConfigurationSection extends StatelessWidget {
               );
             }).toList(),
             onChanged: onProviderChanged,
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: modelNameController,
+            label: tl('Model Name'),
+            hint: tl('Enter model name (optional)'),
           ),
           const SizedBox(height: 16),
         ],
@@ -137,6 +163,92 @@ class TtsConfigurationSection extends StatelessWidget {
             ],
           ),
         ],
+        const SizedBox(height: 24),
+        Text(
+          tl('Settings'),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 16),
+        // Language
+        if (availableLanguages.isNotEmpty) ...[
+          CommonDropdown<String>(
+            value: selectedLanguage,
+            labelText: tl('Language'),
+            options: availableLanguages.map((lang) {
+              return DropdownOption<String>(
+                value: lang,
+                label: lang,
+                icon: const Icon(Icons.language),
+              );
+            }).toList(),
+            onChanged: onLanguageChanged,
+          ),
+          const SizedBox(height: 16),
+        ],
+        // Speech Rate
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(tl('Speech Rate')),
+                Text('${speechRate.toStringAsFixed(1)}x'),
+              ],
+            ),
+            Slider(
+              value: speechRate,
+              min: 0.25,
+              max: 2.0,
+              divisions: 7,
+              onChanged: onSpeechRateChanged,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Volume
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(tl('Volume')),
+                Text('${(volume * 100).toInt()}%'),
+              ],
+            ),
+            Slider(
+              value: volume,
+              min: 0.0,
+              max: 1.0,
+              divisions: 10,
+              onChanged: onVolumeChanged,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Pitch
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(tl('Pitch')),
+                Text(pitch.toStringAsFixed(1)),
+              ],
+            ),
+            Slider(
+              value: pitch,
+              min: 0.5,
+              max: 2.0,
+              divisions: 6,
+              onChanged: onPitchChanged,
+            ),
+          ],
+        ),
       ],
     );
   }

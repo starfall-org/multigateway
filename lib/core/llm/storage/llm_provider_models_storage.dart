@@ -13,7 +13,11 @@ class LlmProviderModelsStorage extends HiveBaseStorage<LlmProviderModels> {
     return _instance!;
   }
 
-  static Future<LlmProviderModelsStorage> init() async => instance;
+  static Future<LlmProviderModelsStorage> init() async {
+    final instance = LlmProviderModelsStorage();
+    await instance.ensureBoxReady();
+    return instance;
+  }
 
   @override
   String get prefix => _prefix;

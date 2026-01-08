@@ -35,6 +35,30 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
   bool _isLoadingVoices = false;
   bool _useCustomVoice = false;
 
+  // Model
+  final _modelNameController = TextEditingController();
+
+  // Settings
+  String? _selectedLanguage;
+  final List<String> _availableLanguages = [
+    'en-US',
+    'vi-VN',
+    'zh-CN',
+    'ja-JP',
+    'ko-KR',
+    'de-DE',
+    'fr-FR',
+    'es-ES',
+  ];
+  double _speechRate = 1.0;
+  double _volume = 1.0;
+  double _pitch = 1.0;
+
+  // STT Settings
+  ServiceType _sttSelectedType = ServiceType.system;
+  String? _sttSelectedProviderId;
+  final _sttModelNameController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +74,8 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
     _tabController.dispose();
     _nameController.dispose();
     _customVoiceController.dispose();
+    _modelNameController.dispose();
+    _sttModelNameController.dispose();
     super.dispose();
   }
 
@@ -133,21 +159,39 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
       finalVoiceId = _selectedVoiceId;
     }
 
+    // Validate voice selection
+    if (finalVoiceId == null || finalVoiceId.isEmpty) {
+      context.showInfoSnackBar(tl('Please select or enter a voice'));
+      return;
+    }
+
     final repository = await SpeechServiceStorage.init();
 
     final tts = TextToSpeech(
       type: _selectedType,
-      provider:
-          _selectedType == ServiceType.provider ? _selectedProviderId : null,
-      modelName: null,
+      provider: _selectedType == ServiceType.provider
+          ? _selectedProviderId
+          : null,
+      modelName: _modelNameController.text.isNotEmpty
+          ? _modelNameController.text
+          : null,
       voiceId: finalVoiceId,
-      settings: const {},
+      settings: {
+        'language': _selectedLanguage ?? _getSystemLocale(),
+        'speechRate': _speechRate,
+        'volume': _volume,
+        'pitch': _pitch,
+      },
     );
 
     final stt = SpeechToText(
-      type: ServiceType.system,
-      provider: null,
-      modelName: null,
+      type: _sttSelectedType,
+      provider: _sttSelectedType == ServiceType.provider
+          ? _sttSelectedProviderId
+          : null,
+      modelName: _sttModelNameController.text.isNotEmpty
+          ? _sttModelNameController.text
+          : null,
       settings: const {},
     );
 
@@ -200,6 +244,12 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
               selectedVoiceId: _selectedVoiceId,
               availableVoices: _availableVoices,
               isLoadingVoices: _isLoadingVoices,
+              modelNameController: _modelNameController,
+              selectedLanguage: _selectedLanguage,
+              availableLanguages: _availableLanguages,
+              speechRate: _speechRate,
+              volume: _volume,
+              pitch: _pitch,
               onTypeChanged: (value) {
                 if (value != null) {
                   setState(() {
@@ -230,8 +280,45 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
                 });
               },
               onFetchVoices: _fetchVoices,
+              onLanguageChanged: (value) {
+                setState(() {
+                  _selectedLanguage = value;
+                });
+              },
+              onSpeechRateChanged: (value) {
+                setState(() {
+                  _speechRate = value;
+                });
+              },
+              onVolumeChanged: (value) {
+                setState(() {
+                  _volume = value;
+                });
+              },
+              onPitchChanged: (value) {
+                setState(() {
+                  _pitch = value;
+                });
+              },
             ),
-            const SttConfigurationSection(),
+            SttConfigurationSection(
+              selectedType: _sttSelectedType,
+              availableProviders: _availableProviders,
+              selectedProviderId: _sttSelectedProviderId,
+              modelNameController: _sttModelNameController,
+              onTypeChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _sttSelectedType = value;
+                  });
+                }
+              },
+              onProviderChanged: (value) {
+                setState(() {
+                  _sttSelectedProviderId = value;
+                });
+              },
+            ),
           ],
         ),
       ),

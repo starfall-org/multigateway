@@ -14,6 +14,8 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
   ChatProfileStorage();
 
   static Future<ChatProfileStorage> init() async {
+    final instance = ChatProfileStorage();
+    await instance.ensureBoxReady();
     return instance;
   }
 

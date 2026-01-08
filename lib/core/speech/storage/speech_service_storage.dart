@@ -15,7 +15,12 @@ class SpeechServiceStorage extends HiveBaseStorage<SpeechService> {
     return _instance!;
   }
 
-  static Future<SpeechServiceStorage> init() async => instance;
+  static Future<SpeechServiceStorage> init() async {
+    final instance = SpeechServiceStorage();
+    // Ensure box is opened before returning
+    await instance.ensureBoxReady();
+    return instance;
+  }
 
   @override
   String get prefix => _prefix;

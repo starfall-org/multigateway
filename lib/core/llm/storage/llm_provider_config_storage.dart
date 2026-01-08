@@ -13,7 +13,11 @@ class LlmProviderConfigStorage extends HiveBaseStorage<LlmProviderConfig> {
     return _instance!;
   }
 
-  static Future<LlmProviderConfigStorage> init() async => instance;
+  static Future<LlmProviderConfigStorage> init() async {
+    final instance = LlmProviderConfigStorage();
+    await instance.ensureBoxReady();
+    return instance;
+  }
 
   @override
   String get prefix => _prefix;

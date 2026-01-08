@@ -26,6 +26,8 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
 
   Future<void> _loadServices() async {
     _repository = await SpeechServiceStorage.init();
+    // Wait for box to be ready
+    await Future.delayed(const Duration(milliseconds: 100));
     setState(() {
       _profiles = _repository.getItems();
       _isLoading = false;

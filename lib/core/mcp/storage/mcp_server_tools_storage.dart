@@ -13,7 +13,11 @@ class McpServerToolsStorage extends HiveBaseStorage<McpServerTools> {
     return _instance!;
   }
 
-  static Future<McpServerToolsStorage> init() async => instance;
+  static Future<McpServerToolsStorage> init() async {
+    final instance = McpServerToolsStorage();
+    await instance.ensureBoxReady();
+    return instance;
+  }
 
   @override
   String get prefix => _prefix;

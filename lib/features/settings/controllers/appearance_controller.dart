@@ -9,14 +9,19 @@ class AppearanceController extends ChangeNotifier {
   late final AppearanceStorage _repository;
   late AppearanceSetting settings;
   bool _isInitialized = false;
+  Future<void>? _initializationFuture;
 
   /// Getter để kiểm tra trạng thái khởi tạo
   bool get isInitialized => _isInitialized;
 
+  /// Future để theo dõi quá trình khởi tạo
+  Future<void> get initializationFuture =>
+      _initializationFuture ??= _initialize();
+
   AppearanceController() {
     // Initialize with default settings immediately
     settings = AppearanceSetting.defaults(themeMode: ThemeMode.system);
-    _initialize();
+    _initializationFuture = _initialize();
   }
 
   Future<void> _initialize() async {

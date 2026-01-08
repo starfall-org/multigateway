@@ -104,9 +104,19 @@ abstract class HiveBaseStorage<T> {
 
   List<T> getItems() {
     if (!Hive.isBoxOpen(_boxName)) {
-      return <T>[];
+      // Box not open yet, try to open synchronously
+      try {
+        final box = Hive.box(_boxName);
+        return _getItemsFromBox(box);
+      } catch (_) {
+        return <T>[];
+      }
     }
     final box = Hive.box(_boxName);
+    return _getItemsFromBox(box);
+  }
+
+  List<T> _getItemsFromBox(Box box) {
     final items = <T>[];
 
     for (final key in box.keys) {
@@ -151,7 +161,19 @@ abstract class HiveBaseStorage<T> {
   }
 
   List<String> getOrder() {
-    if (!Hive.isBoxOpen(_boxName)) return <String>[];
+    if (!Hive.isBoxOpen(_boxName)) {
+      // Try to get existing box synchronously
+      try {
+        final box = Hive.box(_boxName);
+        final raw = box.get('__order__');
+        if (raw is List) {
+          return raw.cast<String>();
+        }
+      } catch (_) {
+        // ignore
+      }
+      return <String>[];
+    }
     final box = Hive.box(_boxName);
     final raw = box.get('__order__');
     if (raw is List) {
@@ -241,4 +263,10 @@ abstract class HiveBaseStorage<T> {
   // Aliases for compatibility with previous base
   Future<void> addItem(T item) => saveItem(item);
   Future<void> updateItem(T item) => saveItem(item);
+
+  /// Ensures the box is fully opened and ready for operations.
+  /// This method should be called in the storage's init() method.
+  Future<void> ensureBoxReady() async {
+    await _openBox();
+  }
 }
