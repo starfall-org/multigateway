@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:multigateway/features/home/controllers/chat_controller.dart';
+import 'package:multigateway/features/home/controllers/home_controller.dart';
 
 /// InheritedWidget để share ChatController xuống widget tree
 class ChatControllerProvider extends InheritedWidget {

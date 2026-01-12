@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:multigateway/features/home/domain/domain.dart';
+import 'package:multigateway/core/chat/chat.dart';
 import 'package:multigateway/features/home/ui/widgets/chat_message_widgets/assistant_message_card.dart';
 import 'package:multigateway/features/home/ui/widgets/chat_message_widgets/user_message_card.dart';
 

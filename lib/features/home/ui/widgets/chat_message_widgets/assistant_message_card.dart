@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
-import 'package:multigateway/features/home/domain/domain.dart';
+import 'package:multigateway/core/chat/chat.dart';
 import 'package:multigateway/features/home/ui/widgets/chat_message_widgets/animated_markdown.dart';
 import 'package:multigateway/features/home/ui/widgets/chat_message_widgets/message_version_switcher.dart';
 import 'package:multigateway/features/home/ui/widgets/chat_message_widgets/reasoning_dropdown.dart';

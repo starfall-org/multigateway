@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/config/routes.dart';
 import 'package:multigateway/app/translate/tl.dart';
-import 'package:multigateway/features/home/pages/chat_screen.dart';
+import 'package:multigateway/features/home/presentation/home_page.dart';
 import 'package:multigateway/features/llm/pages/providers_page.dart';
 import 'package:multigateway/features/mcp/pages/mcp_servers_page.dart';
 import 'package:multigateway/features/profiles/pages/profiles_page.dart';

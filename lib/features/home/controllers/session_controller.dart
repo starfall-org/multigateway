@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:multigateway/features/home/domain/domain.dart';
+import 'package:multigateway/core/chat/chat.dart';
 import 'package:uuid/uuid.dart';
 
 /// Controller responsible for managing chat sessions/conversations

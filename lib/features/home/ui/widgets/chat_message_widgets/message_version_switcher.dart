@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:multigateway/features/home/domain/domain.dart';
+import 'package:multigateway/core/chat/chat.dart';
 
 /// Widget hiển thị bộ chuyển đổi phiên bản tin nhắn
 class MessageVersionSwitcher extends StatelessWidget {

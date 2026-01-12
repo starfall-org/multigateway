@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
-import 'package:multigateway/features/home/controllers/chat_controller.dart';
+import 'package:multigateway/features/home/controllers/home_controller.dart';
 import 'package:multigateway/features/home/ui/widgets/quick_actions_widgets/built_in_tool_tile.dart';
 import 'package:multigateway/features/home/ui/widgets/quick_actions_widgets/mcp_server_tile.dart';
 import 'package:multigateway/features/home/ui/widgets/quick_actions_widgets/section_header.dart';

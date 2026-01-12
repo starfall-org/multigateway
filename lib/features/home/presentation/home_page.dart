@@ -6,7 +6,7 @@ import 'package:multigateway/core/llm/storage/llm_provider_models_storage.dart';
 import 'package:multigateway/core/mcp/storage/mcp_server_info_storage.dart';
 import 'package:multigateway/core/profile/storage/chat_profile_storage.dart';
 import 'package:multigateway/core/speech/speech.dart';
-import 'package:multigateway/features/home/controllers/chat_controller.dart';
+import 'package:multigateway/features/home/controllers/home_controller.dart';
 import 'package:multigateway/features/home/ui/menu_view.dart';
 import 'package:multigateway/features/home/ui/widgets/chat_controller_provider.dart';
 import 'package:multigateway/features/home/ui/widgets/chat_screen_widgets/chat_app_bar.dart';

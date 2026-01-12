@@ -78,7 +78,7 @@ class _EditMessageSheetState extends State<EditMessageSheet> {
     super.dispose();
   }
 
-  Future<void> _pickAttachments() async {
+  Future<void> _pickFromFiles() async {
     try {
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: true,
@@ -228,7 +228,7 @@ class _EditMessageSheetState extends State<EditMessageSheet> {
                 ),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: _pickAttachments,
+                  onPressed: _pickFromFiles,
                   icon: const Icon(Icons.attach_file),
                   label: Text(tl('Add')),
                 ),

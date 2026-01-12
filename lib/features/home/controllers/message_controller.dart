@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/chat/chat.dart';
 import 'package:multigateway/core/profile/profile.dart';
-import 'package:multigateway/features/home/domain/domain.dart';
-import 'package:multigateway/features/home/domain/utils/chat_logic_utils.dart';
+import 'package:multigateway/features/home/services/message_helper.dart';
+import 'package:multigateway/features/home/services/message_stream_service.dart';
+import 'package:multigateway/features/home/services/ui_navigation_service.dart';
 import 'package:multigateway/features/home/ui/widgets/edit_message_sheet.dart';
-import 'package:multigateway/shared/widgets/app_snackbar.dart';
-import 'package:multigateway/shared/widgets/error_debug_dialog.dart';
-import 'package:uuid/uuid.dart';
+import 'package:multigateway/features/home/utils/chat_logic_utils.dart';
 
 /// Controller responsible for message operations
 class MessageController extends ChangeNotifier {
@@ -33,18 +31,8 @@ class MessageController extends ChangeNotifier {
     List<String>? allowedToolNames,
     BuildContext? context,
   }) async {
-    final userMessage = ChatMessage(
-      id: const Uuid().v4(),
-      role: ChatRole.user,
-      content: text,
-      timestamp: DateTime.now(),
-      files: attachments,
-    );
-
-    var session = currentSession.copyWith(
-      messages: [...currentSession.messages, userMessage],
-      updatedAt: DateTime.now(),
-    );
+    final userMessage = MessageHelper.createUserMessage(text, attachments);
+    var session = MessageHelper.addMessageToSession(currentSession, userMessage);
 
     isGenerating = true;
     notifyListeners();
@@ -63,7 +51,7 @@ class MessageController extends ChangeNotifier {
     );
 
     if (enableStream) {
-      await _handleStreamResponse(
+      await MessageStreamService.handleStreamResponse(
         userText: modelInput,
         history: session.messages.take(session.messages.length - 1).toList(),
         profile: profile,
@@ -77,7 +65,7 @@ class MessageController extends ChangeNotifier {
         context: context,
       );
     } else {
-      await _handleNonStreamResponse(
+      await MessageStreamService.handleNonStreamResponse(
         userText: modelInput,
         history: session.messages.take(session.messages.length - 1).toList(),
         profile: profile,
@@ -92,190 +80,6 @@ class MessageController extends ChangeNotifier {
     }
   }
 
-  Future<void> _handleStreamResponse({
-    required String userText,
-    required List<ChatMessage> history,
-    required ChatProfile profile,
-    required String providerName,
-    required String modelName,
-    required Conversation currentSession,
-    required Function(Conversation) onSessionUpdate,
-    required Function() onScrollToBottom,
-    required Function() isNearBottom,
-    List<String>? allowedToolNames,
-    String? existingMessageId,
-    BuildContext? context,
-  }) async {
-    final stream = ChatService.generateStream(
-      userText: userText,
-      history: history,
-      profile: profile,
-      providerName: providerName,
-      modelName: modelName,
-      allowedToolNames: allowedToolNames,
-    );
-
-    final String modelId;
-    var session = currentSession;
-
-    if (existingMessageId != null) {
-      modelId = existingMessageId;
-      final idx = session.messages.indexWhere((m) => m.id == modelId);
-      if (idx != -1) {
-        final existing = session.messages[idx];
-        final withNewVersion = existing.addVersion(
-          MessageContents(content: '', timestamp: DateTime.now()),
-        );
-        final msgs = List<ChatMessage>.from(session.messages);
-        msgs[idx] = withNewVersion;
-        session = session.copyWith(messages: msgs, updatedAt: DateTime.now());
-      }
-    } else {
-      modelId = const Uuid().v4();
-      final placeholder = ChatMessage(
-        id: modelId,
-        role: ChatRole.model,
-        content: '',
-        timestamp: DateTime.now(),
-      );
-      session = session.copyWith(
-        messages: [...session.messages, placeholder],
-        updatedAt: DateTime.now(),
-      );
-    }
-
-    onSessionUpdate(session);
-
-    try {
-      DateTime lastUpdate = DateTime.now();
-      const throttleDuration = Duration(milliseconds: 100);
-      var acc = '';
-
-      await for (final chunk in stream) {
-        if (chunk.isEmpty) continue;
-        acc += chunk;
-
-        final now = DateTime.now();
-        if (now.difference(lastUpdate) < throttleDuration) {
-          continue;
-        }
-
-        final wasAtBottom = isNearBottom();
-
-        final msgs = List<ChatMessage>.from(session.messages);
-        final idx = msgs.indexWhere((m) => m.id == modelId);
-        if (idx != -1) {
-          final old = msgs[idx];
-          msgs[idx] = old.updateActiveContent(acc);
-          session = session.copyWith(messages: msgs, updatedAt: DateTime.now());
-          onSessionUpdate(session);
-
-          if (wasAtBottom) {
-            onScrollToBottom();
-          }
-          lastUpdate = now;
-        }
-      }
-
-      // Final update
-      final msgs = List<ChatMessage>.from(session.messages);
-      final idx = msgs.indexWhere((m) => m.id == modelId);
-      if (idx != -1) {
-        final old = msgs[idx];
-        if (old.content != acc) {
-          msgs[idx] = old.updateActiveContent(acc);
-          session = session.copyWith(messages: msgs, updatedAt: DateTime.now());
-          onSessionUpdate(session);
-        }
-      }
-    } catch (e, stackTrace) {
-      debugPrint('Error in _handleStreamResponse: $e');
-      debugPrint(stackTrace.toString());
-
-      if (context != null && context.mounted) {
-        final prefs = await PreferencesStorage.instance;
-        if (context.mounted && prefs.currentPreferences.debugMode) {
-          ErrorDebugDialog.show(context, error: e, stackTrace: stackTrace);
-        }
-      }
-      rethrow;
-    } finally {
-      isGenerating = false;
-      notifyListeners();
-      if (isNearBottom()) {
-        onScrollToBottom();
-      }
-    }
-  }
-
-  Future<void> _handleNonStreamResponse({
-    required String userText,
-    required List<ChatMessage> history,
-    required ChatProfile profile,
-    required String providerName,
-    required String modelName,
-    required Conversation currentSession,
-    required Function(Conversation) onSessionUpdate,
-    required Function() onScrollToBottom,
-    List<String>? allowedToolNames,
-    String? existingMessageId,
-    BuildContext? context,
-  }) async {
-    try {
-      final reply = await ChatService.generateReply(
-        userText: userText,
-        history: history,
-        profile: profile,
-        providerName: providerName,
-        modelName: modelName,
-        allowedToolNames: allowedToolNames,
-      );
-
-      var session = currentSession;
-      if (existingMessageId != null) {
-        final idx = session.messages.indexWhere(
-          (m) => m.id == existingMessageId,
-        );
-        if (idx != -1) {
-          final existing = session.messages[idx];
-          final updated = existing.addVersion(
-            MessageContents(content: reply, timestamp: DateTime.now()),
-          );
-          final msgs = List<ChatMessage>.from(session.messages);
-          msgs[idx] = updated;
-          session = session.copyWith(messages: msgs, updatedAt: DateTime.now());
-        }
-      } else {
-        final modelMessage = ChatMessage(
-          id: const Uuid().v4(),
-          role: ChatRole.model,
-          content: reply,
-          timestamp: DateTime.now(),
-        );
-        session = session.copyWith(
-          messages: [...session.messages, modelMessage],
-          updatedAt: DateTime.now(),
-        );
-      }
-
-      onSessionUpdate(session);
-    } catch (e, stackTrace) {
-      debugPrint('Error in _handleNonStreamResponse: $e');
-      debugPrint(stackTrace.toString());
-
-      if (context != null && context.mounted) {
-        final prefs = await PreferencesStorage.instance;
-        if (context.mounted && prefs.currentPreferences.debugMode) {
-          ErrorDebugDialog.show(context, error: e, stackTrace: stackTrace);
-        }
-      }
-      rethrow;
-    } finally {
-      isGenerating = false;
-      notifyListeners();
-      onScrollToBottom();
-    }
-  }
 
   Future<String?> regenerateLast({
     required Conversation currentSession,
@@ -292,20 +96,14 @@ class MessageController extends ChangeNotifier {
     if (currentSession.messages.isEmpty) return null;
 
     final msgs = currentSession.messages;
-    int lastUserIndex = -1;
-    for (int i = msgs.length - 1; i >= 0; i--) {
-      if (msgs[i].role == ChatRole.user) {
-        lastUserIndex = i;
-        break;
-      }
-    }
+    final lastUserIndex = MessageHelper.findLastUserMessageIndex(msgs);
 
     if (lastUserIndex == -1) {
       return tl('No user message found to regenerate');
     }
 
     final userText = msgs[lastUserIndex].content;
-    final history = msgs.take(lastUserIndex).toList();
+    final history = MessageHelper.getHistoryUpTo(msgs, lastUserIndex);
 
     // Check if there's an existing model response following the last user message
     ChatMessage? existingModelMessage;
@@ -328,13 +126,13 @@ class MessageController extends ChangeNotifier {
         baseMessages = [...msgs.take(lastUserIndex + 1)];
       }
 
-      var session = currentSession.copyWith(
-        messages: baseMessages,
-        updatedAt: DateTime.now(),
+      var session = MessageHelper.updateSessionWithMessages(
+        currentSession,
+        baseMessages,
       );
 
       if (enableStream) {
-        await _handleStreamResponse(
+        await MessageStreamService.handleStreamResponse(
           userText: userText ?? '',
           history: history,
           profile: profile,
@@ -349,7 +147,7 @@ class MessageController extends ChangeNotifier {
           context: context,
         );
       } else {
-        await _handleNonStreamResponse(
+        await MessageStreamService.handleNonStreamResponse(
           userText: userText ?? '',
           history: history,
           profile: profile,
@@ -367,15 +165,14 @@ class MessageController extends ChangeNotifier {
       return null;
     } catch (e) {
       return e.toString();
+    } finally {
+      isGenerating = false;
+      notifyListeners();
     }
   }
 
   Future<void> copyMessage(BuildContext context, ChatMessage message) async {
-    if ((message.content ?? '').trim().isEmpty) return;
-    await Clipboard.setData(ClipboardData(text: message.content ?? ''));
-    if (context.mounted) {
-      context.showSuccessSnackBar(tl('Transcript copied'));
-    }
+    await UiNavigationService.copyMessageToClipboard(context, message.content);
   }
 
   Future<void> deleteMessage({
@@ -383,14 +180,10 @@ class MessageController extends ChangeNotifier {
     required Conversation currentSession,
     required Function(Conversation) onSessionUpdate,
   }) async {
-    final msgs = List<ChatMessage>.from(currentSession.messages)
-      ..removeWhere((m) => m.id == message.id);
-
-    final session = currentSession.copyWith(
-      messages: msgs,
-      updatedAt: DateTime.now(),
+    final session = MessageHelper.removeMessageFromSession(
+      currentSession,
+      message.id,
     );
-
     onSessionUpdate(session);
   }
 
@@ -431,26 +224,14 @@ class MessageController extends ChangeNotifier {
     required Function(Conversation) onSessionUpdate,
     Function()? regenerateCallback,
   }) async {
-    final msgs = List<ChatMessage>.from(currentSession.messages);
-    final idx = msgs.indexWhere((m) => m.id == original.id);
-    if (idx == -1) return;
-
-    final updated = original.addVersion(
-      MessageContents(
-        content: newContent,
-        timestamp: DateTime.now(),
-        files: newAttachments,
-        reasoningContent: original.reasoningContent,
-        toolCall: original.toolCall,
-      ),
+    final session = MessageHelper.addVersionToMessageInSession(
+      currentSession,
+      original.id,
+      newContent,
+      files: newAttachments,
+      reasoningContent: original.reasoningContent,
+      toolCall: original.toolCall,
     );
-    msgs[idx] = updated;
-
-    final session = currentSession.copyWith(
-      messages: msgs,
-      updatedAt: DateTime.now(),
-    );
-
     onSessionUpdate(session);
 
     if (resend && regenerateCallback != null) {
@@ -464,17 +245,11 @@ class MessageController extends ChangeNotifier {
     required Conversation currentSession,
     required Function(Conversation) onSessionUpdate,
   }) async {
-    final msgs = List<ChatMessage>.from(currentSession.messages);
-    final idx = msgs.indexWhere((m) => m.id == message.id);
-    if (idx == -1) return;
-
-    msgs[idx] = message.switchVersion(index);
-
-    final session = currentSession.copyWith(
-      messages: msgs,
-      updatedAt: DateTime.now(),
+    final session = MessageHelper.switchMessageVersionInSession(
+      currentSession,
+      message.id,
+      index,
     );
-
     onSessionUpdate(session);
   }
 }

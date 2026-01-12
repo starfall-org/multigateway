@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/core/chat/chat.dart';
 import 'package:multigateway/core/profile/profile.dart';
-import 'package:multigateway/features/home/domain/data/chat_store.dart';
 import 'package:multigateway/features/home/ui/widgets/drawer_widgets/drawer_footer.dart';
 import 'package:multigateway/features/home/ui/widgets/drawer_widgets/drawer_header.dart'
     as drawer_widgets;
@@ -52,7 +51,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
   }
 
   Future<void> _loadHistory() async {
-    _chatRepository = await initChatRepository();
+    _chatRepository = await ConversationStorage.init();
     setState(() {
       _sessions = _chatRepository!.getItems();
       _filteredSessions = _sessions;

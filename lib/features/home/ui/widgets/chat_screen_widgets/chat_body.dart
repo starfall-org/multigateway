@@ -56,10 +56,9 @@ class ChatBody extends StatelessWidget {
           child: UserInputArea(
             controller: controller.textController,
             onSubmitted: (text) => controller.handleSubmitted(text, context),
-            attachments: controller.pendingAttachments,
-            onPickAttachments: () => controller.pickAttachments(context),
-            onPickFromGallery: () =>
-                controller.pickAttachmentsFromGallery(context),
+            attachments: controller.pendingFiles,
+            onPickAttachments: () => controller.pickFromFiles(context),
+            onPickFromGallery: () => controller.pickFromGallery(context),
             onRemoveAttachment: controller.removeAttachmentAt,
             isGenerating: controller.isGenerating,
             onOpenModelPicker: () => _openModelPicker(context, controller),

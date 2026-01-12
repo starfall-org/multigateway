@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:multigateway/app/config/theme.dart';
 import 'package:multigateway/app/translate/tl.dart';
-import 'package:multigateway/features/home/domain/domain.dart';
+import 'package:multigateway/core/chat/chat.dart';
 import 'package:multigateway/features/home/ui/widgets/chat_message_widgets/message_attachments_bar.dart';
 import 'package:multigateway/features/home/ui/widgets/chat_message_widgets/message_version_switcher.dart';
 
