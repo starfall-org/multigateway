@@ -29,7 +29,7 @@ class AppSidebar extends StatelessWidget {
             Theme.of(context).extension<SecondarySurface>()?.backgroundColor ??
             Theme.of(context).scaffoldBackgroundColor),
       ),
-      child: child,
+      child: SafeArea(child: child),
     );
   }
 }

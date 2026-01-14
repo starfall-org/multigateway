@@ -44,12 +44,6 @@ class ChatBody extends StatelessWidget {
                   ),
           ),
         ),
-        // Thanh tiến trình khi AI đang tạo phản hồi
-        if (controller.isGenerating)
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: LinearProgressIndicator(),
-          ),
         // Khu vực nhập liệu
         SafeArea(
           top: false,

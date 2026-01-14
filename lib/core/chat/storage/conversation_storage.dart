@@ -7,11 +7,14 @@ class ConversationStorage extends HiveBaseStorage<Conversation> {
   static const String _prefix = 'conversation';
 
   static ConversationStorage? _instance;
+  static Future<ConversationStorage>? _instanceFuture;
 
   ConversationStorage();
 
-  static ConversationStorage get instance {
-    _instance ??= ConversationStorage();
+  static Future<ConversationStorage> get instance async {
+    if (_instance != null) return _instance!;
+    _instanceFuture ??= init();
+    _instance = await _instanceFuture!;
     return _instance!;
   }
 

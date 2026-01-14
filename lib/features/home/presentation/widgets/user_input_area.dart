@@ -96,6 +96,8 @@ class _UserInputAreaState extends State<UserInputArea> {
         ((widget.controller.text.trim().isNotEmpty) ||
             widget.attachments.isNotEmpty);
 
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return GestureDetector(
       onTapDown: (_) {
         // Unfocus the TextField when tapping outside và ẩn bàn phím
@@ -106,17 +108,14 @@ class _UserInputAreaState extends State<UserInputArea> {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-        ),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(28),
-              topRight: Radius.circular(28),
-            ),
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(28),
+            topRight: Radius.circular(28),
           ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 8 + bottomPadding),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,19 +147,43 @@ class _UserInputAreaState extends State<UserInputArea> {
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: Theme.of(context).scaffoldBackgroundColor,
+                    fillColor: Theme.of(context).colorScheme.surface,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
                     ),
-                    // Thêm suffix để hiển thị trạng thái focus
-                    suffixIcon: _isFocused
-                        ? IconButton(
-                            icon: const Icon(Icons.keyboard_hide),
-                            onPressed: _unfocusTextField,
-                            tooltip: tl('Hide keyboard'),
-                          )
-                        : null,
+                    // Đưa nút gửi lên đây thay cho nút ẩn bàn phím
+                    suffixIcon: Container(
+                      margin: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: canSend
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.1)
+                            : Theme.of(
+                                context,
+                              ).colorScheme.surface.withValues(alpha: 0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.arrow_upward,
+                          color: canSend
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(
+                                  context,
+                                ).iconTheme.color?.withValues(alpha: 0.5),
+                          size: 20,
+                        ),
+                        onPressed: canSend
+                            ? () {
+                                widget.onSubmitted(widget.controller.text);
+                                _unfocusTextField();
+                              }
+                            : null,
+                        tooltip: tl('Send'),
+                      ),
+                    ),
                   ),
                   onSubmitted: (_) {
                     if (canSend) {
@@ -214,15 +237,21 @@ class _UserInputAreaState extends State<UserInputArea> {
                       ),
                     ],
                   ),
-                  // Right side buttons
-                  Row(
-                    children: [
-                      ElevatedButton(
+                  // Right side: Nút chọn model kéo dài với tên model
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: ElevatedButton(
                         onPressed: () {
-                          // Unfocus trước khi mở model picker
                           _unfocusTextField();
                           widget.onOpenModelPicker();
                         },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -247,52 +276,24 @@ class _UserInputAreaState extends State<UserInputArea> {
                                   padding: EdgeInsets.only(right: 8.0),
                                   child: Icon(Icons.token, size: 20),
                                 ),
+                              Flexible(
+                                child: Text(
+                                  widget.selectedLlmModel!.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
                             ] else ...[
                               const Padding(
                                 padding: EdgeInsets.only(right: 8.0),
                                 child: Icon(Icons.token, size: 20),
                               ),
+                              Text(tl('Select Model')),
                             ],
                           ],
                         ),
                       ),
-                      GestureDetector(
-                        onTapDown: (_) {},
-                        child: Container(
-                          height: 40,
-                          width: 40,
-                          decoration: BoxDecoration(
-                            color: canSend
-                                ? Theme.of(
-                                    context,
-                                  ).colorScheme.primary.withValues(alpha: 0.1)
-                                : Theme.of(
-                                    context,
-                                  ).colorScheme.surface.withValues(alpha: 0.5),
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              Icons.arrow_upward,
-                              color: canSend
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(
-                                      context,
-                                    ).iconTheme.color?.withValues(alpha: 0.5),
-                              size: 20,
-                            ),
-                            onPressed: canSend
-                                ? () {
-                                    widget.onSubmitted(widget.controller.text);
-                                    // Unfocus sau khi gửi
-                                    _unfocusTextField();
-                                  }
-                                : null,
-                            tooltip: tl('Send'),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),

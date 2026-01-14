@@ -22,7 +22,7 @@ class UiStateController extends ChangeNotifier {
   // === Model Selection ===
   final LlmProviderInfoStorage pInfStorage;
   final LlmProviderModelsStorage pModStorage;
-  
+
   StreamSubscription? _providerSubscription;
   List<LlmProviderInfo> providers = [];
   Map<String, List<LlmModel>> providerModels = {};
@@ -33,7 +33,7 @@ class UiStateController extends ChangeNotifier {
   // === Profile Management ===
   final ChatProfileStorage aiProfileRepository;
   final McpServerInfoStorage mcpServerStorage;
-  
+
   ChatProfile? selectedProfile;
   List<McpServer> mcpServers = [];
 
@@ -168,7 +168,7 @@ class UiStateController extends ChangeNotifier {
 
   Future<List<String>> snapshotEnabledToolNames(ChatProfile profile) async {
     try {
-      final mcpRepo = McpServerInfoStorage.instance;
+      final mcpRepo = await McpServerInfoStorage.instance;
       final servers = profile.activeMcpServerIds
           .map((id) => mcpRepo.getItem(id))
           .whereType<McpServer>()

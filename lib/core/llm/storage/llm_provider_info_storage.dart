@@ -5,11 +5,14 @@ class LlmProviderInfoStorage extends HiveBaseStorage<LlmProviderInfo> {
   static const String _prefix = 'llm_provider_info';
 
   static LlmProviderInfoStorage? _instance;
+  static Future<LlmProviderInfoStorage>? _instanceFuture;
 
   LlmProviderInfoStorage();
 
-  static LlmProviderInfoStorage get instance {
-    _instance ??= LlmProviderInfoStorage();
+  static Future<LlmProviderInfoStorage> get instance async {
+    if (_instance != null) return _instance!;
+    _instanceFuture ??= init();
+    _instance = await _instanceFuture!;
     return _instance!;
   }
 
@@ -31,7 +34,10 @@ class LlmProviderInfoStorage extends HiveBaseStorage<LlmProviderInfo> {
   }
 
   @override
-  LlmProviderInfo deserializeFromFields(String id, Map<String, dynamic> fields) {
+  LlmProviderInfo deserializeFromFields(
+    String id,
+    Map<String, dynamic> fields,
+  ) {
     return LlmProviderInfo.fromJson(fields);
   }
 }

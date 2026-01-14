@@ -35,7 +35,7 @@ class ProfileController extends ChangeNotifier {
 
   Future<List<String>> snapshotEnabledToolNames(ChatProfile profile) async {
     try {
-      final mcpRepo = McpServerInfoStorage.instance;
+      final mcpRepo = await McpServerInfoStorage.instance;
       final servers = profile.activeMcpServerIds
           .map((id) => mcpRepo.getItem(id))
           .whereType<McpServer>()

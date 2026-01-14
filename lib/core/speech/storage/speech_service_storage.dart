@@ -7,11 +7,14 @@ class SpeechServiceStorage extends HiveBaseStorage<SpeechService> {
   static const String _prefix = 'speech_service';
 
   static SpeechServiceStorage? _instance;
+  static Future<SpeechServiceStorage>? _instanceFuture;
 
   SpeechServiceStorage();
 
-  static SpeechServiceStorage get instance {
-    _instance ??= SpeechServiceStorage();
+  static Future<SpeechServiceStorage> get instance async {
+    if (_instance != null) return _instance!;
+    _instanceFuture ??= init();
+    _instance = await _instanceFuture!;
     return _instance!;
   }
 

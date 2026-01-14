@@ -3,6 +3,7 @@ import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/features/settings/presentation/controllers/appearance_controller.dart';
 import 'package:multigateway/features/settings/presentation/widgets/appearance/additional_settings_section.dart';
 import 'package:multigateway/features/settings/presentation/widgets/appearance/appearance_controller_provider.dart';
+import 'package:multigateway/features/settings/presentation/widgets/appearance/color_scheme_selector.dart';
 import 'package:multigateway/features/settings/presentation/widgets/appearance/theme_mode_selector.dart';
 
 /// Màn hình cài đặt giao diện
@@ -89,6 +90,8 @@ class _AppearancePageState extends State<AppearancePage> {
                         ThemeModeSelector(),
                         SizedBox(height: 24),
                         AdditionalSettingsSection(),
+                        SizedBox(height: 24),
+                        ColorSchemeSelector(),
                       ],
                     ),
                   );

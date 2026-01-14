@@ -5,11 +5,14 @@ class LlmProviderModelsStorage extends HiveBaseStorage<LlmProviderModels> {
   static const String _prefix = 'llm_provider_models';
 
   static LlmProviderModelsStorage? _instance;
+  static Future<LlmProviderModelsStorage>? _instanceFuture;
 
   LlmProviderModelsStorage();
 
-  static LlmProviderModelsStorage get instance {
-    _instance ??= LlmProviderModelsStorage();
+  static Future<LlmProviderModelsStorage> get instance async {
+    if (_instance != null) return _instance!;
+    _instanceFuture ??= init();
+    _instance = await _instanceFuture!;
     return _instance!;
   }
 

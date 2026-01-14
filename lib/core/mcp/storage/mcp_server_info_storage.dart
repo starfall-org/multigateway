@@ -5,11 +5,14 @@ class McpServerInfoStorage extends HiveBaseStorage<McpServerInfo> {
   static const String _prefix = 'mcp_server_info';
 
   static McpServerInfoStorage? _instance;
+  static Future<McpServerInfoStorage>? _instanceFuture;
 
   McpServerInfoStorage();
 
-  static McpServerInfoStorage get instance {
-    _instance ??= McpServerInfoStorage();
+  static Future<McpServerInfoStorage> get instance async {
+    if (_instance != null) return _instance!;
+    _instanceFuture ??= init();
+    _instance = await _instanceFuture!;
     return _instance!;
   }
 
@@ -31,10 +34,7 @@ class McpServerInfoStorage extends HiveBaseStorage<McpServerInfo> {
   }
 
   @override
-  McpServerInfo deserializeFromFields(
-    String id,
-    Map<String, dynamic> fields,
-  ) {
+  McpServerInfo deserializeFromFields(String id, Map<String, dynamic> fields) {
     return McpServerInfo.fromJson(fields);
   }
 }

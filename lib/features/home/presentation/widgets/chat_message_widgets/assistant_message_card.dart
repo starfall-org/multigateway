@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/chat/chat.dart';
+import 'package:multigateway/features/home/presentation/widgets/chat_message_widgets/animated_avatar_border.dart';
 import 'package:multigateway/features/home/presentation/widgets/chat_message_widgets/animated_markdown.dart';
 import 'package:multigateway/features/home/presentation/widgets/chat_message_widgets/message_version_switcher.dart';
 import 'package:multigateway/features/home/presentation/widgets/chat_message_widgets/reasoning_dropdown.dart';
@@ -50,9 +51,13 @@ class AssistantMessageCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const CircleAvatar(
+                    AnimatedAvatarBorder(
+                      isAnimating: isStreaming,
                       radius: 18,
-                      child: Icon(Icons.token, size: 18),
+                      child: const CircleAvatar(
+                        radius: 18,
+                        child: Icon(Icons.token, size: 18),
+                      ),
                     ),
                     if (onRead != null)
                       IconButton(
@@ -64,7 +69,7 @@ class AssistantMessageCard extends StatelessWidget {
                       ),
                   ],
                 ),
-                
+
                 // Content
                 if ((message.content ?? '').trim().isNotEmpty)
                   Padding(
@@ -154,8 +159,7 @@ class AssistantMessageCard extends StatelessWidget {
   }
 
   void _showContextMenu(BuildContext context, Offset globalPos) async {
-    final overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     final selected = await showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -190,7 +194,7 @@ class _MediaGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = _computeTileSize(files.length);
-    
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,

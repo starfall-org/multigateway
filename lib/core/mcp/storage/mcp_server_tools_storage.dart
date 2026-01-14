@@ -5,11 +5,14 @@ class McpServerToolsStorage extends HiveBaseStorage<McpServerTools> {
   static const String _prefix = 'mcp_server_tools';
 
   static McpServerToolsStorage? _instance;
+  static Future<McpServerToolsStorage>? _instanceFuture;
 
   McpServerToolsStorage();
 
-  static McpServerToolsStorage get instance {
-    _instance ??= McpServerToolsStorage();
+  static Future<McpServerToolsStorage> get instance async {
+    if (_instance != null) return _instance!;
+    _instanceFuture ??= init();
+    _instance = await _instanceFuture!;
     return _instance!;
   }
 

@@ -5,11 +5,14 @@ class LlmProviderConfigStorage extends HiveBaseStorage<LlmProviderConfig> {
   static const String _prefix = 'llm_provider_config';
 
   static LlmProviderConfigStorage? _instance;
+  static Future<LlmProviderConfigStorage>? _instanceFuture;
 
   LlmProviderConfigStorage();
 
-  static LlmProviderConfigStorage get instance {
-    _instance ??= LlmProviderConfigStorage();
+  static Future<LlmProviderConfigStorage> get instance async {
+    if (_instance != null) return _instance!;
+    _instanceFuture ??= init();
+    _instance = await _instanceFuture!;
     return _instance!;
   }
 

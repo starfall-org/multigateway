@@ -37,14 +37,14 @@ class _ChatPageState extends State<ChatPage>
   Future<void> _initializeController() async {
     try {
       final preferencesSp = await PreferencesStorage.instance;
-      final conversationRepository = ConversationStorage.instance;
-      final aiProfileRepository = ChatProfileStorage.instance;
-      final pInfStorage = LlmProviderInfoStorage.instance;
-      final pModStorage = LlmProviderModelsStorage.instance;
-      final mcpServerStorage = McpServerInfoStorage.instance;
+      final conversationRepository = await ConversationStorage.instance;
+      final aiProfileRepository = await ChatProfileStorage.instance;
+      final pInfStorage = await LlmProviderInfoStorage.instance;
+      final pModStorage = await LlmProviderModelsStorage.instance;
+      final mcpServerStorage = await McpServerInfoStorage.instance;
 
       final speechManager = SpeechManager(
-        storage: SpeechServiceStorage.instance,
+        storage: await SpeechServiceStorage.instance,
       );
 
       _controller = ChatController(
@@ -61,7 +61,7 @@ class _ChatPageState extends State<ChatPage>
       await _controller.initChat();
       await _controller.loadSelectedProfile();
       await _controller.refreshProviders();
-      
+
       // Trigger rebuild after initialization completes
       if (mounted) {
         setState(() {});
@@ -82,7 +82,7 @@ class _ChatPageState extends State<ChatPage>
 
   @override
   Future<({String content, List<String> attachments, bool resend})?>
-      showEditMessageDialog({
+  showEditMessageDialog({
     required String initialContent,
     required List<String> initialAttachments,
   }) async {
@@ -144,8 +144,7 @@ class _ChatPageState extends State<ChatPage>
             key: _scaffoldKey,
             appBar: ChatAppBar(
               onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-              onOpenEndDrawer: () =>
-                  _scaffoldKey.currentState?.openEndDrawer(),
+              onOpenEndDrawer: () => _scaffoldKey.currentState?.openEndDrawer(),
             ),
             drawer: ConversationsDrawer(
               onSessionSelected: (sessionId) {

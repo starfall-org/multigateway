@@ -10,6 +10,7 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
   static const String _selectedKey = '__selected_id__';
 
   static ChatProfileStorage? _instance;
+  static Future<ChatProfileStorage>? _instanceFuture;
 
   ChatProfileStorage();
 
@@ -19,8 +20,10 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
     return instance;
   }
 
-  static ChatProfileStorage get instance {
-    _instance ??= ChatProfileStorage();
+  static Future<ChatProfileStorage> get instance async {
+    if (_instance != null) return _instance!;
+    _instanceFuture ??= init();
+    _instance = await _instanceFuture!;
     return _instance!;
   }
 

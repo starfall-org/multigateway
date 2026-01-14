@@ -91,8 +91,12 @@ class AppearanceController extends ChangeNotifier {
   Future<void> updateColor(ColorType type, int colorValue) async {
     final newColors = switch (type) {
       ColorType.primary => settings.colors.copyWith(primaryColor: colorValue),
-      ColorType.secondary => settings.colors.copyWith(secondaryColor: colorValue),
-      ColorType.background => settings.colors.copyWith(backgroundColor: colorValue),
+      ColorType.secondary => settings.colors.copyWith(
+        secondaryColor: colorValue,
+      ),
+      ColorType.background => settings.colors.copyWith(
+        backgroundColor: colorValue,
+      ),
       ColorType.surface => settings.colors.copyWith(surfaceColor: colorValue),
       ColorType.text => settings.colors.copyWith(textColor: colorValue),
       ColorType.textHint => settings.colors.copyWith(textHintColor: colorValue),
@@ -122,12 +126,36 @@ class AppearanceController extends ChangeNotifier {
     await _updateSettings(newSettings);
   }
 
+  Future<void> updateColorSchemePreset(ColorSchemePreset preset) async {
+    // Nếu không phải custom, cập nhật màu sắc từ preset
+    if (preset != ColorSchemePreset.custom) {
+      final isDark =
+          settings.themeMode == ThemeMode.dark ||
+          (settings.themeMode == ThemeMode.system &&
+              WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                  Brightness.dark);
+
+      final newColors = ColorSettings.fromPreset(
+        preset: preset,
+        isDark: isDark,
+      );
+
+      final newSettings = settings.copyWith(
+        colorSchemePreset: preset,
+        colors: newColors,
+      );
+      await _updateSettings(newSettings);
+    } else {
+      // Chỉ cập nhật preset, giữ nguyên màu hiện tại
+      final newSettings = settings.copyWith(colorSchemePreset: preset);
+      await _updateSettings(newSettings);
+    }
+  }
+
   @Deprecated('removed')
   Future<void> updateSecondaryBackgroundMode(
     SecondaryBackgroundMode mode,
-  ) async {
-    
-  }
+  ) async {}
 
   Future<void> _updateSettings(AppearanceSetting newSettings) async {
     await _repository.updateSettings(newSettings);

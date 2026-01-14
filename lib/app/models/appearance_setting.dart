@@ -8,6 +8,18 @@ enum ThemeSelection { system, light, dark, custom }
 
 enum SecondaryBackgroundMode { off, auto, on }
 
+enum ColorSchemePreset {
+  blue,
+  purple,
+  green,
+  orange,
+  pink,
+  red,
+  teal,
+  indigo,
+  custom,
+}
+
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class ColorSettings {
   final int primaryColor;
@@ -30,6 +42,62 @@ class ColorSettings {
     return ColorSettings(
       primaryColor: Colors.blue.toARGB32(),
       secondaryColor: Colors.purple.toARGB32(),
+      backgroundColor: isDark
+          ? Colors.black.toARGB32()
+          : Colors.white.toARGB32(),
+      surfaceColor: isDark ? Colors.black.toARGB32() : Colors.white.toARGB32(),
+      textColor: isDark ? Colors.white.toARGB32() : Colors.black.toARGB32(),
+      textHintColor: isDark ? Colors.white.toARGB32() : Colors.black.toARGB32(),
+    );
+  }
+
+  factory ColorSettings.fromPreset({
+    required ColorSchemePreset preset,
+    required bool isDark,
+  }) {
+    final Color primary;
+    final Color secondary;
+
+    switch (preset) {
+      case ColorSchemePreset.blue:
+        primary = Colors.blue;
+        secondary = Colors.lightBlue;
+        break;
+      case ColorSchemePreset.purple:
+        primary = Colors.purple;
+        secondary = Colors.deepPurple;
+        break;
+      case ColorSchemePreset.green:
+        primary = Colors.green;
+        secondary = Colors.lightGreen;
+        break;
+      case ColorSchemePreset.orange:
+        primary = Colors.orange;
+        secondary = Colors.deepOrange;
+        break;
+      case ColorSchemePreset.pink:
+        primary = Colors.pink;
+        secondary = Colors.pinkAccent;
+        break;
+      case ColorSchemePreset.red:
+        primary = Colors.red;
+        secondary = Colors.redAccent;
+        break;
+      case ColorSchemePreset.teal:
+        primary = Colors.teal;
+        secondary = Colors.cyan;
+        break;
+      case ColorSchemePreset.indigo:
+        primary = Colors.indigo;
+        secondary = Colors.indigoAccent;
+        break;
+      case ColorSchemePreset.custom:
+        return ColorSettings.defaults(isDark: isDark);
+    }
+
+    return ColorSettings(
+      primaryColor: primary.toARGB32(),
+      secondaryColor: secondary.toARGB32(),
       backgroundColor: isDark
           ? Colors.black.toARGB32()
           : Colors.white.toARGB32(),
@@ -109,6 +177,7 @@ class AppearanceSetting {
   final FontSettings font;
   final bool superDarkMode;
   final bool dynamicColor;
+  final ColorSchemePreset colorSchemePreset;
   final bool enableAnimation;
 
   AppearanceSetting({
@@ -118,6 +187,7 @@ class AppearanceSetting {
     required this.font,
     required this.superDarkMode,
     required this.dynamicColor,
+    this.colorSchemePreset = ColorSchemePreset.blue,
     required this.enableAnimation,
   });
 
@@ -131,6 +201,7 @@ class AppearanceSetting {
       font: FontSettings.defaults(),
       superDarkMode: false,
       dynamicColor: false,
+      colorSchemePreset: ColorSchemePreset.blue,
       enableAnimation: true,
     );
   }
@@ -142,6 +213,7 @@ class AppearanceSetting {
     FontSettings? font,
     bool? superDarkMode,
     bool? dynamicColor,
+    ColorSchemePreset? colorSchemePreset,
     bool? enableAnimation,
   }) {
     return AppearanceSetting(
@@ -151,6 +223,7 @@ class AppearanceSetting {
       font: font ?? this.font,
       superDarkMode: superDarkMode ?? this.superDarkMode,
       dynamicColor: dynamicColor ?? this.dynamicColor,
+      colorSchemePreset: colorSchemePreset ?? this.colorSchemePreset,
       enableAnimation: enableAnimation ?? this.enableAnimation,
     );
   }

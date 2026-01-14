@@ -104,13 +104,9 @@ abstract class HiveBaseStorage<T> {
 
   List<T> getItems() {
     if (!Hive.isBoxOpen(_boxName)) {
-      // Box not open yet, try to open synchronously
-      try {
-        final box = Hive.box(_boxName);
-        return _getItemsFromBox(box);
-      } catch (_) {
-        return <T>[];
-      }
+      // Box not open yet, return empty list
+      // Callers should use await init() or await instance getter to ensure box is ready
+      return <T>[];
     }
     final box = Hive.box(_boxName);
     return _getItemsFromBox(box);

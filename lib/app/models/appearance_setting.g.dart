@@ -48,6 +48,9 @@ AppearanceSetting _$AppearanceSettingFromJson(Map<String, dynamic> json) =>
       font: FontSettings.fromJson(json['font'] as Map<String, dynamic>),
       superDarkMode: json['super_dark_mode'] as bool,
       dynamicColor: json['dynamic_color'] as bool,
+      colorSchemePreset: $enumDecodeNullable(
+              _$ColorSchemePresetEnumMap, json['color_scheme_preset']) ??
+          ColorSchemePreset.blue,
       enableAnimation: json['enable_animation'] as bool,
     );
 
@@ -59,6 +62,8 @@ Map<String, dynamic> _$AppearanceSettingToJson(AppearanceSetting instance) =>
       'font': instance.font.toJson(),
       'super_dark_mode': instance.superDarkMode,
       'dynamic_color': instance.dynamicColor,
+      'color_scheme_preset':
+          _$ColorSchemePresetEnumMap[instance.colorSchemePreset]!,
       'enable_animation': instance.enableAnimation,
     };
 
@@ -73,4 +78,16 @@ const _$ThemeSelectionEnumMap = {
   ThemeSelection.light: 'light',
   ThemeSelection.dark: 'dark',
   ThemeSelection.custom: 'custom',
+};
+
+const _$ColorSchemePresetEnumMap = {
+  ColorSchemePreset.blue: 'blue',
+  ColorSchemePreset.purple: 'purple',
+  ColorSchemePreset.green: 'green',
+  ColorSchemePreset.orange: 'orange',
+  ColorSchemePreset.pink: 'pink',
+  ColorSchemePreset.red: 'red',
+  ColorSchemePreset.teal: 'teal',
+  ColorSchemePreset.indigo: 'indigo',
+  ColorSchemePreset.custom: 'custom',
 };
