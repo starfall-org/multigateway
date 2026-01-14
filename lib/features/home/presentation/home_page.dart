@@ -47,6 +47,10 @@ class _ChatPageState extends State<ChatPage>
         storage: await SpeechServiceStorage.instance,
       );
 
+      // Đọc tùy chọn continueLastConversation từ preferences
+      final continueLastConversation =
+          preferencesSp.currentPreferences.continueLastConversation;
+
       _controller = ChatController(
         navigator: this,
         conversationRepository: conversationRepository,
@@ -56,6 +60,7 @@ class _ChatPageState extends State<ChatPage>
         preferencesSp: preferencesSp,
         mcpServerStorage: mcpServerStorage,
         speechManager: speechManager,
+        continueLastConversation: continueLastConversation,
       );
 
       await _controller.initChat();

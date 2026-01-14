@@ -59,7 +59,6 @@ class UserInputArea extends StatefulWidget {
 
 class _UserInputAreaState extends State<UserInputArea> {
   late FocusNode _focusNode;
-  bool _isFocused = false;
 
   @override
   void initState() {
@@ -77,7 +76,6 @@ class _UserInputAreaState extends State<UserInputArea> {
 
   void _onFocusChanged() {
     setState(() {
-      _isFocused = _focusNode.hasFocus;
     });
   }
 
@@ -278,7 +276,7 @@ class _UserInputAreaState extends State<UserInputArea> {
                                 ),
                               Flexible(
                                 child: Text(
-                                  widget.selectedLlmModel!.name,
+                                  widget.selectedLlmModel!.displayName,
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                 ),

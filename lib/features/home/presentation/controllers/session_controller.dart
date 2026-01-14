@@ -8,16 +8,29 @@ class SessionController extends ChangeNotifier {
 
   Conversation? currentSession;
   bool isLoading = true;
+  bool continueLastConversation = true;
 
   SessionController({
     required this.conversationRepository,
+    this.continueLastConversation = true,
   });
 
   Future<void> initChat() async {
     final sessions = conversationRepository.getItems();
 
-    if (sessions.isNotEmpty) {
-      currentSession = sessions.first;
+    // Xóa các conversation rỗng (không có messages)
+    final emptySessions = sessions.where((s) => s.messages.isEmpty).toList();
+    for (final emptySession in emptySessions) {
+      await conversationRepository.deleteItem(emptySession.id);
+    }
+
+    // Lọc ra các conversation có nội dung
+    final nonEmptySessions = sessions
+        .where((s) => s.messages.isNotEmpty)
+        .toList();
+
+    if (continueLastConversation && nonEmptySessions.isNotEmpty) {
+      currentSession = nonEmptySessions.first;
       isLoading = false;
     } else {
       await createNewSession();
@@ -58,7 +71,7 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<void> saveCurrentSession() async {
-    if (currentSession != null) {
+    if (currentSession != null && currentSession!.messages.isNotEmpty) {
       await conversationRepository.saveItem(currentSession!);
     }
   }
@@ -89,9 +102,7 @@ class SessionController extends ChangeNotifier {
         .map((m) {
           final who = m.role == ChatRole.user
               ? 'You'
-              : (m.role == ChatRole.model
-                    ? (profileName ?? 'AI')
-                    : 'System');
+              : (m.role == ChatRole.model ? (profileName ?? 'AI') : 'System');
           return '$who: ${m.content}';
         })
         .join('\n\n');

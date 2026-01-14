@@ -37,10 +37,12 @@ class ChatController extends ChangeNotifier {
     required this.preferencesSp,
     required McpServerInfoStorage mcpServerStorage,
     required this.speechManager,
+    bool continueLastConversation = true,
   }) {
     // Initialize sub-controllers
     sessionController = SessionController(
       conversationRepository: conversationRepository,
+      continueLastConversation: continueLastConversation,
     );
     messageController = MessageController();
     attachmentController = AttachmentController();
@@ -128,8 +130,8 @@ class ChatController extends ChangeNotifier {
       currentSession: currentSession,
     );
 
-    final profile = selectedProfile ??
-        ProviderResolutionService.createDefaultProfile();
+    final profile =
+        selectedProfile ?? ProviderResolutionService.createDefaultProfile();
 
     try {
       await messageController.sendMessage(
@@ -145,7 +147,8 @@ class ChatController extends ChangeNotifier {
           // ignore: discarded_futures
           sessionController.saveCurrentSession();
         },
-        onScrollToBottom: () => UiNavigationService.scrollToBottom(scrollController),
+        onScrollToBottom: () =>
+            UiNavigationService.scrollToBottom(scrollController),
         isNearBottom: () => UiNavigationService.isNearBottom(scrollController),
         allowedToolNames: null,
         context: context.mounted ? context : null,
@@ -169,8 +172,8 @@ class ChatController extends ChangeNotifier {
       currentSession: currentSession,
     );
 
-    final profile = selectedProfile ??
-        ProviderResolutionService.createDefaultProfile();
+    final profile =
+        selectedProfile ?? ProviderResolutionService.createDefaultProfile();
 
     final errorMessage = await messageController.regenerateLast(
       currentSession: currentSession!,
@@ -183,7 +186,8 @@ class ChatController extends ChangeNotifier {
         // ignore: discarded_futures
         sessionController.saveCurrentSession();
       },
-      onScrollToBottom: () => UiNavigationService.scrollToBottom(scrollController),
+      onScrollToBottom: () =>
+          UiNavigationService.scrollToBottom(scrollController),
       isNearBottom: () => UiNavigationService.isNearBottom(scrollController),
       allowedToolNames: null,
       context: context.mounted ? context : null,

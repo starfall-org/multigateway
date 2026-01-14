@@ -102,6 +102,18 @@ class _PreferencesPageState extends State<PreferencesPage> {
               child: Column(
                 children: [
                   SettingsTile(
+                    icon: Icons.chat_outlined,
+                    title: tl('Continue last conversation'),
+                    subtitle: tl('Open last conversation when app starts'),
+                    trailing: Switch(
+                      value: _controller.continueLastConversation,
+                      onChanged: (val) => _controller.updatePreferencesSetting(
+                        continueLastConversation: val,
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 56, endIndent: 16),
+                  SettingsTile(
                     icon: Icons.save_outlined,
                     title: tl('Persist selections'),
                     trailing: Switch(

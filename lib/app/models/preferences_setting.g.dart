@@ -17,6 +17,8 @@ PreferencesSetting _$PreferencesSettingFromJson(Map<String, dynamic> json) =>
       hideNavigationBar: json['hide_navigation_bar'] as bool? ?? false,
       debugMode: json['debug_mode'] as bool? ?? false,
       hasInitializedIcons: json['has_initialized_icons'] as bool? ?? false,
+      continueLastConversation:
+          json['continue_last_conversation'] as bool? ?? true,
     );
 
 Map<String, dynamic> _$PreferencesSettingToJson(PreferencesSetting instance) =>
@@ -28,6 +30,7 @@ Map<String, dynamic> _$PreferencesSettingToJson(PreferencesSetting instance) =>
       'debug_mode': instance.debugMode,
       'has_initialized_icons': instance.hasInitializedIcons,
       'language_setting': instance.languageSetting.toJson(),
+      'continue_last_conversation': instance.continueLastConversation,
     };
 
 VibrationSettings _$VibrationSettingsFromJson(Map<String, dynamic> json) =>

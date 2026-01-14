@@ -13,6 +13,7 @@ class PreferencesSetting {
   final bool debugMode;
   final bool hasInitializedIcons;
   final LanguageSetting languageSetting;
+  final bool continueLastConversation;
 
   const PreferencesSetting({
     required this.persistChatSelection,
@@ -22,6 +23,7 @@ class PreferencesSetting {
     this.hideNavigationBar = false,
     this.debugMode = false,
     this.hasInitializedIcons = false,
+    this.continueLastConversation = true,
   });
 
   factory PreferencesSetting.defaults() {
@@ -33,6 +35,7 @@ class PreferencesSetting {
       hideNavigationBar: false,
       debugMode: false,
       hasInitializedIcons: false,
+      continueLastConversation: true,
     );
   }
 
@@ -44,6 +47,7 @@ class PreferencesSetting {
     bool? hideNavigationBar,
     bool? debugMode,
     bool? hasInitializedIcons,
+    bool? continueLastConversation,
   }) {
     return PreferencesSetting(
       persistChatSelection: persistChatSelection ?? this.persistChatSelection,
@@ -53,6 +57,8 @@ class PreferencesSetting {
       hideNavigationBar: hideNavigationBar ?? this.hideNavigationBar,
       debugMode: debugMode ?? this.debugMode,
       hasInitializedIcons: hasInitializedIcons ?? this.hasInitializedIcons,
+      continueLastConversation:
+          continueLastConversation ?? this.continueLastConversation,
     );
   }
 
