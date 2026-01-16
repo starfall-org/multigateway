@@ -46,6 +46,11 @@ class _AddProviderScreenState extends State<AddProviderScreen>
         providerConfig: config,
         providerModels: models,
       );
+
+      // Rebuild UI after loading data
+      if (mounted) {
+        setState(() {});
+      }
     } else {
       _controller.initialize();
     }

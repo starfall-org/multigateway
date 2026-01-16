@@ -27,6 +27,9 @@ LlmModel _$LlmModelFromJson(Map<String, dynamic> json) => LlmModel(
       displayName: json['display_name'] as String,
       type: $enumDecode(_$LlmModelTypeEnumMap, json['type']),
       origin: json['origin'],
+      originType:
+          $enumDecodeNullable(_$OriginModelTypeEnumMap, json['origin_type']),
+      originData: json['origin_data'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$LlmModelToJson(LlmModel instance) => <String, dynamic>{
@@ -34,6 +37,8 @@ Map<String, dynamic> _$LlmModelToJson(LlmModel instance) => <String, dynamic>{
       'icon': instance.icon,
       'display_name': instance.displayName,
       'type': _$LlmModelTypeEnumMap[instance.type]!,
+      'origin_type': _$OriginModelTypeEnumMap[instance.originType],
+      'origin_data': instance.originData,
       'origin': instance.origin,
     };
 
@@ -43,4 +48,11 @@ const _$LlmModelTypeEnumMap = {
   LlmModelType.audio: 'audio',
   LlmModelType.video: 'video',
   LlmModelType.embed: 'embed',
+};
+
+const _$OriginModelTypeEnumMap = {
+  OriginModelType.basic: 'basic',
+  OriginModelType.github: 'github',
+  OriginModelType.googleai: 'googleai',
+  OriginModelType.ollama: 'ollama',
 };

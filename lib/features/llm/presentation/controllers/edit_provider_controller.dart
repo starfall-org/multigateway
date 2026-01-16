@@ -125,7 +125,7 @@ class AddProviderController extends ChangeNotifier {
       if (providerModels != null) {
         // Extract models from LlmProviderModels and convert to their origin types
         selectedModels = providerModels.models
-            .where((model) => model != null)
+            .where((model) => model != null && model.origin != null)
             .map((model) => model!.origin)
             .toList();
       }

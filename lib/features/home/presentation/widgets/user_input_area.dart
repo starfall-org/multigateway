@@ -143,35 +143,38 @@ class _UserInputAreaState extends State<UserInputArea> {
                     vertical: 8,
                   ),
                   // Đưa nút gửi lên đây thay cho nút ẩn bàn phím
-                  suffixIcon: Container(
-                    margin: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: canSend
-                          ? Theme.of(
-                              context,
-                            ).colorScheme.primary.withValues(alpha: 0.1)
-                          : Theme.of(
-                              context,
-                            ).colorScheme.surface.withValues(alpha: 0.5),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.arrow_upward,
+                  suffixIcon: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: canSend
+                        ? () {
+                            widget.onSubmitted(widget.controller.text);
+                            _unfocusTextField();
+                          }
+                        : null,
+                    child: Container(
+                      margin: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
                         color: canSend
-                            ? Theme.of(context).colorScheme.primary
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.1)
                             : Theme.of(
                                 context,
-                              ).iconTheme.color?.withValues(alpha: 0.5),
-                        size: 20,
+                              ).colorScheme.surface.withValues(alpha: 0.5),
+                        shape: BoxShape.circle,
                       ),
-                      onPressed: canSend
-                          ? () {
-                              widget.onSubmitted(widget.controller.text);
-                              _unfocusTextField();
-                            }
-                          : null,
-                      tooltip: tl('Send'),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          Icons.arrow_upward,
+                          color: canSend
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(
+                                  context,
+                                ).iconTheme.color?.withValues(alpha: 0.5),
+                          size: 20,
+                        ),
+                      ),
                     ),
                   ),
                 ),
