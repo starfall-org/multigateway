@@ -5,6 +5,180 @@ import 'package:multigateway/app/app_routes.dart';
 import 'package:multigateway/app/config/theme.dart';
 import 'package:multigateway/app/storage/appearance_storage.dart';
 
+/// Build a consistent light ColorScheme when dynamic color is disabled.
+ColorScheme _buildLightColorScheme({
+  required Color primaryColor,
+  required Color secondaryColor,
+}) {
+  // Ensure primary color has good contrast in light mode
+  final HSLColor primaryHsl = HSLColor.fromColor(primaryColor);
+  final Color adjustedPrimary = primaryHsl.lightness > 0.6
+      ? primaryHsl.withLightness(0.45).toColor()
+      : primaryHsl
+            .withLightness((primaryHsl.lightness * 0.9).clamp(0.3, 0.55))
+            .toColor();
+
+  // Adjust secondary color similarly
+  final HSLColor secondaryHsl = HSLColor.fromColor(secondaryColor);
+  final Color adjustedSecondary = secondaryHsl.lightness > 0.6
+      ? secondaryHsl.withLightness(0.5).toColor()
+      : secondaryHsl
+            .withLightness((secondaryHsl.lightness * 0.9).clamp(0.35, 0.6))
+            .toColor();
+
+  // Create soft container colors
+  final Color primaryContainer = HSLColor.fromColor(
+    primaryColor,
+  ).withLightness(0.9).withSaturation(0.5).toColor();
+  final Color secondaryContainer = HSLColor.fromColor(
+    secondaryColor,
+  ).withLightness(0.88).withSaturation(0.45).toColor();
+
+  return ColorScheme(
+    brightness: Brightness.light,
+    primary: adjustedPrimary,
+    onPrimary: Colors.white,
+    primaryContainer: primaryContainer,
+    onPrimaryContainer: HSLColor.fromColor(
+      primaryColor,
+    ).withLightness(0.2).toColor(),
+    secondary: adjustedSecondary,
+    onSecondary: Colors.white,
+    secondaryContainer: secondaryContainer,
+    onSecondaryContainer: HSLColor.fromColor(
+      secondaryColor,
+    ).withLightness(0.25).toColor(),
+    tertiary: adjustedSecondary.withValues(alpha: 0.9),
+    onTertiary: Colors.white,
+    tertiaryContainer: secondaryContainer.withValues(alpha: 0.8),
+    onTertiaryContainer: const Color(0xFF2D2D2D),
+    error: const Color(0xFFBA1A1A),
+    onError: Colors.white,
+    errorContainer: const Color(0xFFFFDAD6),
+    onErrorContainer: const Color(0xFF410002),
+    surface: Colors.white,
+    onSurface: const Color(0xFF1C1B1F),
+    surfaceContainerLowest: Colors.white,
+    surfaceContainerLow: const Color(0xFFF7F7F7),
+    surfaceContainer: const Color(0xFFF3F3F3),
+    surfaceContainerHigh: const Color(0xFFEDEDED),
+    surfaceContainerHighest: const Color(0xFFE6E6E6),
+    onSurfaceVariant: const Color(0xFF49454F),
+    outline: const Color(0xFF79747E),
+    outlineVariant: const Color(0xFFCAC4D0),
+    shadow: Colors.black,
+    scrim: Colors.black,
+    inverseSurface: const Color(0xFF313033),
+    onInverseSurface: const Color(0xFFF4EFF4),
+    inversePrimary: HSLColor.fromColor(
+      primaryColor,
+    ).withLightness(0.75).toColor(),
+  );
+}
+
+/// Build a consistent dark ColorScheme when dynamic color is disabled.
+/// This ensures good contrast and readability across all UI elements.
+ColorScheme _buildDarkColorScheme({
+  required Color primaryColor,
+  required Color secondaryColor,
+  required bool superDarkMode,
+}) {
+  // Base surface colors - consistent gray scale for dark mode
+  final Color surface = superDarkMode
+      ? const Color(0xFF000000)
+      : const Color(0xFF121212);
+  final Color surfaceContainerLowest = superDarkMode
+      ? const Color(0xFF000000)
+      : const Color(0xFF0D0D0D);
+  final Color surfaceContainerLow = superDarkMode
+      ? const Color(0xFF0A0A0A)
+      : const Color(0xFF1A1A1A);
+  final Color surfaceContainer = superDarkMode
+      ? const Color(0xFF141414)
+      : const Color(0xFF1E1E1E);
+  final Color surfaceContainerHigh = superDarkMode
+      ? const Color(0xFF1E1E1E)
+      : const Color(0xFF252525);
+  final Color surfaceContainerHighest = superDarkMode
+      ? const Color(0xFF282828)
+      : const Color(0xFF2C2C2C);
+
+  // Ensure primary color has good contrast in dark mode
+  // Lighten if too dark (luminance < 0.3)
+  final HSLColor primaryHsl = HSLColor.fromColor(primaryColor);
+  final Color adjustedPrimary = primaryHsl.lightness < 0.4
+      ? primaryHsl.withLightness(0.65).toColor()
+      : primaryHsl
+            .withLightness((primaryHsl.lightness * 0.8 + 0.5).clamp(0.5, 0.8))
+            .toColor();
+
+  // Adjust secondary color similarly
+  final HSLColor secondaryHsl = HSLColor.fromColor(secondaryColor);
+  final Color adjustedSecondary = secondaryHsl.lightness < 0.4
+      ? secondaryHsl.withLightness(0.6).toColor()
+      : secondaryHsl
+            .withLightness(
+              (secondaryHsl.lightness * 0.8 + 0.45).clamp(0.45, 0.75),
+            )
+            .toColor();
+
+  // Create muted container colors from primary/secondary
+  final Color primaryContainer = HSLColor.fromColor(
+    primaryColor,
+  ).withLightness(0.25).withSaturation(0.4).toColor();
+  final Color secondaryContainer = HSLColor.fromColor(
+    secondaryColor,
+  ).withLightness(0.22).withSaturation(0.35).toColor();
+
+  // Text colors with good contrast
+  const Color onSurface = Color(0xFFE6E6E6);
+  const Color onSurfaceVariant = Color(0xFFB3B3B3);
+  const Color outline = Color(0xFF737373);
+  const Color outlineVariant = Color(0xFF404040);
+
+  return ColorScheme(
+    brightness: Brightness.dark,
+    primary: adjustedPrimary,
+    onPrimary: _contrastingTextColor(adjustedPrimary),
+    primaryContainer: primaryContainer,
+    onPrimaryContainer: const Color(0xFFE0E0E0),
+    secondary: adjustedSecondary,
+    onSecondary: _contrastingTextColor(adjustedSecondary),
+    secondaryContainer: secondaryContainer,
+    onSecondaryContainer: const Color(0xFFDCDCDC),
+    tertiary: adjustedSecondary.withValues(alpha: 0.8),
+    onTertiary: Colors.white,
+    tertiaryContainer: secondaryContainer.withValues(alpha: 0.7),
+    onTertiaryContainer: const Color(0xFFD8D8D8),
+    error: const Color(0xFFFFB4AB),
+    onError: const Color(0xFF690005),
+    errorContainer: const Color(0xFF93000A),
+    onErrorContainer: const Color(0xFFFFDAD6),
+    surface: surface,
+    onSurface: onSurface,
+    surfaceContainerLowest: surfaceContainerLowest,
+    surfaceContainerLow: surfaceContainerLow,
+    surfaceContainer: surfaceContainer,
+    surfaceContainerHigh: surfaceContainerHigh,
+    surfaceContainerHighest: surfaceContainerHighest,
+    onSurfaceVariant: onSurfaceVariant,
+    outline: outline,
+    outlineVariant: outlineVariant,
+    shadow: Colors.black,
+    scrim: Colors.black,
+    inverseSurface: const Color(0xFFE6E1E5),
+    onInverseSurface: const Color(0xFF1C1B1F),
+    inversePrimary: primaryColor,
+  );
+}
+
+/// Returns black or white text color based on background luminance
+Color _contrastingTextColor(Color background) {
+  return background.computeLuminance() > 0.5
+      ? const Color(0xFF1A1A1A)
+      : const Color(0xFFF5F5F5);
+}
+
 class MultiGatewayApp extends StatelessWidget {
   final AppearanceStorage appearanceStorage;
 
@@ -21,38 +195,17 @@ class MultiGatewayApp extends StatelessWidget {
 
             final ColorScheme lightScheme = (useDynamic && lightDynamic != null)
                 ? lightDynamic.harmonized()
-                : ColorScheme.fromSeed(
-                    seedColor: Color(settings.colors.primaryColor),
-                    brightness: Brightness.light,
-                  ).copyWith(
-                    secondary: Color(settings.colors.secondaryColor),
-                    surface: Color(settings.colors.surfaceColor),
+                : _buildLightColorScheme(
+                    primaryColor: Color(settings.colors.primaryColor),
+                    secondaryColor: Color(settings.colors.secondaryColor),
                   );
 
             final ColorScheme darkScheme = (useDynamic && darkDynamic != null)
                 ? darkDynamic.harmonized()
-                : ColorScheme.fromSeed(
-                    seedColor: Color(settings.colors.primaryColor),
-                    brightness: Brightness.dark,
-                  ).copyWith(
-                    secondary: Color(settings.colors.secondaryColor),
-                    surface: Color(settings.colors.surfaceColor),
-                    // Make surface variants more consistent in dark mode when dynamic color is off
-                    surfaceContainerLowest: settings.superDarkMode 
-                        ? const Color(0xFF000000) 
-                        : const Color(0xFF121212),
-                    surfaceContainerLow: settings.superDarkMode 
-                        ? const Color(0xFF0A0A0A) 
-                        : const Color(0xFF1A1A1A),
-                    surfaceContainer: settings.superDarkMode 
-                        ? const Color(0xFF141414) 
-                        : const Color(0xFF1E1E1E),
-                    surfaceContainerHigh: settings.superDarkMode 
-                        ? const Color(0xFF1E1E1E) 
-                        : const Color(0xFF252525),
-                    surfaceContainerHighest: settings.superDarkMode 
-                        ? const Color(0xFF282828) 
-                        : const Color(0xFF2C2C2C),
+                : _buildDarkColorScheme(
+                    primaryColor: Color(settings.colors.primaryColor),
+                    secondaryColor: Color(settings.colors.secondaryColor),
+                    superDarkMode: settings.superDarkMode,
                   );
 
             // Apply custom text colors only if they match the current brightness

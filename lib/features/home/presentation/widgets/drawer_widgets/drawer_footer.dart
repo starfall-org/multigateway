@@ -8,11 +8,7 @@ class DrawerFooter extends StatelessWidget {
   final ChatProfile? selectedProfile;
   final VoidCallback? onAgentChanged;
 
-  const DrawerFooter({
-    super.key,
-    this.selectedProfile,
-    this.onAgentChanged,
-  });
+  const DrawerFooter({super.key, this.selectedProfile, this.onAgentChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -25,15 +21,9 @@ class DrawerFooter extends StatelessWidget {
           top: BorderSide(color: colorScheme.outlineVariant, width: 1),
         ),
       ),
-      child: Column(
-        children: [
-          _ActiveProfileButton(
-            selectedProfile: selectedProfile,
-            onAgentChanged: onAgentChanged,
-          ),
-          const SizedBox(height: 16),
-          const _UserProfile(),
-        ],
+      child: _ActiveProfileButton(
+        selectedProfile: selectedProfile,
+        onAgentChanged: onAgentChanged,
       ),
     );
   }
@@ -44,10 +34,7 @@ class _ActiveProfileButton extends StatelessWidget {
   final ChatProfile? selectedProfile;
   final VoidCallback? onAgentChanged;
 
-  const _ActiveProfileButton({
-    this.selectedProfile,
-    this.onAgentChanged,
-  });
+  const _ActiveProfileButton({this.selectedProfile, this.onAgentChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -137,57 +124,6 @@ class _ActiveProfileButton extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// User profile info
-class _UserProfile extends StatelessWidget {
-  const _UserProfile();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final userName = tl('Preview Feature');
-    final userEmail = tl('bosuutap@alwaysdata.net');
-
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Icon(Icons.person, size: 20, color: colorScheme.onSurface),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                userName,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-              Text(
-                userEmail,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

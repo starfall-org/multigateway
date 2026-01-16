@@ -32,7 +32,10 @@ class MessageController extends ChangeNotifier {
     BuildContext? context,
   }) async {
     final userMessage = MessageHelper.createUserMessage(text, attachments);
-    var session = MessageHelper.addMessageToSession(currentSession, userMessage);
+    var session = MessageHelper.addMessageToSession(
+      currentSession,
+      userMessage,
+    );
 
     isGenerating = true;
     notifyListeners();
@@ -45,41 +48,42 @@ class MessageController extends ChangeNotifier {
 
     onSessionUpdate(session);
 
-    final modelInput = ChatLogicUtils.formatFilesForPrompt(
-      text,
-      attachments,
-    );
+    final modelInput = ChatLogicUtils.formatFilesForPrompt(text, attachments);
 
-    if (enableStream) {
-      await MessageStreamService.handleStreamResponse(
-        userText: modelInput,
-        history: session.messages.take(session.messages.length - 1).toList(),
-        profile: profile,
-        providerName: providerName,
-        modelName: modelName,
-        currentSession: session,
-        onSessionUpdate: onSessionUpdate,
-        onScrollToBottom: onScrollToBottom,
-        isNearBottom: isNearBottom,
-        allowedToolNames: allowedToolNames,
-        context: context,
-      );
-    } else {
-      await MessageStreamService.handleNonStreamResponse(
-        userText: modelInput,
-        history: session.messages.take(session.messages.length - 1).toList(),
-        profile: profile,
-        providerName: providerName,
-        modelName: modelName,
-        currentSession: session,
-        onSessionUpdate: onSessionUpdate,
-        onScrollToBottom: onScrollToBottom,
-        allowedToolNames: allowedToolNames,
-        context: context,
-      );
+    try {
+      if (enableStream) {
+        await MessageStreamService.handleStreamResponse(
+          userText: modelInput,
+          history: session.messages.take(session.messages.length - 1).toList(),
+          profile: profile,
+          providerName: providerName,
+          modelName: modelName,
+          currentSession: session,
+          onSessionUpdate: onSessionUpdate,
+          onScrollToBottom: onScrollToBottom,
+          isNearBottom: isNearBottom,
+          allowedToolNames: allowedToolNames,
+          context: context,
+        );
+      } else {
+        await MessageStreamService.handleNonStreamResponse(
+          userText: modelInput,
+          history: session.messages.take(session.messages.length - 1).toList(),
+          profile: profile,
+          providerName: providerName,
+          modelName: modelName,
+          currentSession: session,
+          onSessionUpdate: onSessionUpdate,
+          onScrollToBottom: onScrollToBottom,
+          allowedToolNames: allowedToolNames,
+          context: context,
+        );
+      }
+    } finally {
+      isGenerating = false;
+      notifyListeners();
     }
   }
-
 
   Future<String?> regenerateLast({
     required Conversation currentSession,

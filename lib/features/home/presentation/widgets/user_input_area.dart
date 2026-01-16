@@ -75,8 +75,7 @@ class _UserInputAreaState extends State<UserInputArea> {
   }
 
   void _onFocusChanged() {
-    setState(() {
-    });
+    setState(() {});
   }
 
   void _unfocusTextField() {
@@ -113,7 +112,7 @@ class _UserInputAreaState extends State<UserInputArea> {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 8 + bottomPadding),
+          padding: EdgeInsets.fromLTRB(12, 8, 12, 4 + bottomPadding),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,7 +147,7 @@ class _UserInputAreaState extends State<UserInputArea> {
                     fillColor: Theme.of(context).colorScheme.surface,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 12,
+                      vertical: 8,
                     ),
                     // Đưa nút gửi lên đây thay cho nút ẩn bàn phím
                     suffixIcon: Container(
@@ -197,7 +196,7 @@ class _UserInputAreaState extends State<UserInputArea> {
                   enableInteractiveSelection: true,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               // Buttons row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

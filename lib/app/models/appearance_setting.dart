@@ -43,11 +43,17 @@ class ColorSettings {
       primaryColor: Colors.blue.toARGB32(),
       secondaryColor: Colors.purple.toARGB32(),
       backgroundColor: isDark
-          ? Colors.black.toARGB32()
+          ? const Color(0xFF121212).toARGB32()
           : Colors.white.toARGB32(),
-      surfaceColor: isDark ? Colors.black.toARGB32() : Colors.white.toARGB32(),
-      textColor: isDark ? Colors.white.toARGB32() : Colors.black.toARGB32(),
-      textHintColor: isDark ? Colors.white.toARGB32() : Colors.black.toARGB32(),
+      surfaceColor: isDark
+          ? const Color(0xFF121212).toARGB32()
+          : Colors.white.toARGB32(),
+      textColor: isDark
+          ? const Color(0xFFE6E6E6).toARGB32()
+          : const Color(0xFF1C1B1F).toARGB32(),
+      textHintColor: isDark
+          ? const Color(0xFFB3B3B3).toARGB32()
+          : const Color(0xFF49454F).toARGB32(),
     );
   }
 
@@ -99,11 +105,17 @@ class ColorSettings {
       primaryColor: primary.toARGB32(),
       secondaryColor: secondary.toARGB32(),
       backgroundColor: isDark
-          ? Colors.black.toARGB32()
+          ? const Color(0xFF121212).toARGB32()
           : Colors.white.toARGB32(),
-      surfaceColor: isDark ? Colors.black.toARGB32() : Colors.white.toARGB32(),
-      textColor: isDark ? Colors.white.toARGB32() : Colors.black.toARGB32(),
-      textHintColor: isDark ? Colors.white.toARGB32() : Colors.black.toARGB32(),
+      surfaceColor: isDark
+          ? const Color(0xFF121212).toARGB32()
+          : Colors.white.toARGB32(),
+      textColor: isDark
+          ? const Color(0xFFE6E6E6).toARGB32()
+          : const Color(0xFF1C1B1F).toARGB32(),
+      textHintColor: isDark
+          ? const Color(0xFFB3B3B3).toARGB32()
+          : const Color(0xFF49454F).toARGB32(),
     );
   }
 

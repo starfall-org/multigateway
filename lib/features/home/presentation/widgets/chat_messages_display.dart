@@ -4,7 +4,7 @@ import 'package:multigateway/features/home/presentation/widgets/chat_message_wid
 import 'package:multigateway/features/home/presentation/widgets/chat_message_widgets/user_message_card.dart';
 
 /// Widget hiển thị danh sách tin nhắn chat
-class ChatMessagesDisplay extends StatelessWidget {
+class ChatMessagesDisplay extends StatefulWidget {
   final List<ChatMessage> messages;
   final ScrollController scrollController;
   final bool isGenerating;
@@ -33,39 +33,113 @@ class ChatMessagesDisplay extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      controller: scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: messages.length,
-      itemBuilder: (context, index) {
-        final message = messages[index];
-        final isUser = message.role == ChatRole.user;
+  State<ChatMessagesDisplay> createState() => _ChatMessagesDisplayState();
+}
 
-        return isUser
-            ? UserMessageCard(
-                message: message,
-                onCopy: onCopy != null ? () => onCopy!(message) : null,
-                onEdit: onEdit != null ? () => onEdit!(message) : null,
-                onDelete: onDelete != null ? () => onDelete!(message) : null,
-                onOpenAttachments: onOpenAttachmentsSidebar,
-                onSwitchVersion: onSwitchVersion != null
-                    ? (idx) => onSwitchVersion!(message, idx)
-                    : null,
-              )
-            : AssistantMessageCard(
-                message: message,
-                isStreaming: isGenerating && index == messages.length - 1,
-                onCopy: onCopy != null ? () => onCopy!(message) : null,
-                onEdit: onEdit != null ? () => onEdit!(message) : null,
-                onDelete: onDelete != null ? () => onDelete!(message) : null,
-                onRegenerate: onRegenerate,
-                onRead: onRead != null ? () => onRead!(message) : null,
-                onSwitchVersion: onSwitchVersion != null
-                    ? (idx) => onSwitchVersion!(message, idx)
-                    : null,
-              );
-      },
+class _ChatMessagesDisplayState extends State<ChatMessagesDisplay> {
+  bool _showScrollToBottom = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    widget.scrollController.removeListener(_onScroll);
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final isAtBottom = _isNearBottom();
+    if (_showScrollToBottom == isAtBottom) {
+      setState(() {
+        _showScrollToBottom = !isAtBottom;
+      });
+    }
+  }
+
+  bool _isNearBottom() {
+    if (!widget.scrollController.hasClients) return true;
+    final position = widget.scrollController.position;
+    return position.pixels >= position.maxScrollExtent - 100;
+  }
+
+  void _scrollToBottom() {
+    if (widget.scrollController.hasClients) {
+      widget.scrollController.animateTo(
+        widget.scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        ListView.builder(
+          controller: widget.scrollController,
+          padding: const EdgeInsets.all(16),
+          itemCount: widget.messages.length,
+          itemBuilder: (context, index) {
+            final message = widget.messages[index];
+            final isUser = message.role == ChatRole.user;
+
+            return isUser
+                ? UserMessageCard(
+                    message: message,
+                    onCopy: widget.onCopy != null
+                        ? () => widget.onCopy!(message)
+                        : null,
+                    onEdit: widget.onEdit != null
+                        ? () => widget.onEdit!(message)
+                        : null,
+                    onDelete: widget.onDelete != null
+                        ? () => widget.onDelete!(message)
+                        : null,
+                    onOpenAttachments: widget.onOpenAttachmentsSidebar,
+                    onSwitchVersion: widget.onSwitchVersion != null
+                        ? (idx) => widget.onSwitchVersion!(message, idx)
+                        : null,
+                  )
+                : AssistantMessageCard(
+                    message: message,
+                    isStreaming:
+                        widget.isGenerating &&
+                        index == widget.messages.length - 1,
+                    onCopy: widget.onCopy != null
+                        ? () => widget.onCopy!(message)
+                        : null,
+                    onEdit: widget.onEdit != null
+                        ? () => widget.onEdit!(message)
+                        : null,
+                    onDelete: widget.onDelete != null
+                        ? () => widget.onDelete!(message)
+                        : null,
+                    onRegenerate: widget.onRegenerate,
+                    onRead: widget.onRead != null
+                        ? () => widget.onRead!(message)
+                        : null,
+                    onSwitchVersion: widget.onSwitchVersion != null
+                        ? (idx) => widget.onSwitchVersion!(message, idx)
+                        : null,
+                  );
+          },
+        ),
+        // Nút cuộn xuống cuối
+        if (_showScrollToBottom)
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton.small(
+              onPressed: _scrollToBottom,
+              child: const Icon(Icons.keyboard_arrow_down),
+            ),
+          ),
+      ],
     );
   }
 }

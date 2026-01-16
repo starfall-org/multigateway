@@ -62,22 +62,28 @@ class MessageStreamService {
           continue;
         }
 
-        final wasAtBottom = isNearBottom();
-        
-        session = MessageHelper.updateMessageActiveContent(session, modelId, acc);
+        session = MessageHelper.updateMessageActiveContent(
+          session,
+          modelId,
+          acc,
+        );
         onSessionUpdate(session);
 
-        if (wasAtBottom) {
-          onScrollToBottom();
-        }
+        // Không tự động cuộn - để người dùng tự cuộn hoặc dùng nút scroll to bottom
         lastUpdate = now;
       }
 
       // Final update
-      final currentMessage = session.messages
-          .firstWhere((m) => m.id == modelId, orElse: () => throw StateError('Message not found'));
+      final currentMessage = session.messages.firstWhere(
+        (m) => m.id == modelId,
+        orElse: () => throw StateError('Message not found'),
+      );
       if (currentMessage.content != acc) {
-        session = MessageHelper.updateMessageActiveContent(session, modelId, acc);
+        session = MessageHelper.updateMessageActiveContent(
+          session,
+          modelId,
+          acc,
+        );
         onSessionUpdate(session);
       }
     } catch (e, stackTrace) {
@@ -89,9 +95,7 @@ class MessageStreamService {
       );
       rethrow;
     } finally {
-      if (isNearBottom()) {
-        onScrollToBottom();
-      }
+      // Không tự động cuộn khi kết thúc - để người dùng tự quyết định
     }
   }
 
@@ -141,7 +145,7 @@ class MessageStreamService {
       );
       rethrow;
     } finally {
-      onScrollToBottom();
+      // Không tự động cuộn - để người dùng tự quyết định
     }
   }
 }

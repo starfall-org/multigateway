@@ -158,8 +158,7 @@ class ChatController extends ChangeNotifier {
         context.showErrorSnackBar(e.toString());
       }
     }
-
-    UiNavigationService.scrollToBottom(scrollController);
+    // Không tự động cuộn - để người dùng tự quyết định hoặc dùng nút scroll to bottom
   }
 
   Future<void> regenerateLast(BuildContext context) async {
