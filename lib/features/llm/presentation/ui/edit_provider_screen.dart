@@ -88,18 +88,13 @@ class _AddProviderScreenState extends State<AddProviderScreen>
       body: SafeArea(
         top: true,
         bottom: true,
-        child: ListenableBuilder(
-          listenable: _controller,
-          builder: (context, child) {
-            return TabBarView(
-              controller: _tabController,
-              children: [
-                ProviderInfoSection(controller: _controller),
-                ModelsManagementSection(controller: _controller),
-                HttpConfigSection(controller: _controller),
-              ],
-            );
-          },
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            ProviderInfoSection(controller: _controller),
+            ModelsManagementSection(controller: _controller),
+            HttpConfigSection(controller: _controller),
+          ],
         ),
       ),
     );

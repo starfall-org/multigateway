@@ -12,30 +12,31 @@ import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/features/home/services/file_pick_service.dart';
 import 'package:multigateway/features/home/services/gallery_pick_service.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:signals/signals.dart';
 
 /// Controller hợp nhất xử lý UI state, attachment, model selection và profile
-class UiStateController extends ChangeNotifier {
+class UiStateController {
   // === Attachment Management ===
-  final List<String> pendingFiles = [];
-  final List<String> inspectingFiles = [];
+  final pendingFiles = signal<List<String>>([]);
+  final inspectingFiles = signal<List<String>>([]);
 
   // === Model Selection ===
   final LlmProviderInfoStorage pInfStorage;
   final LlmProviderModelsStorage pModStorage;
 
   StreamSubscription? _providerSubscription;
-  List<LlmProviderInfo> providers = [];
-  Map<String, List<LlmModel>> providerModels = {};
-  final Map<String, bool> providerCollapsed = {};
-  String? selectedProviderName;
-  String? selectedModelName;
+  final providers = signal<List<LlmProviderInfo>>([]);
+  final providerModels = signal<Map<String, List<LlmModel>>>({});
+  final providerCollapsed = signal<Map<String, bool>>({});
+  final selectedProviderName = signal<String?>(null);
+  final selectedModelName = signal<String?>(null);
 
   // === Profile Management ===
   final ChatProfileStorage aiProfileRepository;
   final McpServerInfoStorage mcpServerStorage;
 
-  ChatProfile? selectedProfile;
-  List<McpServer> mcpServers = [];
+  final selectedProfile = signal<ChatProfile?>(null);
+  final mcpServers = signal<List<McpServer>>([]);
 
   UiStateController({
     required this.pInfStorage,
@@ -51,8 +52,9 @@ class UiStateController extends ChangeNotifier {
   // === Attachment Methods ===
   Future<void> pickFromFiles(BuildContext context) async {
     try {
-      filePickService(pendingFiles);
-      notifyListeners();
+      final files = List<String>.from(pendingFiles.value);
+      filePickService(files);
+      pendingFiles.value = files;
     } catch (e) {
       if (context.mounted) {
         context.showErrorSnackBar(tl('Unable to pick files: ${e.toString()}'));
@@ -62,8 +64,9 @@ class UiStateController extends ChangeNotifier {
 
   Future<void> pickFromGallery(BuildContext context) async {
     try {
-      galleryPickService(pendingFiles);
-      notifyListeners();
+      final files = List<String>.from(pendingFiles.value);
+      galleryPickService(files);
+      pendingFiles.value = files;
     } catch (e) {
       if (context.mounted) {
         context.showErrorSnackBar(tl('Unable to pick files: ${e.toString()}'));
@@ -72,21 +75,18 @@ class UiStateController extends ChangeNotifier {
   }
 
   void removeAttachmentAt(int index) {
-    if (index < 0 || index >= pendingFiles.length) return;
-    pendingFiles.removeAt(index);
-    notifyListeners();
+    final files = List<String>.from(pendingFiles.value);
+    if (index < 0 || index >= files.length) return;
+    files.removeAt(index);
+    pendingFiles.value = files;
   }
 
   void clearPendingAttachments() {
-    pendingFiles.clear();
-    notifyListeners();
+    pendingFiles.value = [];
   }
 
   void setInspectingAttachments(List<String> attachments) {
-    inspectingFiles
-      ..clear()
-      ..addAll(attachments);
-    notifyListeners();
+    inspectingFiles.value = List<String>.from(attachments);
   }
 
   void openFilesDialog(List<String> attachments) {
@@ -94,76 +94,81 @@ class UiStateController extends ChangeNotifier {
   }
 
   void clearInspectingAttachments() {
-    inspectingFiles.clear();
-    notifyListeners();
+    inspectingFiles.value = [];
   }
 
   // === Model Selection Methods ===
   LlmModel? get selectedLlmModel {
-    if (selectedProviderName == null || selectedModelName == null) return null;
+    if (selectedProviderName.value == null || selectedModelName.value == null) {
+      return null;
+    }
     try {
-      final provider = providers.firstWhere(
-        (p) => p.name == selectedProviderName,
+      final provider = providers.value.firstWhere(
+        (p) => p.name == selectedProviderName.value,
       );
-      final models = providerModels[provider.id];
+      final models = providerModels.value[provider.id];
       if (models == null) return null;
-      return models.firstWhere((m) => m.id == selectedModelName);
+      return models.firstWhere((m) => m.id == selectedModelName.value);
     } catch (e) {
       return null;
     }
   }
 
   Future<void> refreshProviders() async {
-    providers = pInfStorage.getItems();
-    providerModels.clear();
+    providers.value = pInfStorage.getItems();
+    final newProviderModels = <String, List<LlmModel>>{};
+    final newCollapsed = Map<String, bool>.from(providerCollapsed.value);
 
-    for (final p in providers) {
-      providerCollapsed.putIfAbsent(p.name, () => false);
+    for (final p in providers.value) {
+      newCollapsed.putIfAbsent(p.name, () => false);
       final modelsObj = pModStorage.getItem(p.id);
       if (modelsObj != null) {
-        providerModels[p.id] = modelsObj.models.whereType<LlmModel>().toList();
+        newProviderModels[p.id] = modelsObj.models
+            .whereType<LlmModel>()
+            .toList();
       } else {
-        providerModels[p.id] = [];
+        newProviderModels[p.id] = [];
       }
     }
-    notifyListeners();
+
+    providerModels.value = newProviderModels;
+    providerCollapsed.value = newCollapsed;
   }
 
   void setProviderCollapsed(String providerName, bool collapsed) {
-    providerCollapsed[providerName] = collapsed;
-    notifyListeners();
+    final newCollapsed = Map<String, bool>.from(providerCollapsed.value);
+    newCollapsed[providerName] = collapsed;
+    providerCollapsed.value = newCollapsed;
   }
 
   void selectModel(String providerName, String modelName) {
-    selectedProviderName = providerName;
-    selectedModelName = modelName;
-    notifyListeners();
+    selectedProviderName.value = providerName;
+    selectedModelName.value = modelName;
   }
 
   void loadSelectionFromSession({String? providerName, String? modelName}) {
     if (providerName != null && modelName != null) {
-      selectedProviderName = providerName;
-      selectedModelName = modelName;
-      notifyListeners();
+      selectedProviderName.value = providerName;
+      selectedModelName.value = modelName;
     }
   }
 
   // === Profile Methods ===
   Future<void> loadSelectedProfile() async {
     final profile = await aiProfileRepository.getOrInitSelectedProfile();
-    selectedProfile = profile;
-    notifyListeners();
+    selectedProfile.value = profile;
   }
 
   Future<void> updateProfile(ChatProfile profile) async {
-    selectedProfile = profile;
+    selectedProfile.value = profile;
     await aiProfileRepository.saveItem(profile);
-    notifyListeners();
   }
 
   Future<void> loadMcpServers() async {
-    mcpServers = mcpServerStorage.getItems().whereType<McpServer>().toList();
-    notifyListeners();
+    mcpServers.value = mcpServerStorage
+        .getItems()
+        .whereType<McpServer>()
+        .toList();
   }
 
   Future<List<String>> snapshotEnabledToolNames(ChatProfile profile) async {
@@ -185,9 +190,16 @@ class UiStateController extends ChangeNotifier {
     }
   }
 
-  @override
   void dispose() {
     _providerSubscription?.cancel();
-    super.dispose();
+    pendingFiles.dispose();
+    inspectingFiles.dispose();
+    providers.dispose();
+    providerModels.dispose();
+    providerCollapsed.dispose();
+    selectedProviderName.dispose();
+    selectedModelName.dispose();
+    selectedProfile.dispose();
+    mcpServers.dispose();
   }
 }

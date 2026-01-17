@@ -5,6 +5,7 @@ import 'package:multigateway/features/home/presentation/controllers/home_control
 import 'package:multigateway/features/home/presentation/widgets/quick_actions_widgets/built_in_tool_tile.dart';
 import 'package:multigateway/features/home/presentation/widgets/quick_actions_widgets/mcp_server_tile.dart';
 import 'package:multigateway/features/home/presentation/widgets/quick_actions_widgets/section_header.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
 class QuickActionsSheet extends StatefulWidget {
   final ChatController controller;
@@ -14,7 +15,6 @@ class QuickActionsSheet extends StatefulWidget {
   @override
   State<QuickActionsSheet> createState() => _QuickActionsSheetState();
 
-  /// Static method to show the drawer as a modal bottom sheet
   static void show(BuildContext context, ChatController controller) {
     showModalBottomSheet(
       context: context,
@@ -35,7 +35,7 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
   void initState() {
     super.initState();
     widget.controller.loadMcpServers();
-    _profile = widget.controller.selectedProfile!;
+    _profile = widget.controller.profile.selectedProfile.value!;
   }
 
   void _updateProfile() {
@@ -68,7 +68,7 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
 
     if (enabled) {
       if (!currentServers.any((s) => s.id == serverId)) {
-        final serverDef = widget.controller.mcpServers.firstWhere(
+        final serverDef = widget.controller.profile.mcpServers.value.firstWhere(
           (s) => s.id == serverId,
         );
         final allToolNames = serverDef.tools.map((t) => t.name).toList();
@@ -136,7 +136,6 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle bar
             Center(
               child: Container(
                 width: 40,
@@ -150,8 +149,6 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
                 ),
               ),
             ),
-
-            // Title
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
@@ -162,96 +159,92 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
               ),
             ),
             const Divider(),
-
             Expanded(
-              child: ListenableBuilder(
-                listenable: widget.controller,
-                builder: (context, _) {
-                  if (widget.controller.selectedProfile != null) {
-                    _profile = widget.controller.selectedProfile!;
-                  }
+              child: Watch((context) {
+                final selectedProfile =
+                    widget.controller.profile.selectedProfile.value;
+                if (selectedProfile != null) {
+                  _profile = selectedProfile;
+                }
 
-                  final model = widget.controller.selectedLlmModel;
-                  final tools = model?.builtInTools;
+                final model = widget.controller.model.selectedLlmModel;
+                final origin = model?.origin;
+                final tools = origin?.builtInTools;
+                final mcpServers = widget.controller.profile.mcpServers.value;
 
-                  return ListView(
-                    children: [
-                      // Section: Built-in Tools
-                      if (tools != null &&
-                          (tools.googleSearch ||
-                              tools.codeExecution ||
-                              tools.urlContext)) ...[
-                        const SectionHeader(title: 'Built-in Tools'),
-                        if (tools.googleSearch)
-                          BuiltInToolTile(
-                            title: 'Google Search',
-                            id: 'google_search',
-                            icon: Icons.search,
-                            subtitle:
-                                'Search the web for up-to-date information.',
-                            isEnabled: _profile.activeBuiltInTools.contains(
-                              'google_search',
-                            ),
-                            onChanged: (val) =>
-                                _toggleBuiltInTool('google_search', val),
+                return ListView(
+                  children: [
+                    if (tools != null &&
+                        (tools.googleSearch ||
+                            tools.codeExecution ||
+                            tools.urlContext)) ...[
+                      const SectionHeader(title: 'Built-in Tools'),
+                      if (tools.googleSearch)
+                        BuiltInToolTile(
+                          title: 'Google Search',
+                          id: 'google_search',
+                          icon: Icons.search,
+                          subtitle:
+                              'Search the web for up-to-date information.',
+                          isEnabled: _profile.activeBuiltInTools.contains(
+                            'google_search',
                           ),
-                        if (tools.codeExecution)
-                          BuiltInToolTile(
-                            title: 'Code Execution',
-                            id: 'code_execution',
-                            icon: Icons.code,
-                            subtitle:
-                                'Execute Python code to solve complex problems.',
-                            isEnabled: _profile.activeBuiltInTools.contains(
-                              'code_execution',
-                            ),
-                            onChanged: (val) =>
-                                _toggleBuiltInTool('code_execution', val),
-                          ),
-                        if (tools.urlContext)
-                          BuiltInToolTile(
-                            title: 'URL Context',
-                            id: 'url_context',
-                            icon: Icons.link,
-                            subtitle:
-                                'Access and read content from specific URLs.',
-                            isEnabled: _profile.activeBuiltInTools.contains(
-                              'url_context',
-                            ),
-                            onChanged: (val) =>
-                                _toggleBuiltInTool('url_context', val),
-                          ),
-                        const Divider(),
-                      ],
-
-                      // Section: MCP Servers
-                      const SectionHeader(title: 'MCP Servers'),
-                      if (widget.controller.mcpServers.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Text(
-                            tl('No MCP servers configured.'),
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
-                          ),
+                          onChanged: (val) =>
+                              _toggleBuiltInTool('google_search', val),
                         ),
-
-                      ...widget.controller.mcpServers.map((server) {
-                        return McpServerTile(
-                          server: server,
-                          profile: _profile,
-                          onServerToggle: _toggleMcpServer,
-                          onToolToggle: _toggleMcpTool,
-                        );
-                      }),
+                      if (tools.codeExecution)
+                        BuiltInToolTile(
+                          title: 'Code Execution',
+                          id: 'code_execution',
+                          icon: Icons.code,
+                          subtitle:
+                              'Execute Python code to solve complex problems.',
+                          isEnabled: _profile.activeBuiltInTools.contains(
+                            'code_execution',
+                          ),
+                          onChanged: (val) =>
+                              _toggleBuiltInTool('code_execution', val),
+                        ),
+                      if (tools.urlContext)
+                        BuiltInToolTile(
+                          title: 'URL Context',
+                          id: 'url_context',
+                          icon: Icons.link,
+                          subtitle:
+                              'Access and read content from specific URLs.',
+                          isEnabled: _profile.activeBuiltInTools.contains(
+                            'url_context',
+                          ),
+                          onChanged: (val) =>
+                              _toggleBuiltInTool('url_context', val),
+                        ),
+                      const Divider(),
                     ],
-                  );
-                },
-              ),
+                    const SectionHeader(title: 'MCP Servers'),
+                    if (mcpServers.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          tl('No MCP servers configured.'),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                    ...mcpServers.map((server) {
+                      return McpServerTile(
+                        server: server,
+                        profile: _profile,
+                        onServerToggle: _toggleMcpServer,
+                        onToolToggle: _toggleMcpTool,
+                      );
+                    }),
+                  ],
+                );
+              }),
             ),
           ],
         ),

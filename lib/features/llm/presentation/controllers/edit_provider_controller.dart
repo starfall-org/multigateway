@@ -8,6 +8,7 @@ import 'package:multigateway/core/core.dart';
 import 'package:multigateway/features/llm/services/fetch_models.dart'
     as fetch_tools;
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:signals/signals.dart';
 import 'package:uuid/uuid.dart';
 
 class HeaderPair {
@@ -25,7 +26,7 @@ class HeaderPair {
   }
 }
 
-class AddProviderController extends ChangeNotifier {
+class AddProviderController {
   // Controllers
   final TextEditingController nameController = TextEditingController();
   final TextEditingController apiKeyController = TextEditingController();
@@ -54,22 +55,24 @@ class AddProviderController extends ChangeNotifier {
       TextEditingController();
 
   // State
-  ProviderType selectedType = ProviderType.openai;
-  AuthMethod selectedAuthMethod = AuthMethod.bearerToken;
+  final selectedType = signal<ProviderType>(ProviderType.openai);
+  final selectedAuthMethod = signal<AuthMethod>(AuthMethod.bearerToken);
   final TextEditingController customHeaderKeyController =
       TextEditingController();
-  bool responsesApi = false;
-  bool supportStream = true;
+  final responsesApi = signal<bool>(false);
+  final supportStream = signal<bool>(true);
 
   // Headers
-  final List<HeaderPair> headers = [];
+  final headers = signal<List<HeaderPair>>([]);
 
   // Models - Using new model types from llm package
-  List<dynamic> availableModels =
-      []; // Can be BasicModel, OllamaModel, GoogleAiModel
-  List<dynamic> selectedModels =
-      []; // Can be BasicModel, OllamaModel, GoogleAiModel
-  bool isFetchingModels = false;
+  final availableModels = signal<List<dynamic>>(
+    [],
+  ); // Can be BasicModel, OllamaModel, GoogleAiModel
+  final selectedModels = signal<List<dynamic>>(
+    [],
+  ); // Can be BasicModel, OllamaModel, GoogleAiModel
+  final isFetchingModels = signal<bool>(false);
 
   void initialize({
     LlmProviderInfo? providerInfo,
@@ -80,11 +83,11 @@ class AddProviderController extends ChangeNotifier {
       nameController.text = providerInfo.name;
       apiKeyController.text = providerInfo.auth.key ?? '';
       baseUrlController.text = providerInfo.baseUrl;
-      selectedType = providerInfo.type;
+      selectedType.value = providerInfo.type;
 
       if (providerConfig != null) {
-        responsesApi = providerConfig.responsesApi;
-        supportStream = providerConfig.supportStream;
+        responsesApi.value = providerConfig.responsesApi;
+        supportStream.value = providerConfig.supportStream;
 
         // Custom URLs
         customChatCompletionUrlController.text =
@@ -117,14 +120,16 @@ class AddProviderController extends ChangeNotifier {
         }
 
         // Headers
+        final headersList = <HeaderPair>[];
         providerConfig.headers?.forEach((k, v) {
-          headers.add(HeaderPair(k: k, v: v.toString()));
+          headersList.add(HeaderPair(k: k, v: v.toString()));
         });
+        headers.value = headersList;
       }
 
       if (providerModels != null) {
         // Extract models from LlmProviderModels and convert to their origin types
-        selectedModels = providerModels.models
+        selectedModels.value = providerModels.models
             .where((model) => model != null && model.origin != null)
             .map((model) => model!.origin)
             .toList();
@@ -135,59 +140,56 @@ class AddProviderController extends ChangeNotifier {
   }
 
   void updateSelectedType(ProviderType type) {
-    selectedType = type;
+    selectedType.value = type;
     // Set defaults
     switch (type) {
       case ProviderType.openai:
         baseUrlController.text = 'https://api.openai.com/v1';
-        selectedAuthMethod = AuthMethod.bearerToken;
+        selectedAuthMethod.value = AuthMethod.bearerToken;
         break;
       case ProviderType.anthropic:
         baseUrlController.text = 'https://api.anthropic.com/v1';
-        selectedAuthMethod = AuthMethod.bearerToken;
+        selectedAuthMethod.value = AuthMethod.bearerToken;
         break;
       case ProviderType.ollama:
         baseUrlController.text = 'http://localhost:11434/api';
-        selectedAuthMethod = AuthMethod.bearerToken;
+        selectedAuthMethod.value = AuthMethod.bearerToken;
         break;
       case ProviderType.googleai:
         baseUrlController.text = '';
-        selectedAuthMethod = AuthMethod.queryParam;
+        selectedAuthMethod.value = AuthMethod.queryParam;
         break;
     }
-    notifyListeners();
   }
 
   void updateResponsesApi(bool value) {
-    responsesApi = value;
-    notifyListeners();
+    responsesApi.value = value;
   }
 
   void updateSupportStream(bool value) {
-    supportStream = value;
-    notifyListeners();
+    supportStream.value = value;
   }
 
   void updateAuthMethod(AuthMethod method) {
-    selectedAuthMethod = method;
-    notifyListeners();
+    selectedAuthMethod.value = method;
   }
 
   void updateCustomHeaderKey(String value) {
     customHeaderKeyController.text = value;
-    notifyListeners();
   }
 
   void addHeader() {
-    headers.add(HeaderPair());
-    notifyListeners();
+    final list = List<HeaderPair>.from(headers.value);
+    list.add(HeaderPair());
+    headers.value = list;
   }
 
   void removeHeader(int index) {
-    if (index >= 0 && index < headers.length) {
-      headers[index].dispose();
-      headers.removeAt(index);
-      notifyListeners();
+    final list = List<HeaderPair>.from(headers.value);
+    if (index >= 0 && index < list.length) {
+      list[index].dispose();
+      list.removeAt(index);
+      headers.value = list;
     }
   }
 
@@ -200,8 +202,9 @@ class AddProviderController extends ChangeNotifier {
   }
 
   void removeModel(String modelName) {
-    selectedModels.removeWhere((m) => _getModelName(m) == modelName);
-    notifyListeners();
+    final list = List<dynamic>.from(selectedModels.value);
+    list.removeWhere((m) => _getModelName(m) == modelName);
+    selectedModels.value = list;
   }
 
   void removeModelDirectly(dynamic model) {
@@ -210,18 +213,20 @@ class AddProviderController extends ChangeNotifier {
 
   void addModelDirectly(dynamic model) {
     final modelName = _getModelName(model);
-    if (!selectedModels.any((m) => _getModelName(m) == modelName)) {
-      selectedModels.add(model);
-      notifyListeners();
+    final list = List<dynamic>.from(selectedModels.value);
+    if (!list.any((m) => _getModelName(m) == modelName)) {
+      list.add(model);
+      selectedModels.value = list;
     }
   }
 
   void updateModel(dynamic oldModel, dynamic newModel) {
     final oldName = _getModelName(oldModel);
-    final index = selectedModels.indexWhere((m) => _getModelName(m) == oldName);
+    final list = List<dynamic>.from(selectedModels.value);
+    final index = list.indexWhere((m) => _getModelName(m) == oldName);
     if (index != -1) {
-      selectedModels[index] = newModel;
-      notifyListeners();
+      list[index] = newModel;
+      selectedModels.value = list;
     }
   }
 
@@ -232,13 +237,13 @@ class AddProviderController extends ChangeNotifier {
       displayName: 'New Model',
       ownedBy: 'user',
     );
-    selectedModels.add(newModel);
-    notifyListeners();
+    final list = List<dynamic>.from(selectedModels.value);
+    list.add(newModel);
+    selectedModels.value = list;
   }
 
   Future<void> fetchModels(BuildContext context) async {
-    isFetchingModels = true;
-    notifyListeners();
+    isFetchingModels.value = true;
 
     try {
       final baseUrl = baseUrlController.text.trim();
@@ -250,7 +255,7 @@ class AddProviderController extends ChangeNotifier {
 
       // Build custom headers
       final customHeaders = <String, String>{};
-      for (var h in headers) {
+      for (var h in headers.value) {
         if (h.key.text.isNotEmpty) {
           customHeaders[h.key.text] = h.value.text;
         }
@@ -258,8 +263,8 @@ class AddProviderController extends ChangeNotifier {
 
       // Fetch models based on provider type using new API
       // Keep models in their original types (BasicModel, OllamaModel, GoogleAiModel)
-      availableModels = await fetch_tools.fetchModels(
-        providerType: selectedType,
+      availableModels.value = await fetch_tools.fetchModels(
+        providerType: selectedType.value,
         baseUrl: baseUrl,
         apiKey: apiKey.isEmpty ? null : apiKey,
         customHeaders: customHeaders.isEmpty ? null : customHeaders,
@@ -267,7 +272,7 @@ class AddProviderController extends ChangeNotifier {
 
       if (context.mounted) {
         context.showSuccessSnackBar(
-          tl('Fetched ${availableModels.length} models'),
+          tl('Fetched ${availableModels.value.length} models'),
         );
       }
     } catch (e) {
@@ -275,8 +280,7 @@ class AddProviderController extends ChangeNotifier {
         context.showErrorSnackBar(e.toString());
       }
     } finally {
-      isFetchingModels = false;
-      notifyListeners();
+      isFetchingModels.value = false;
     }
   }
 
@@ -293,7 +297,7 @@ class AddProviderController extends ChangeNotifier {
     final id = existingProvider?.id ?? Uuid().v4();
 
     final headerMap = <String, dynamic>{};
-    for (var h in headers) {
+    for (var h in headers.value) {
       if (h.key.text.isNotEmpty) headerMap[h.key.text] = h.value.text;
     }
 
@@ -326,9 +330,9 @@ class AddProviderController extends ChangeNotifier {
     final providerInfo = LlmProviderInfo(
       id: id,
       name: name,
-      type: selectedType,
+      type: selectedType.value,
       auth: Authorization(
-        type: selectedAuthMethod,
+        type: selectedAuthMethod.value,
         key: apiKeyController.text.trim().isEmpty
             ? null
             : apiKeyController.text.trim(),
@@ -339,8 +343,8 @@ class AddProviderController extends ChangeNotifier {
     final providerConfig = LlmProviderConfig(
       id: id,
       headers: headerMap.isEmpty ? null : headerMap,
-      responsesApi: responsesApi,
-      supportStream: supportStream,
+      responsesApi: responsesApi.value,
+      supportStream: supportStream.value,
       httpProxy: httpProxy,
       socksProxy: socksProxy,
       customChatCompletionUrl:
@@ -355,7 +359,7 @@ class AddProviderController extends ChangeNotifier {
     // Convert selected models to LlmModel format
     final llmModels = <LlmModel>[];
 
-    for (var m in selectedModels) {
+    for (var m in selectedModels.value) {
       if (m is BasicModel) {
         llmModels.add(
           LlmModel(
@@ -410,7 +414,6 @@ class AddProviderController extends ChangeNotifier {
     }
   }
 
-  @override
   void dispose() {
     nameController.dispose();
     apiKeyController.dispose();
@@ -426,9 +429,16 @@ class AddProviderController extends ChangeNotifier {
     socksProxyUsernameController.dispose();
     socksProxyPasswordController.dispose();
     customHeaderKeyController.dispose();
-    for (var h in headers) {
+    for (var h in headers.value) {
       h.dispose();
     }
-    super.dispose();
+    selectedType.dispose();
+    selectedAuthMethod.dispose();
+    responsesApi.dispose();
+    supportStream.dispose();
+    headers.dispose();
+    availableModels.dispose();
+    selectedModels.dispose();
+    isFetchingModels.dispose();
   }
 }

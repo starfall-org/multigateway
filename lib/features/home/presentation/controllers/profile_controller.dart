@@ -1,15 +1,15 @@
-import 'package:flutter/material.dart';
 import 'package:mcp/mcp.dart';
 import 'package:multigateway/core/mcp/storage/mcp_server_info_storage.dart';
 import 'package:multigateway/core/profile/profile.dart';
+import 'package:signals/signals.dart';
 
 /// Controller responsible for AI profile and MCP server management
-class ProfileController extends ChangeNotifier {
+class ProfileController {
   final ChatProfileStorage aiProfileRepository;
   final McpServerInfoStorage mcpServerStorage;
 
-  ChatProfile? selectedProfile;
-  List<McpServer> mcpServers = [];
+  final selectedProfile = signal<ChatProfile?>(null);
+  final mcpServers = listSignal<McpServer>([]);
 
   ProfileController({
     required this.aiProfileRepository,
@@ -18,19 +18,19 @@ class ProfileController extends ChangeNotifier {
 
   Future<void> loadSelectedProfile() async {
     final profile = await aiProfileRepository.getOrInitSelectedProfile();
-    selectedProfile = profile;
-    notifyListeners();
+    selectedProfile.value = profile;
   }
 
   Future<void> updateProfile(ChatProfile profile) async {
-    selectedProfile = profile;
+    selectedProfile.value = profile;
     await aiProfileRepository.saveItem(profile);
-    notifyListeners();
   }
 
   Future<void> loadMcpServers() async {
-    mcpServers = mcpServerStorage.getItems().whereType<McpServer>().toList();
-    notifyListeners();
+    mcpServers.value = mcpServerStorage
+        .getItems()
+        .whereType<McpServer>()
+        .toList();
   }
 
   Future<List<String>> snapshotEnabledToolNames(ChatProfile profile) async {
@@ -50,5 +50,10 @@ class ProfileController extends ChangeNotifier {
     } catch (_) {
       return const <String>[];
     }
+  }
+
+  void dispose() {
+    selectedProfile.dispose();
+    mcpServers.dispose();
   }
 }

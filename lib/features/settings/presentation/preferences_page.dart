@@ -6,6 +6,7 @@ import 'package:multigateway/features/settings/presentation/widgets/settings_car
 import 'package:multigateway/features/settings/presentation/widgets/settings_section_header.dart';
 import 'package:multigateway/features/settings/presentation/widgets/settings_tile.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:signals/signals_flutter.dart';
 
 class PreferencesPage extends StatefulWidget {
   const PreferencesPage({super.key});
@@ -21,18 +22,12 @@ class _PreferencesPageState extends State<PreferencesPage> {
   void initState() {
     super.initState();
     _controller = PreferencesController();
-    _controller.addListener(_onControllerChanged);
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_onControllerChanged);
     _controller.dispose();
     super.dispose();
-  }
-
-  void _onControllerChanged() {
-    setState(() {});
   }
 
   Future<void> _selectLanguage(String languageCode) async {
@@ -93,111 +88,116 @@ class _PreferencesPageState extends State<PreferencesPage> {
       body: SafeArea(
         top: false,
         bottom: true,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            SettingsSectionHeader(tl('General')),
-            const SizedBox(height: 8),
-            SettingsCard(
-              child: Column(
-                children: [
-                  SettingsTile(
-                    icon: Icons.chat_outlined,
-                    title: tl('Continue last conversation'),
-                    subtitle: tl('Open last conversation when app starts'),
-                    trailing: Switch(
-                      value: _controller.continueLastConversation,
-                      onChanged: (val) => _controller.updatePreferencesSetting(
-                        continueLastConversation: val,
+        child: Watch((context) {
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              SettingsSectionHeader(tl('General')),
+              const SizedBox(height: 8),
+              SettingsCard(
+                child: Column(
+                  children: [
+                    SettingsTile(
+                      icon: Icons.chat_outlined,
+                      title: tl('Continue last conversation'),
+                      subtitle: tl('Open last conversation when app starts'),
+                      trailing: Switch(
+                        value: _controller.continueLastConversation.value,
+                        onChanged: (val) =>
+                            _controller.updatePreferencesSetting(
+                              continueLastConversation: val,
+                            ),
                       ),
                     ),
-                  ),
-                  const Divider(height: 1, indent: 56, endIndent: 16),
-                  SettingsTile(
-                    icon: Icons.save_outlined,
-                    title: tl('Persist selections'),
-                    trailing: Switch(
-                      value: _controller.persistChatSelection,
-                      onChanged: (val) => _controller.updatePreferencesSetting(
-                        persistChatSelection: val,
+                    const Divider(height: 1, indent: 56, endIndent: 16),
+                    SettingsTile(
+                      icon: Icons.save_outlined,
+                      title: tl('Persist selections'),
+                      trailing: Switch(
+                        value: _controller.persistChatSelection.value,
+                        onChanged: (val) =>
+                            _controller.updatePreferencesSetting(
+                              persistChatSelection: val,
+                            ),
                       ),
                     ),
-                  ),
-                  const Divider(height: 1, indent: 56, endIndent: 16),
-                  SettingsTile(
-                    icon: Icons.vibration_outlined,
-                    title: tl('Vibration'),
-                    trailing: Switch(
-                      value: _controller.vibrationSettings.enable,
-                      onChanged: (val) => _controller.updatePreferencesSetting(
-                        vibrationSettings: _controller.vibrationSettings
-                            .copyWith(enable: val),
+                    const Divider(height: 1, indent: 56, endIndent: 16),
+                    SettingsTile(
+                      icon: Icons.vibration_outlined,
+                      title: tl('Vibration'),
+                      trailing: Switch(
+                        value: _controller.vibrationSettings.value.enable,
+                        onChanged: (val) =>
+                            _controller.updatePreferencesSetting(
+                              vibrationSettings: _controller
+                                  .vibrationSettings
+                                  .value
+                                  .copyWith(enable: val),
+                            ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-            SettingsSectionHeader(tl('Display')),
-            const SizedBox(height: 8),
-            SettingsCard(
-              child: Column(
-                children: [
-                  SettingsTile(
-                    icon: Icons.fullscreen_outlined,
-                    title: tl('Hide Status Bar'),
-                    trailing: Switch(
-                      value: _controller.hideStatusBar,
-                      onChanged: (val) => _controller.updatePreferencesSetting(
-                        hideStatusBar: val,
-                      ),
-                    ),
-                  ),
-                  const Divider(height: 1, indent: 56, endIndent: 16),
-                  SettingsTile(
-                    icon: Icons.keyboard_hide_outlined,
-                    title: tl('Hide Navigation Bar'),
-                    trailing: Switch(
-                      value: _controller.hideNavigationBar,
-                      onChanged: (val) => _controller.updatePreferencesSetting(
-                        hideNavigationBar: val,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-            SettingsSectionHeader(tl('Developer')),
-            const SizedBox(height: 8),
-            SettingsCard(
-              child: SettingsTile(
-                icon: Icons.bug_report_outlined,
-                title: tl('Debug Mode'),
-                trailing: Switch(
-                  value: _controller.debugMode,
-                  onChanged: (val) =>
-                      _controller.updatePreferencesSetting(debugMode: val),
+                  ],
                 ),
               ),
-            ),
 
-            const SizedBox(height: 24),
-            SettingsSectionHeader(tl('Languages')),
-            const SizedBox(height: 8),
-            SettingsCard(
-              child: SettingsTile(
-                icon: Icons.language_outlined,
-                title: tl('Current Language'),
-                subtitle: _controller.getCurrentLanguageName(),
-                onTap: () => _showLanguagePicker(),
+              const SizedBox(height: 24),
+              SettingsSectionHeader(tl('Display')),
+              const SizedBox(height: 8),
+              SettingsCard(
+                child: Column(
+                  children: [
+                    SettingsTile(
+                      icon: Icons.fullscreen_outlined,
+                      title: tl('Hide Status Bar'),
+                      trailing: Switch(
+                        value: _controller.hideStatusBar.value,
+                        onChanged: (val) => _controller
+                            .updatePreferencesSetting(hideStatusBar: val),
+                      ),
+                    ),
+                    const Divider(height: 1, indent: 56, endIndent: 16),
+                    SettingsTile(
+                      icon: Icons.keyboard_hide_outlined,
+                      title: tl('Hide Navigation Bar'),
+                      trailing: Switch(
+                        value: _controller.hideNavigationBar.value,
+                        onChanged: (val) => _controller
+                            .updatePreferencesSetting(hideNavigationBar: val),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+
+              const SizedBox(height: 24),
+              SettingsSectionHeader(tl('Developer')),
+              const SizedBox(height: 8),
+              SettingsCard(
+                child: SettingsTile(
+                  icon: Icons.bug_report_outlined,
+                  title: tl('Debug Mode'),
+                  trailing: Switch(
+                    value: _controller.debugMode.value,
+                    onChanged: (val) =>
+                        _controller.updatePreferencesSetting(debugMode: val),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+              SettingsSectionHeader(tl('Languages')),
+              const SizedBox(height: 8),
+              SettingsCard(
+                child: SettingsTile(
+                  icon: Icons.language_outlined,
+                  title: tl('Current Language'),
+                  subtitle: _controller.getCurrentLanguageName(),
+                  onTap: () => _showLanguagePicker(),
+                ),
+              ),
+            ],
+          );
+        }),
       ),
     );
   }
@@ -237,30 +237,32 @@ class _PreferencesPageState extends State<PreferencesPage> {
             ),
             const Divider(),
             Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: _controller.supportedLanguages.map((language) {
-                  final isSelected =
-                      _controller.selectedLanguage == language['code'];
-                  return ListTile(
-                    leading: Text(
-                      language['flag'],
-                      style: const TextStyle(fontSize: 24),
-                    ),
-                    title: Text(language['name'] as String),
-                    trailing: isSelected
-                        ? Icon(
-                            Icons.check_circle,
-                            color: Theme.of(context).colorScheme.primary,
-                          )
-                        : null,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _selectLanguage(language['code']);
-                    },
-                  );
-                }).toList(),
-              ),
+              child: Watch((context) {
+                return ListView(
+                  shrinkWrap: true,
+                  children: _controller.supportedLanguages.map((language) {
+                    final isSelected =
+                        _controller.selectedLanguage.value == language['code'];
+                    return ListTile(
+                      leading: Text(
+                        language['flag'],
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                      title: Text(language['name'] as String),
+                      trailing: isSelected
+                          ? Icon(
+                              Icons.check_circle,
+                              color: Theme.of(context).colorScheme.primary,
+                            )
+                          : null,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _selectLanguage(language['code']);
+                      },
+                    );
+                  }).toList(),
+                );
+              }),
             ),
           ],
         ),

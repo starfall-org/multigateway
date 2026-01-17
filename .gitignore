@@ -56,3 +56,4 @@ wget-log
 android/build/reports/problems/problems-report.html
 **/firebase.json
 firebase.json
+SIGNALS_MIGRATION.md

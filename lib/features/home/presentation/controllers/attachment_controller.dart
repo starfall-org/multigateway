@@ -3,16 +3,17 @@ import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/features/home/services/file_pick_service.dart';
 import 'package:multigateway/features/home/services/gallery_pick_service.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:signals/signals.dart';
 
 /// Controller responsible for attachment management
-class AttachmentController extends ChangeNotifier {
-  final List<String> pendingFiles = [];
-  final List<String> inspectingFiles = [];
+class AttachmentController {
+  final pendingFiles = listSignal<String>([]);
+  final inspectingFiles = listSignal<String>([]);
 
   Future<void> pickFromFiles(BuildContext context) async {
     try {
-      filePickService(pendingFiles);
-      notifyListeners();
+      filePickService(pendingFiles.value);
+      pendingFiles.set([...pendingFiles.value], force: true);
     } catch (e) {
       if (context.mounted) {
         context.showErrorSnackBar(tl('Unable to pick files: ${e.toString()}'));
@@ -22,8 +23,8 @@ class AttachmentController extends ChangeNotifier {
 
   Future<void> pickFromGallery(BuildContext context) async {
     try {
-      galleryPickService(pendingFiles);
-      notifyListeners();
+      galleryPickService(pendingFiles.value);
+      pendingFiles.set([...pendingFiles.value], force: true);
     } catch (e) {
       if (context.mounted) {
         context.showErrorSnackBar(tl('Unable to pick files: ${e.toString()}'));
@@ -32,21 +33,17 @@ class AttachmentController extends ChangeNotifier {
   }
 
   void removeAttachmentAt(int index) {
-    if (index < 0 || index >= pendingFiles.length) return;
-    pendingFiles.removeAt(index);
-    notifyListeners();
+    if (index < 0 || index >= pendingFiles.value.length) return;
+    pendingFiles.value.removeAt(index);
+    pendingFiles.set([...pendingFiles.value], force: true);
   }
 
   void clearPendingAttachments() {
     pendingFiles.clear();
-    notifyListeners();
   }
 
   void setInspectingAttachments(List<String> attachments) {
-    inspectingFiles
-      ..clear()
-      ..addAll(attachments);
-    notifyListeners();
+    inspectingFiles.value = [...attachments];
   }
 
   void openFilesDialog(List<String> attachments) {
@@ -55,6 +52,10 @@ class AttachmentController extends ChangeNotifier {
 
   void clearInspectingAttachments() {
     inspectingFiles.clear();
-    notifyListeners();
+  }
+
+  void dispose() {
+    pendingFiles.dispose();
+    inspectingFiles.dispose();
   }
 }

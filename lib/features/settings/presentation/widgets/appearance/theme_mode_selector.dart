@@ -16,10 +16,9 @@ class ThemeModeSelector extends StatelessWidget {
       children: [
         Text(
           tl('Theme Mode'),
-          style: Theme.of(context)
-              .textTheme
-              .titleLarge
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Card(
@@ -29,7 +28,9 @@ class ThemeModeSelector extends StatelessWidget {
                 title: 'System',
                 subtitle: 'Follow system theme',
                 icon: Icons.brightness_auto,
-                isSelected: controller.settings.selection == ThemeSelection.system,
+                isSelected:
+                    controller.settings.value.selection ==
+                    ThemeSelection.system,
                 onTap: () => controller.updateSelection(ThemeSelection.system),
               ),
               const Divider(height: 1),
@@ -37,7 +38,8 @@ class ThemeModeSelector extends StatelessWidget {
                 title: 'Light',
                 subtitle: 'Light theme',
                 icon: Icons.light_mode,
-                isSelected: controller.settings.selection == ThemeSelection.light,
+                isSelected:
+                    controller.settings.value.selection == ThemeSelection.light,
                 onTap: () => controller.updateSelection(ThemeSelection.light),
               ),
               const Divider(height: 1),
@@ -45,7 +47,8 @@ class ThemeModeSelector extends StatelessWidget {
                 title: 'Dark',
                 subtitle: 'Dark theme',
                 icon: Icons.dark_mode,
-                isSelected: controller.settings.selection == ThemeSelection.dark,
+                isSelected:
+                    controller.settings.value.selection == ThemeSelection.dark,
                 onTap: () => controller.updateSelection(ThemeSelection.dark),
               ),
               const Divider(height: 1),
@@ -53,7 +56,9 @@ class ThemeModeSelector extends StatelessWidget {
                 title: 'Custom',
                 subtitle: 'Customize colors',
                 icon: Icons.palette,
-                isSelected: controller.settings.selection == ThemeSelection.custom,
+                isSelected:
+                    controller.settings.value.selection ==
+                    ThemeSelection.custom,
                 onTap: () => controller.updateSelection(ThemeSelection.custom),
               ),
             ],

@@ -5,6 +5,7 @@ import 'package:multigateway/features/llm/presentation/controllers/edit_provider
 import 'package:multigateway/shared/utils/icon_builder.dart';
 import 'package:multigateway/shared/widgets/common_dropdown.dart';
 import 'package:multigateway/shared/widgets/custom_text_field.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
 /// Section cấu hình thông tin provider
 class ProviderInfoSection extends StatelessWidget {
@@ -14,52 +15,60 @@ class ProviderInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        CommonDropdown<ProviderType>(
-          value: controller.selectedType,
-          labelText: tl('Compatibility'),
-          options: ProviderType.values.map((type) {
-            return DropdownOption<ProviderType>(
-              value: type,
-              label: type.name,
-              icon: buildLogoIcon(_getProviderIcon(type, controller), size: 24),
-            );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              controller.updateSelectedType(value);
-            }
-          },
-        ),
-        const SizedBox(height: 16),
-        CustomTextField(controller: controller.nameController, label: 'Name'),
-        const SizedBox(height: 16),
-        CustomTextField(
-          controller: controller.apiKeyController,
-          label: 'API Key',
-          obscureText: true,
-        ),
-        const SizedBox(height: 16),
-        CustomTextField(
-          controller: controller.baseUrlController,
-          label: 'Base URL',
-        ),
-        const SizedBox(height: 8),
-        if (controller.selectedType == ProviderType.openai)
-          CheckboxListTile(
-            title: Text(tl('Responses API')),
-            value: controller.responsesApi,
+    return Watch((context) {
+      final selectedType = controller.selectedType.value;
+      final responsesApi = controller.responsesApi.value;
+
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          CommonDropdown<ProviderType>(
+            value: selectedType,
+            labelText: tl('Compatibility'),
+            options: ProviderType.values.map((type) {
+              return DropdownOption<ProviderType>(
+                value: type,
+                label: type.name,
+                icon: buildLogoIcon(
+                  _getProviderIcon(type, controller),
+                  size: 24,
+                ),
+              );
+            }).toList(),
             onChanged: (value) {
               if (value != null) {
-                controller.updateResponsesApi(value);
+                controller.updateSelectedType(value);
               }
             },
-            controlAffinity: ListTileControlAffinity.leading,
           ),
-      ],
-    );
+          const SizedBox(height: 16),
+          CustomTextField(controller: controller.nameController, label: 'Name'),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: controller.apiKeyController,
+            label: 'API Key',
+            obscureText: true,
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: controller.baseUrlController,
+            label: 'Base URL',
+          ),
+          const SizedBox(height: 8),
+          if (selectedType == ProviderType.openai)
+            CheckboxListTile(
+              title: Text(tl('Responses API')),
+              value: responsesApi,
+              onChanged: (value) {
+                if (value != null) {
+                  controller.updateResponsesApi(value);
+                }
+              },
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+        ],
+      );
+    });
   }
 
   String _getProviderIcon(ProviderType type, AddProviderController controller) {

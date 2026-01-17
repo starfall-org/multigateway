@@ -1,30 +1,27 @@
-import 'package:flutter/material.dart';
 import 'package:multigateway/app/models/appearance_setting.dart';
 import 'package:multigateway/app/storage/shared_prefs_base.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:signals/signals.dart';
 
 class AppearanceStorage extends SharedPreferencesBase<AppearanceSetting> {
   static const String _prefix = 'appearance';
 
-  // Expose a notifier for valid reactive UI updates
-  final ValueNotifier<AppearanceSetting> themeNotifier = ValueNotifier(
-    AppearanceSetting.defaults(themeMode: ThemeMode.system),
-  );
+  final theme = signal<AppearanceSetting>(AppearanceSetting.defaults());
 
   AppearanceStorage(super.prefs) {
     _loadInitialTheme();
     changes.listen((_) {
       final items = getItems();
-      themeNotifier.value = items.isNotEmpty
+      theme.value = items.isNotEmpty
           ? items.first
-          : AppearanceSetting.defaults(themeMode: ThemeMode.system);
+          : AppearanceSetting.defaults();
     });
   }
 
   void _loadInitialTheme() {
     final items = getItems();
     if (items.isNotEmpty) {
-      themeNotifier.value = items.first;
+      theme.value = items.first;
     }
   }
 
@@ -65,8 +62,6 @@ class AppearanceStorage extends SharedPreferencesBase<AppearanceSetting> {
 
   Future<void> updateSettings(AppearanceSetting settings) async {
     await saveItem(settings);
-    themeNotifier.value = settings;
+    theme.value = settings;
   }
-
-  AppearanceSetting get currentTheme => themeNotifier.value;
 }

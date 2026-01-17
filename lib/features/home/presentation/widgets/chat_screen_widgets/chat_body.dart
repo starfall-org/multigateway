@@ -5,78 +5,80 @@ import 'package:multigateway/features/home/presentation/widgets/model_picker_she
 import 'package:multigateway/features/home/presentation/widgets/quick_actions_sheet.dart';
 import 'package:multigateway/features/home/presentation/widgets/user_input_area.dart';
 import 'package:multigateway/shared/widgets/empty_state.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
-/// Body chính của chat screen
 class ChatBody extends StatelessWidget {
   const ChatBody({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controller = ChatControllerProvider.of(context);
+    final ctrl = ChatControllerProvider.of(context);
 
-    return Column(
-      children: [
-        // Danh sách tin nhắn
-        Expanded(
-          child: SafeArea(
+    return Watch((context) {
+      final currentSession = ctrl.session.currentSession.value;
+      final isGenerating = ctrl.message.isGenerating.value;
+      final pendingFiles = ctrl.attachment.pendingFiles.value;
+
+      return Column(
+        children: [
+          Expanded(
+            child: SafeArea(
+              top: false,
+              bottom: false,
+              child: (currentSession?.messages.isEmpty ?? true)
+                  ? const EmptyState(
+                      icon: Icons.chat_bubble_outline,
+                      message: 'Start a conversation!',
+                    )
+                  : ChatMessagesDisplay(
+                      messages: currentSession!.messages,
+                      scrollController: ctrl.scrollController,
+                      isGenerating: isGenerating,
+                      onCopy: (m) => ctrl.copyMessage(context, m),
+                      onEdit: (m) => ctrl.openEditMessageDialog(context, m),
+                      onDelete: (m) => ctrl.deleteMessage(m),
+                      onOpenAttachmentsSidebar: (files) =>
+                          ctrl.openFilesDialog(files),
+                      onRegenerate: () => ctrl.regenerateLast(context),
+                      onRead: (m) => ctrl.speechManager.speak(m.content ?? ''),
+                      onSwitchVersion: (m, idx) =>
+                          ctrl.switchMessageVersion(m, idx),
+                    ),
+            ),
+          ),
+          SafeArea(
             top: false,
-            bottom: false,
-            child: (controller.currentSession?.messages.isEmpty ?? true)
-                ? const EmptyState(
-                    icon: Icons.chat_bubble_outline,
-                    message: 'Start a conversation!',
-                  )
-                : ChatMessagesDisplay(
-                    messages: controller.currentSession!.messages,
-                    scrollController: controller.scrollController,
-                    isGenerating: controller.isGenerating,
-                    onCopy: (m) => controller.copyMessage(context, m),
-                    onEdit: (m) => controller.openEditMessageDialog(context, m),
-                    onDelete: (m) => controller.deleteMessage(m),
-                    onOpenAttachmentsSidebar: (files) {
-                      controller.openFilesDialog(files);
-                    },
-                    onRegenerate: () => controller.regenerateLast(context),
-                    onRead: (m) =>
-                        controller.speechManager.speak(m.content ?? ''),
-                    onSwitchVersion: (m, idx) =>
-                        controller.switchMessageVersion(m, idx),
-                  ),
+            child: UserInputArea(
+              controller: ctrl.textController,
+              onSubmitted: (text) => ctrl.handleSubmitted(text, context),
+              attachments: pendingFiles,
+              onPickAttachments: () => ctrl.pickFromFiles(context),
+              onPickFromGallery: () => ctrl.pickFromGallery(context),
+              onRemoveAttachment: ctrl.removeAttachmentAt,
+              isGenerating: isGenerating,
+              onOpenModelPicker: () => _openModelPicker(context, ctrl),
+              onOpenMenu: () => QuickActionsSheet.show(context, ctrl),
+              selectedLlmModel: ctrl.model.selectedLlmModel,
+            ),
           ),
-        ),
-        // Khu vực nhập liệu
-        SafeArea(
-          top: false,
-          child: UserInputArea(
-            controller: controller.textController,
-            onSubmitted: (text) => controller.handleSubmitted(text, context),
-            attachments: controller.pendingFiles,
-            onPickAttachments: () => controller.pickFromFiles(context),
-            onPickFromGallery: () => controller.pickFromGallery(context),
-            onRemoveAttachment: controller.removeAttachmentAt,
-            isGenerating: controller.isGenerating,
-            onOpenModelPicker: () => _openModelPicker(context, controller),
-            onOpenMenu: () => QuickActionsSheet.show(context, controller),
-            selectedLlmModel: controller.selectedLlmModel,
-          ),
-        ),
-      ],
-    );
+        ],
+      );
+    });
   }
 
-  void _openModelPicker(BuildContext context, controller) {
+  void _openModelPicker(BuildContext context, ctrl) {
     ModelPickerSheet.show(
       context,
-      providers: controller.providers,
-      providerCollapsed: controller.providerCollapsed,
-      providerModels: controller.modelSelectionController.providerModels,
-      selectedProviderName: controller.selectedProviderName,
-      selectedModelName: controller.selectedModelName,
+      providers: ctrl.model.providers.value,
+      providerCollapsed: ctrl.model.providerCollapsed.value,
+      providerModels: ctrl.model.providerModels.value,
+      selectedProviderName: ctrl.model.selectedProviderName.value,
+      selectedModelName: ctrl.model.selectedModelName.value,
       onToggleProvider: (providerName, collapsed) {
-        controller.setProviderCollapsed(providerName, collapsed);
+        ctrl.setProviderCollapsed(providerName, collapsed);
       },
       onSelectModel: (providerName, modelName) {
-        controller.selectModel(providerName, modelName);
+        ctrl.selectModel(providerName, modelName);
       },
     );
   }

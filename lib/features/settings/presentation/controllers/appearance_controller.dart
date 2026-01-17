@@ -2,39 +2,34 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/models/appearance_setting.dart';
 import 'package:multigateway/app/storage/appearance_storage.dart';
+import 'package:signals/signals_flutter.dart';
 
 enum ColorType { primary, secondary, background, surface, text, textHint }
 
-class AppearanceController extends ChangeNotifier {
+class AppearanceController {
   late final AppearanceStorage _repository;
-  late AppearanceSetting settings;
-  bool _isInitialized = false;
+  final settings = signal<AppearanceSetting>(
+    AppearanceSetting.defaults(themeMode: ThemeMode.system),
+  );
+  final isInitialized = signal<bool>(false);
   Future<void>? _initializationFuture;
-
-  /// Getter để kiểm tra trạng thái khởi tạo
-  bool get isInitialized => _isInitialized;
 
   /// Future để theo dõi quá trình khởi tạo
   Future<void> get initializationFuture =>
       _initializationFuture ??= _initialize();
 
   AppearanceController() {
-    // Initialize with default settings immediately
-    settings = AppearanceSetting.defaults(themeMode: ThemeMode.system);
     _initializationFuture = _initialize();
   }
 
   Future<void> _initialize() async {
     try {
       _repository = await AppearanceStorage.instance;
-      settings = _repository.currentTheme;
-      _isInitialized = true;
-      notifyListeners();
+      settings.value = _repository.theme.value;
+      isInitialized.value = true;
     } catch (e) {
-      // Fallback to default settings if initialization fails
-      settings = AppearanceSetting.defaults(themeMode: ThemeMode.system);
-      _isInitialized = true;
-      notifyListeners();
+      settings.value = AppearanceSetting.defaults(themeMode: ThemeMode.system);
+      isInitialized.value = true;
       if (kDebugMode) {
         print('AppearanceController initialization error: $e');
       }
@@ -42,33 +37,33 @@ class AppearanceController extends ChangeNotifier {
   }
 
   Future<void> updateSelection(ThemeSelection selection) async {
-    if (!_isInitialized) await _initialize();
+    if (!isInitialized.value) await _initialize();
     // Keep themeMode in sync for non-custom selections
-    ThemeMode mode = settings.themeMode;
+    ThemeMode mode = settings.value.themeMode;
     bool shouldResetColors = false;
 
     switch (selection) {
       case ThemeSelection.system:
         mode = ThemeMode.system;
         shouldResetColors =
-            settings.selection != ThemeSelection.system &&
-            settings.selection != ThemeSelection.custom;
+            settings.value.selection != ThemeSelection.system &&
+            settings.value.selection != ThemeSelection.custom;
         break;
       case ThemeSelection.light:
         mode = ThemeMode.light;
         shouldResetColors =
-            settings.selection != ThemeSelection.light &&
-            settings.selection != ThemeSelection.custom;
+            settings.value.selection != ThemeSelection.light &&
+            settings.value.selection != ThemeSelection.custom;
         break;
       case ThemeSelection.dark:
         mode = ThemeMode.dark;
         shouldResetColors =
-            settings.selection != ThemeSelection.dark &&
-            settings.selection != ThemeSelection.custom;
+            settings.value.selection != ThemeSelection.dark &&
+            settings.value.selection != ThemeSelection.custom;
         break;
       case ThemeSelection.custom:
         // keep current themeMode; custom only affects colors
-        mode = settings.themeMode;
+        mode = settings.value.themeMode;
         break;
     }
 
@@ -76,13 +71,16 @@ class AppearanceController extends ChangeNotifier {
     if (shouldResetColors) {
       // Reset màu sắc về mặc định cho theme mode mới
       final defaultSettings = AppearanceSetting.defaults(themeMode: mode);
-      newSettings = settings.copyWith(
+      newSettings = settings.value.copyWith(
         selection: selection,
         themeMode: mode,
         colors: defaultSettings.colors,
       );
     } else {
-      newSettings = settings.copyWith(selection: selection, themeMode: mode);
+      newSettings = settings.value.copyWith(
+        selection: selection,
+        themeMode: mode,
+      );
     }
 
     await _updateSettings(newSettings);
@@ -90,39 +88,45 @@ class AppearanceController extends ChangeNotifier {
 
   Future<void> updateColor(ColorType type, int colorValue) async {
     final newColors = switch (type) {
-      ColorType.primary => settings.colors.copyWith(primaryColor: colorValue),
-      ColorType.secondary => settings.colors.copyWith(
+      ColorType.primary => settings.value.colors.copyWith(
+        primaryColor: colorValue,
+      ),
+      ColorType.secondary => settings.value.colors.copyWith(
         secondaryColor: colorValue,
       ),
-      ColorType.background => settings.colors.copyWith(
+      ColorType.background => settings.value.colors.copyWith(
         backgroundColor: colorValue,
       ),
-      ColorType.surface => settings.colors.copyWith(surfaceColor: colorValue),
-      ColorType.text => settings.colors.copyWith(textColor: colorValue),
-      ColorType.textHint => settings.colors.copyWith(textHintColor: colorValue),
+      ColorType.surface => settings.value.colors.copyWith(
+        surfaceColor: colorValue,
+      ),
+      ColorType.text => settings.value.colors.copyWith(textColor: colorValue),
+      ColorType.textHint => settings.value.colors.copyWith(
+        textHintColor: colorValue,
+      ),
     };
-    final newSettings = settings.copyWith(colors: newColors);
+    final newSettings = settings.value.copyWith(colors: newColors);
     await _updateSettings(newSettings);
   }
 
   int getColor(ColorType type) {
     return switch (type) {
-      ColorType.primary => settings.colors.primaryColor,
-      ColorType.secondary => settings.colors.secondaryColor,
-      ColorType.background => settings.colors.backgroundColor,
-      ColorType.surface => settings.colors.surfaceColor,
-      ColorType.text => settings.colors.textColor,
-      ColorType.textHint => settings.colors.textHintColor,
+      ColorType.primary => settings.value.colors.primaryColor,
+      ColorType.secondary => settings.value.colors.secondaryColor,
+      ColorType.background => settings.value.colors.backgroundColor,
+      ColorType.surface => settings.value.colors.surfaceColor,
+      ColorType.text => settings.value.colors.textColor,
+      ColorType.textHint => settings.value.colors.textHintColor,
     };
   }
 
   Future<void> togglePureDark(bool value) async {
-    final newSettings = settings.copyWith(superDarkMode: value);
+    final newSettings = settings.value.copyWith(superDarkMode: value);
     await _updateSettings(newSettings);
   }
 
   Future<void> toggleMaterialYou(bool value) async {
-    final newSettings = settings.copyWith(dynamicColor: value);
+    final newSettings = settings.value.copyWith(dynamicColor: value);
     await _updateSettings(newSettings);
   }
 
@@ -130,8 +134,8 @@ class AppearanceController extends ChangeNotifier {
     // Nếu không phải custom, cập nhật màu sắc từ preset
     if (preset != ColorSchemePreset.custom) {
       final isDark =
-          settings.themeMode == ThemeMode.dark ||
-          (settings.themeMode == ThemeMode.system &&
+          settings.value.themeMode == ThemeMode.dark ||
+          (settings.value.themeMode == ThemeMode.system &&
               WidgetsBinding.instance.platformDispatcher.platformBrightness ==
                   Brightness.dark);
 
@@ -140,14 +144,14 @@ class AppearanceController extends ChangeNotifier {
         isDark: isDark,
       );
 
-      final newSettings = settings.copyWith(
+      final newSettings = settings.value.copyWith(
         colorSchemePreset: preset,
         colors: newColors,
       );
       await _updateSettings(newSettings);
     } else {
       // Chỉ cập nhật preset, giữ nguyên màu hiện tại
-      final newSettings = settings.copyWith(colorSchemePreset: preset);
+      final newSettings = settings.value.copyWith(colorSchemePreset: preset);
       await _updateSettings(newSettings);
     }
   }
@@ -159,7 +163,11 @@ class AppearanceController extends ChangeNotifier {
 
   Future<void> _updateSettings(AppearanceSetting newSettings) async {
     await _repository.updateSettings(newSettings);
-    settings = newSettings;
-    notifyListeners();
+    settings.value = newSettings;
+  }
+
+  void dispose() {
+    settings.dispose();
+    isInitialized.dispose();
   }
 }

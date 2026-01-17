@@ -23,7 +23,7 @@ class ProviderEditTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         CommonDropdown<ProviderType>(
-          value: controller.selectedType,
+          value: controller.selectedType.value,
           labelText: tl('Compatibility'),
           options: ProviderType.values.map((type) {
             return DropdownOption<ProviderType>(
@@ -62,10 +62,10 @@ class ProviderEditTab extends StatelessWidget {
           label: 'Base URL',
         ),
         const SizedBox(height: 8),
-        if (controller.selectedType == ProviderType.openai)
+        if (controller.selectedType.value == ProviderType.openai)
           CheckboxListTile(
             title: Text(tl('Responses API')),
-            value: controller.responsesApi,
+            value: controller.responsesApi.value,
             onChanged: (value) {
               if (value != null) {
                 controller.updateResponsesApi(value);
@@ -76,4 +76,4 @@ class ProviderEditTab extends StatelessWidget {
       ],
     );
   }
-}     
+}

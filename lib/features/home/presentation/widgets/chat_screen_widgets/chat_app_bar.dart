@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/features/home/presentation/widgets/chat_controller_provider.dart';
 import 'package:multigateway/features/home/presentation/widgets/chat_screen_widgets/agent_avatar_button.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
-/// AppBar cho chat screen
 class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onOpenDrawer;
   final VoidCallback onOpenEndDrawer;
@@ -15,46 +15,52 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = ChatControllerProvider.of(context);
+    final ctrl = ChatControllerProvider.of(context);
 
-    return AppBar(
-      leading: IconButton(
-        icon: Icon(
-          Icons.history,
-          color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.7),
-        ),
-        onPressed: onOpenDrawer,
-      ),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            controller.currentSession?.title ?? 'New Chat',
-            style: TextStyle(
-              color: Theme.of(context).textTheme.titleLarge?.color,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+    return Watch((context) {
+      final currentSession = ctrl.session.currentSession.value;
+      final selectedModelName = ctrl.model.selectedModelName.value;
+      final selectedProfile = ctrl.profile.selectedProfile.value;
+
+      return AppBar(
+        leading: IconButton(
+          icon: Icon(
+            Icons.history,
+            color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.7),
           ),
-          Text(
-            controller.selectedModelName ?? '',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
+          onPressed: onOpenDrawer,
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              currentSession?.title ?? 'New Chat',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.titleLarge?.color,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
+            Text(
+              selectedModelName ?? '',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        elevation: 0.5,
+        actions: [
+          AgentAvatarButton(
+            profileName: selectedProfile?.name,
+            onTap: onOpenEndDrawer,
           ),
         ],
-      ),
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      elevation: 0.5,
-      actions: [
-        AgentAvatarButton(
-          profileName: controller.selectedProfile?.name,
-          onTap: onOpenEndDrawer,
-        ),
-      ],
-    );
+      );
+    });
   }
 
   @override

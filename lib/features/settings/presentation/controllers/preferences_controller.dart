@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/models/preferences_setting.dart';
 import 'package:multigateway/app/storage/preferences_storage.dart';
+import 'package:signals/signals_flutter.dart';
 
-class PreferencesController extends ChangeNotifier {
+class PreferencesController {
   PreferencesStorage? _preferencesSp;
 
-  bool _autoDetect = true;
-  String _selectedLanguage = 'auto';
-  bool _persistChatSelection = false;
-  VibrationSettings _vibrationSettings = VibrationSettings.defaults();
-  bool _hideStatusBar = false;
-  bool _hideNavigationBar = false;
-  bool _debugMode = false;
-  bool _continueLastConversation = true;
-  bool _isInitialized = false;
+  final autoDetect = signal<bool>(true);
+  final selectedLanguage = signal<String>('auto');
+  final persistChatSelection = signal<bool>(false);
+  final vibrationSettings = signal<VibrationSettings>(
+    VibrationSettings.defaults(),
+  );
+  final hideStatusBar = signal<bool>(false);
+  final hideNavigationBar = signal<bool>(false);
+  final debugMode = signal<bool>(false);
+  final continueLastConversation = signal<bool>(true);
+  final isInitialized = signal<bool>(false);
 
   final List<Map<String, dynamic>> supportedLanguages = [
     {'code': 'auto', 'name': 'System Language', 'flag': '🌐'},
@@ -35,7 +38,7 @@ class PreferencesController extends ChangeNotifier {
   Future<void> _initialize() async {
     try {
       _preferencesSp = await PreferencesStorage.instance;
-      _isInitialized = true;
+      isInitialized.value = true;
       _loadPreferences();
       _loadPreferencesSetting();
     } catch (e) {
@@ -44,36 +47,24 @@ class PreferencesController extends ChangeNotifier {
     }
   }
 
-  bool get autoDetect => _autoDetect;
-  String get selectedLanguage => _selectedLanguage;
-  bool get persistChatSelection => _persistChatSelection;
-  VibrationSettings get vibrationSettings => _vibrationSettings;
-  bool get hideStatusBar => _hideStatusBar;
-  bool get hideNavigationBar => _hideNavigationBar;
-  bool get debugMode => _debugMode;
-  bool get continueLastConversation => _continueLastConversation;
-  bool get isInitialized => _isInitialized;
-
   void _loadPreferences() {
     if (_preferencesSp == null) return;
 
     final languageSetting = _preferencesSp!.currentPreferences.languageSetting;
-    _autoDetect = languageSetting.autoDetect;
-    _selectedLanguage = languageSetting.languageCode;
-    notifyListeners();
+    autoDetect.value = languageSetting.autoDetect;
+    selectedLanguage.value = languageSetting.languageCode;
   }
 
   void _loadPreferencesSetting() {
     if (_preferencesSp == null) return;
 
     final appPrefs = _preferencesSp!.currentPreferences;
-    _persistChatSelection = appPrefs.persistChatSelection;
-    _vibrationSettings = appPrefs.vibrationSettings;
-    _hideStatusBar = appPrefs.hideStatusBar;
-    _hideNavigationBar = appPrefs.hideNavigationBar;
-    _debugMode = appPrefs.debugMode;
-    _continueLastConversation = appPrefs.continueLastConversation;
-    notifyListeners();
+    persistChatSelection.value = appPrefs.persistChatSelection;
+    vibrationSettings.value = appPrefs.vibrationSettings;
+    hideStatusBar.value = appPrefs.hideStatusBar;
+    hideNavigationBar.value = appPrefs.hideNavigationBar;
+    debugMode.value = appPrefs.debugMode;
+    continueLastConversation.value = appPrefs.continueLastConversation;
   }
 
   Future<void> updatePreferencesSetting({
@@ -96,17 +87,19 @@ class PreferencesController extends ChangeNotifier {
     );
 
     if (persistChatSelection != null) {
-      _persistChatSelection = persistChatSelection;
+      this.persistChatSelection.value = persistChatSelection;
     }
-    if (vibrationSettings != null) _vibrationSettings = vibrationSettings;
-    if (hideStatusBar != null) _hideStatusBar = hideStatusBar;
-    if (hideNavigationBar != null) _hideNavigationBar = hideNavigationBar;
-    if (debugMode != null) _debugMode = debugMode;
+    if (vibrationSettings != null) {
+      this.vibrationSettings.value = vibrationSettings;
+    }
+    if (hideStatusBar != null) this.hideStatusBar.value = hideStatusBar;
+    if (hideNavigationBar != null) {
+      this.hideNavigationBar.value = hideNavigationBar;
+    }
+    if (debugMode != null) this.debugMode.value = debugMode;
     if (continueLastConversation != null) {
-      _continueLastConversation = continueLastConversation;
+      this.continueLastConversation.value = continueLastConversation;
     }
-
-    notifyListeners();
 
     try {
       await _preferencesSp!.updatePreferences(newPrefs);
@@ -120,9 +113,8 @@ class PreferencesController extends ChangeNotifier {
     if (_preferencesSp == null) return;
 
     try {
-      _selectedLanguage = languageCode;
-      _autoDetect = languageCode == 'auto';
-      notifyListeners();
+      selectedLanguage.value = languageCode;
+      autoDetect.value = languageCode == 'auto';
 
       if (languageCode == 'auto') {
         await _preferencesSp!.setAutoDetectLanguage(true);
@@ -173,15 +165,27 @@ class PreferencesController extends ChangeNotifier {
   }
 
   String getCurrentLanguageName() {
-    if (_autoDetect) {
+    if (autoDetect.value) {
       return 'Auto';
     }
 
     final selected = supportedLanguages.firstWhere(
-      (lang) => lang['code'] == _selectedLanguage,
+      (lang) => lang['code'] == selectedLanguage.value,
       orElse: () => supportedLanguages.first,
     );
 
     return selected['name'] as String;
+  }
+
+  void dispose() {
+    autoDetect.dispose();
+    selectedLanguage.dispose();
+    persistChatSelection.dispose();
+    vibrationSettings.dispose();
+    hideStatusBar.dispose();
+    hideNavigationBar.dispose();
+    debugMode.dispose();
+    continueLastConversation.dispose();
+    isInitialized.dispose();
   }
 }

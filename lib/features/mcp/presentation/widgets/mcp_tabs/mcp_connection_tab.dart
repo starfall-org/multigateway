@@ -16,13 +16,12 @@ class McpConnectionTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         // Connection Settings
-        if (controller.selectedTransport != McpProtocol.stdio) ...[
+        if (controller.selectedTransport.value != McpProtocol.stdio) ...[
           Text(
             tl('Connection Settings'),
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
 
@@ -30,7 +29,7 @@ class McpConnectionTab extends StatelessWidget {
           CustomTextField(
             controller: controller.urlController,
             label: tl('Server URL'),
-            hint: _getUrlHint(controller.selectedTransport),
+            hint: _getUrlHint(controller.selectedTransport.value),
             prefixIcon: Icons.link,
             keyboardType: TextInputType.url,
           ),
@@ -43,10 +42,9 @@ class McpConnectionTab extends StatelessWidget {
             children: [
               Text(
                 tl('HTTP Headers'),
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               IconButton(
                 icon: const Icon(Icons.add_circle_outline),
@@ -58,7 +56,7 @@ class McpConnectionTab extends StatelessWidget {
           const SizedBox(height: 12),
 
           // Headers List
-          if (controller.headers.isEmpty)
+          if (controller.headers.value.isEmpty)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -88,7 +86,7 @@ class McpConnectionTab extends StatelessWidget {
               ),
             )
           else
-            ...controller.headers.asMap().entries.map((entry) {
+            ...controller.headers.value.asMap().entries.map((entry) {
               final index = entry.key;
               final header = entry.value;
               return Padding(
@@ -164,8 +162,8 @@ class McpConnectionTab extends StatelessWidget {
                     Text(
                       tl('STDIO Transport'),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),

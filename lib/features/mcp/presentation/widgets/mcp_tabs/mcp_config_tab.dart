@@ -18,7 +18,7 @@ class McpConfigTab extends StatelessWidget {
       children: [
         // Transport Type Selection
         CommonDropdown<McpProtocol>(
-          value: controller.selectedTransport,
+          value: controller.selectedTransport.value,
           labelText: tl('Transport Type'),
           options: McpProtocol.values.map((transport) {
             return DropdownOption<McpProtocol>(

@@ -14,7 +14,7 @@ class McpInfoTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildTransportInfoCard(context, controller.selectedTransport),
+        _buildTransportInfoCard(context, controller.selectedTransport as McpProtocol),
         const SizedBox(height: 24),
       ],
     );

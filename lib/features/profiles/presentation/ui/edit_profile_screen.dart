@@ -7,6 +7,7 @@ import 'package:multigateway/features/profiles/presentation/widgets/profile_conf
 import 'package:multigateway/features/profiles/presentation/widgets/profile_controller_provider.dart';
 import 'package:multigateway/features/profiles/presentation/widgets/profile_general_tab.dart';
 import 'package:multigateway/features/profiles/presentation/widgets/profile_tools_tab.dart';
+import 'package:signals/signals_flutter.dart';
 
 class AddProfileScreen extends StatefulWidget {
   final ChatProfile? profile;
@@ -31,9 +32,6 @@ class _AddProfileScreenState extends State<AddProfileScreen>
     });
     _controller = AddAgentController();
     _controller.initialize(widget.profile);
-    _controller.addListener(() {
-      setState(() {});
-    });
   }
 
   @override
@@ -56,57 +54,59 @@ class _AddProfileScreenState extends State<AddProfileScreen>
 
     return ProfileControllerProvider(
       controller: _controller,
-      child: Scaffold(
-        floatingActionButton: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            if (isEditing)
-              FloatingActionButton(
-                heroTag: "info",
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          ViewProfileDialog(profile: widget.profile!),
-                    ),
-                  );
-                },
-                child: const Icon(Icons.info_outline),
+      child: Watch((context) {
+        return Scaffold(
+          floatingActionButton: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (isEditing)
+                FloatingActionButton(
+                  heroTag: "info",
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ViewProfileDialog(profile: widget.profile!),
+                      ),
+                    );
+                  },
+                  child: const Icon(Icons.info_outline),
+                ),
+              if (isEditing) const SizedBox(width: 16),
+              FloatingActionButton.extended(
+                heroTag: "save",
+                onPressed: _saveAgent,
+                label: Text(tl('Save')),
+                icon: const Icon(Icons.check),
               ),
-            if (isEditing) const SizedBox(width: 16),
-            FloatingActionButton.extended(
-              heroTag: "save",
-              onPressed: _saveAgent,
-              label: Text(tl('Save')),
-              icon: const Icon(Icons.check),
+            ],
+          ),
+          bottomNavigationBar: BottomAppBar(
+            elevation: 0,
+            child: TabBar(
+              controller: _tabController,
+              tabs: const [
+                Tab(icon: Icon(Icons.person), text: 'Info'),
+                Tab(icon: Icon(Icons.settings), text: 'Config'),
+                Tab(icon: Icon(Icons.build), text: 'Tools'),
+              ],
             ),
-          ],
-        ),
-        bottomNavigationBar: BottomAppBar(
-          elevation: 0,
-          child: TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(icon: Icon(Icons.person), text: 'Info'),
-              Tab(icon: Icon(Icons.settings), text: 'Config'),
-              Tab(icon: Icon(Icons.build), text: 'Tools'),
-            ],
           ),
-        ),
-        body: SafeArea(
-          top: true,
-          bottom: true,
-          child: TabBarView(
-            controller: _tabController,
-            children: const [
-              ProfileGeneralTab(),
-              ProfileConfigTab(),
-              ProfileToolsTab(),
-            ],
+          body: SafeArea(
+            top: true,
+            bottom: true,
+            child: TabBarView(
+              controller: _tabController,
+              children: const [
+                ProfileGeneralTab(),
+                ProfileConfigTab(),
+                ProfileToolsTab(),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      }),
     );
   }
 }

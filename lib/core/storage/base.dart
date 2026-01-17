@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:signals/signals.dart';
 
 /// Hive-backed base repository to replace SharedPreferences storage for core stores.
 /// Keeps the existing API (class name and methods) so current repositories continue to work
@@ -31,8 +32,8 @@ abstract class HiveBaseStorage<T> {
   Map<String, dynamic> serializeToFields(T item);
   T deserializeFromFields(String id, Map<String, dynamic> fields);
 
-  // Reactive notifier (mirrors the API from SharedPreferencesBase)
-  final ValueNotifier<int> changeNotifier = ValueNotifier<int>(0);
+  // Reactive signal for change notifications
+  final changeSignal = signal<int>(0);
 
   // Internal
   static bool _hiveInitialized = false;
@@ -79,7 +80,7 @@ abstract class HiveBaseStorage<T> {
     await box.put(id, fields);
 
     // Notify listeners
-    changeNotifier.value++;
+    changeSignal.value++;
   }
 
   T? getItem(String id) {
@@ -153,7 +154,7 @@ abstract class HiveBaseStorage<T> {
   Future<void> saveOrder(List<String> ids) async {
     final box = await _openBox();
     await box.put('__order__', ids);
-    changeNotifier.value++;
+    changeSignal.value++;
   }
 
   List<String> getOrder() {
@@ -181,13 +182,13 @@ abstract class HiveBaseStorage<T> {
   Future<void> deleteItem(String id) async {
     final box = await _openBox();
     await box.delete(id);
-    changeNotifier.value++;
+    changeSignal.value++;
   }
 
   Future<void> clear() async {
     final box = await _openBox();
     await box.clear();
-    changeNotifier.value++;
+    changeSignal.value++;
   }
 
   // Reactive streams
@@ -195,12 +196,16 @@ abstract class HiveBaseStorage<T> {
   /// Stream that emits on every change. Starts by emitting once on subscribe.
   Stream<void> get changes {
     final controller = StreamController<void>.broadcast();
-    late VoidCallback listener;
+    EffectCleanup? cleanup;
 
     controller.onListen = () {
       controller.add(null); // initial tick
-      listener = () => controller.add(null);
-      changeNotifier.addListener(listener);
+
+      // Watch signal changes
+      cleanup = effect(() {
+        changeSignal.value; // Track signal
+        controller.add(null);
+      });
 
       // Also attach to Hive watch (async)
       () async {
@@ -212,7 +217,7 @@ abstract class HiveBaseStorage<T> {
     };
 
     controller.onCancel = () {
-      changeNotifier.removeListener(listener);
+      cleanup?.call();
     };
 
     return controller.stream;
@@ -222,7 +227,7 @@ abstract class HiveBaseStorage<T> {
   Stream<List<T>> get itemsStream {
     final controller = StreamController<List<T>>.broadcast();
     StreamSubscription? hiveSub;
-    late VoidCallback notifierListener;
+    EffectCleanup? cleanup;
 
     Future<void> emit() async {
       // Ensure box is open before enumerating
@@ -234,9 +239,11 @@ abstract class HiveBaseStorage<T> {
       // initial emit
       unawaited(emit());
 
-      // listen to internal notifier
-      notifierListener = () => unawaited(emit());
-      changeNotifier.addListener(notifierListener);
+      // listen to signal changes
+      cleanup = effect(() {
+        changeSignal.value; // Track signal
+        unawaited(emit());
+      });
 
       // listen to hive events
       () async {
@@ -248,7 +255,7 @@ abstract class HiveBaseStorage<T> {
     };
 
     controller.onCancel = () async {
-      changeNotifier.removeListener(notifierListener);
+      cleanup?.call();
       await hiveSub?.cancel();
       hiveSub = null;
     };

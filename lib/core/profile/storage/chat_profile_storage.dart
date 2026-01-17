@@ -121,7 +121,7 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
         : await Hive.openBox(boxName);
     await box.put(_selectedKey, id);
     // Notify listeners so selected profile updates propagate live
-    changeNotifier.value++;
+    changeSignal.value++;
   }
 
   Future<ChatProfile> getOrInitSelectedProfile() async {

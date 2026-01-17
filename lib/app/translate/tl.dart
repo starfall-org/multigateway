@@ -3,10 +3,11 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/app/storage/translation_cache_storage.dart';
+import 'package:signals/signals.dart';
 import 'package:translator/translator.dart';
 
 /// TranslationManager quản lý việc dịch và notify UI khi có bản dịch mới
-class TranslationManager extends ChangeNotifier {
+class TranslationManager {
   static TranslationManager? _instance;
   static TranslationManager get instance {
     _instance ??= TranslationManager._internal();
@@ -20,6 +21,9 @@ class TranslationManager extends ChangeNotifier {
 
   final GoogleTranslator _translator = GoogleTranslator();
 
+  /// Signal để notify UI khi có bản dịch mới
+  final translationUpdated = signal<int>(0);
+
   /// Map lưu các request đang pending để tránh gọi API đồng thời cho cùng một text
   final Map<String, Completer<String>> _pendingRequests = {};
 
@@ -31,14 +35,14 @@ class TranslationManager extends ChangeNotifier {
     try {
       final translationCacheRepo = TranslationCacheStorage.instance;
       final cachedEntries = translationCacheRepo.getItems();
-      
+
       for (final entry in cachedEntries) {
         final cacheKey = _getCacheKey(entry.originalText, entry.targetLanguage);
         _translatedTexts[cacheKey] = entry.translatedText;
       }
-      
+
       debugPrint('Loaded ${cachedEntries.length} translations from cache');
-      notifyListeners();
+      translationUpdated.value++;
     } catch (e) {
       debugPrint('Failed to load translation cache: $e');
     }
@@ -97,7 +101,7 @@ class TranslationManager extends ChangeNotifier {
       // Kiểm tra in-memory cache trước (cho realtime update)
       if (_translatedTexts.containsKey(cacheKey)) {
         // Đã có bản dịch, notify để UI update
-        notifyListeners();
+        translationUpdated.value++;
         return;
       }
 
@@ -111,7 +115,7 @@ class TranslationManager extends ChangeNotifier {
 
       if (cached != null) {
         _translatedTexts[cacheKey] = cached.translatedText;
-        notifyListeners();
+        translationUpdated.value++;
         return;
       }
 
@@ -194,7 +198,7 @@ class TranslationManager extends ChangeNotifier {
       completer.complete(result.text);
 
       // Notify UI để rebuild với bản dịch mới
-      notifyListeners();
+      translationUpdated.value++;
     } catch (e) {
       debugPrint('Background translation failed: $e');
       completer.completeError(e);
@@ -208,12 +212,12 @@ class TranslationManager extends ChangeNotifier {
   Future<void> clearCache() async {
     _translatedTexts.clear();
     _pendingRequests.clear();
-    
+
     // Xóa persistent cache
     final translationCacheRepo = TranslationCacheStorage.instance;
     await translationCacheRepo.clearCache();
-    
-    notifyListeners();
+
+    translationUpdated.value++;
   }
 
   /// Reload cache từ storage (dùng khi thay đổi ngôn ngữ)
@@ -229,8 +233,6 @@ class TranslationManager extends ChangeNotifier {
   /// Số lượng bản dịch đã cache trong memory
   int get cachedCount => _translatedTexts.length;
 }
-
-
 
 /// Hàm tiện ích để dịch text
 /// Sử dụng: tl('Hello') -> 'Xin chào' (nếu target language là Vietnamese)

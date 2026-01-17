@@ -14,8 +14,8 @@ import 'package:multigateway/features/home/presentation/widgets/chat_screen_widg
 import 'package:multigateway/features/home/presentation/widgets/conversations_drawer.dart';
 import 'package:multigateway/features/home/presentation/widgets/edit_message_sheet.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
-/// Màn hình chat chính cho ứng dụng
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
 
@@ -25,7 +25,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage>
     implements ChatNavigationInterface {
-  late ChatController _controller;
+  ChatController? _controller;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -47,7 +47,6 @@ class _ChatPageState extends State<ChatPage>
         storage: await SpeechServiceStorage.instance,
       );
 
-      // Đọc tùy chọn continueLastConversation từ preferences
       final continueLastConversation =
           preferencesSp.currentPreferences.continueLastConversation;
 
@@ -63,18 +62,15 @@ class _ChatPageState extends State<ChatPage>
         continueLastConversation: continueLastConversation,
       );
 
-      await _controller.initChat();
-      await _controller.loadSelectedProfile();
-      await _controller.refreshProviders();
+      await _controller!.initChat();
+      await _controller!.loadSelectedProfile();
+      await _controller!.refreshProviders();
 
-      // Trigger rebuild after initialization completes
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
         showSnackBar('Error initializing chat: $e');
-        setState(() {}); // Also rebuild on error to show error state
+        setState(() {});
       }
     }
   }
@@ -106,72 +102,68 @@ class _ChatPageState extends State<ChatPage>
   }
 
   @override
-  void openDrawer() {
-    _scaffoldKey.currentState?.openDrawer();
-  }
+  void openDrawer() => _scaffoldKey.currentState?.openDrawer();
 
   @override
-  void openEndDrawer() {
-    _scaffoldKey.currentState?.openEndDrawer();
-  }
+  void openEndDrawer() => _scaffoldKey.currentState?.openEndDrawer();
 
   @override
-  void closeEndDrawer() {
-    _scaffoldKey.currentState?.closeEndDrawer();
-  }
+  void closeEndDrawer() => _scaffoldKey.currentState?.closeEndDrawer();
 
   @override
-  String getTranslatedString(String key, {Map<String, String>? namedArgs}) {
-    if (!mounted) return key;
-    return key;
-  }
+  String getTranslatedString(String key, {Map<String, String>? namedArgs}) =>
+      key;
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChatControllerProvider(
-      controller: _controller,
-      child: ListenableBuilder(
-        listenable: _controller,
-        builder: (context, child) {
-          if (_controller.isLoading) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
+    final ctrl = _controller;
+    if (ctrl == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
-          return Scaffold(
-            key: _scaffoldKey,
-            appBar: ChatAppBar(
-              onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-              onOpenEndDrawer: () => _scaffoldKey.currentState?.openEndDrawer(),
-            ),
-            drawer: ConversationsDrawer(
-              onSessionSelected: (sessionId) {
-                Navigator.pop(context);
-                _controller.loadSession(sessionId);
-              },
-              onNewChat: () {
-                Navigator.pop(context);
-                _controller.createNewSession();
-              },
-              onAgentChanged: () {
-                _controller.loadSelectedProfile();
-              },
-              selectedProviderName: _controller.selectedProviderName,
-              selectedModelName: _controller.selectedModelName,
-              selectedProfile: _controller.selectedProfile,
-            ),
-            endDrawer: const MenuView(),
-            body: const ChatBody(),
+    return ChatControllerProvider(
+      controller: ctrl,
+      child: Watch((context) {
+        final isLoading = ctrl.session.isLoading.value;
+
+        if (isLoading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
           );
-        },
-      ),
+        }
+
+        return Scaffold(
+          key: _scaffoldKey,
+          appBar: ChatAppBar(
+            onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+            onOpenEndDrawer: () => _scaffoldKey.currentState?.openEndDrawer(),
+          ),
+          drawer: ConversationsDrawer(
+            onSessionSelected: (sessionId) {
+              Navigator.pop(context);
+              ctrl.loadSession(sessionId);
+            },
+            onNewChat: () {
+              Navigator.pop(context);
+              ctrl.createNewSession();
+            },
+            onAgentChanged: () {
+              ctrl.loadSelectedProfile();
+            },
+            selectedProviderName: ctrl.model.selectedProviderName.value,
+            selectedModelName: ctrl.model.selectedModelName.value,
+            selectedProfile: ctrl.profile.selectedProfile.value,
+          ),
+          endDrawer: const MenuView(),
+          body: const ChatBody(),
+        );
+      }),
     );
   }
 }

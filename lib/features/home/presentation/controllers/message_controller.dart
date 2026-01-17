@@ -7,14 +7,14 @@ import 'package:multigateway/features/home/services/message_helper.dart';
 import 'package:multigateway/features/home/services/message_stream_service.dart';
 import 'package:multigateway/features/home/services/ui_navigation_service.dart';
 import 'package:multigateway/features/home/utils/chat_logic_utils.dart';
+import 'package:signals/signals.dart';
 
 /// Controller responsible for message operations
-class MessageController extends ChangeNotifier {
-  bool isGenerating = false;
+class MessageController {
+  final isGenerating = signal<bool>(false);
 
   void setGenerating(bool value) {
-    isGenerating = value;
-    notifyListeners();
+    isGenerating.value = value;
   }
 
   Future<void> sendMessage({
@@ -37,8 +37,7 @@ class MessageController extends ChangeNotifier {
       userMessage,
     );
 
-    isGenerating = true;
-    notifyListeners();
+    isGenerating.value = true;
 
     // Generate title if first message
     if (session.messages.length == 1) {
@@ -80,8 +79,7 @@ class MessageController extends ChangeNotifier {
         );
       }
     } finally {
-      isGenerating = false;
-      notifyListeners();
+      isGenerating.value = false;
     }
   }
 
@@ -118,8 +116,7 @@ class MessageController extends ChangeNotifier {
       }
     }
 
-    isGenerating = true;
-    notifyListeners();
+    isGenerating.value = true;
 
     try {
       // Preserve the message list up to the user message, plus the model message if we are regenerating it
@@ -170,9 +167,12 @@ class MessageController extends ChangeNotifier {
     } catch (e) {
       return e.toString();
     } finally {
-      isGenerating = false;
-      notifyListeners();
+      isGenerating.value = false;
     }
+  }
+
+  void dispose() {
+    isGenerating.dispose();
   }
 
   Future<void> copyMessage(BuildContext context, ChatMessage message) async {

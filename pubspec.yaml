@@ -43,7 +43,6 @@ dependencies:
   flutter_tts: ^4.2.3
   path_provider: ^2.1.5
   meta: ^1.17.0
-  firebase_core: ^4.3.0
 
   # Dynamic Color support
   dynamic_color: ^1.7.0
@@ -55,11 +54,15 @@ dependencies:
   image_picker: ^1.2.1
   json_annotation: ^4.9.0
   
+  # State management
+  signals: ^6.3.0
+  
   # Metalore packages
   llm:
     path: llm
   mcp:
     path: mcp
+  signals_flutter: ^6.3.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.13.1

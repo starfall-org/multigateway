@@ -4,69 +4,69 @@ import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:signals/signals_flutter.dart';
 import 'package:uuid/uuid.dart';
 
-class AddAgentController extends ChangeNotifier {
+class AddAgentController {
   // Controllers
   final TextEditingController nameController = TextEditingController();
   final TextEditingController promptController = TextEditingController();
   final TextEditingController avatarController = TextEditingController();
 
   // State variables representing all fields of ChatProfile
-  bool enableStream = true;
-  bool isTopPEnabled = false;
-  double topPValue = 1.0;
-  bool isTopKEnabled = false;
-  double topKValue = 40.0;
-  bool isTemperatureEnabled = false;
-  double temperatureValue = 0.7;
-  int contextWindowValue = 60000;
-  int conversationLengthValue = 10;
-  int maxTokensValue = 4000;
-  bool isCustomThinkingTokensEnabled = false;
-  int customThinkingTokensValue = 0;
-  ThinkingLevel thinkingLevel = ThinkingLevel.auto;
-  List<McpServer> availableMcpServers = [];
-  final List<String> selectedMcpServerIds = [];
+  final enableStream = signal<bool>(true);
+  final isTopPEnabled = signal<bool>(false);
+  final topPValue = signal<double>(1.0);
+  final isTopKEnabled = signal<bool>(false);
+  final topKValue = signal<double>(40.0);
+  final isTemperatureEnabled = signal<bool>(false);
+  final temperatureValue = signal<double>(0.7);
+  final contextWindowValue = signal<int>(60000);
+  final conversationLengthValue = signal<int>(10);
+  final maxTokensValue = signal<int>(4000);
+  final isCustomThinkingTokensEnabled = signal<bool>(false);
+  final customThinkingTokensValue = signal<int>(0);
+  final thinkingLevel = signal<ThinkingLevel>(ThinkingLevel.auto);
+  final availableMcpServers = signal<List<McpServer>>([]);
+  final selectedMcpServerIds = signal<List<String>>([]);
 
   // Initialize with optional existing profile
   void initialize(ChatProfile? profile) {
     if (profile != null) {
       nameController.text = profile.name;
       promptController.text = profile.config.systemPrompt;
-      enableStream = profile.config.enableStream;
+      enableStream.value = profile.config.enableStream;
 
       if (profile.config.topP != null) {
-        isTopPEnabled = true;
-        topPValue = profile.config.topP!;
+        isTopPEnabled.value = true;
+        topPValue.value = profile.config.topP!;
       }
       if (profile.config.topK != null) {
-        isTopKEnabled = true;
-        topKValue = profile.config.topK!;
+        isTopKEnabled.value = true;
+        topKValue.value = profile.config.topK!;
       }
       if (profile.config.temperature != null) {
-        isTemperatureEnabled = true;
-        temperatureValue = profile.config.temperature!;
+        isTemperatureEnabled.value = true;
+        temperatureValue.value = profile.config.temperature!;
       }
 
-      contextWindowValue = profile.config.contextWindow;
-      conversationLengthValue = profile.config.conversationLength;
-      maxTokensValue = profile.config.maxTokens;
+      contextWindowValue.value = profile.config.contextWindow;
+      conversationLengthValue.value = profile.config.conversationLength;
+      maxTokensValue.value = profile.config.maxTokens;
       if (profile.config.customThinkingTokens != null) {
-        isCustomThinkingTokensEnabled = true;
-        customThinkingTokensValue = profile.config.customThinkingTokens!;
+        isCustomThinkingTokensEnabled.value = true;
+        customThinkingTokensValue.value = profile.config.customThinkingTokens!;
       }
 
-      thinkingLevel = profile.config.thinkingLevel;
-      selectedMcpServerIds.addAll(profile.activeMcpServerIds);
+      thinkingLevel.value = profile.config.thinkingLevel;
+      selectedMcpServerIds.value = List.from(profile.activeMcpServerIds);
     }
     _loadMcpServers();
   }
 
   Future<void> _loadMcpServers() async {
     final mcpRepo = await McpServerInfoStorage.init();
-    availableMcpServers = mcpRepo.getItems().cast<McpServer>();
-    notifyListeners();
+    availableMcpServers.value = mcpRepo.getItems().cast<McpServer>();
   }
 
   Future<void> saveAgent(
@@ -84,19 +84,19 @@ class AddAgentController extends ChangeNotifier {
       name: nameController.text,
       config: LlmChatConfig(
         systemPrompt: promptController.text,
-        enableStream: enableStream,
-        topP: isTopPEnabled ? topPValue : null,
-        topK: isTopKEnabled ? topKValue : null,
-        temperature: isTemperatureEnabled ? temperatureValue : null,
-        contextWindow: contextWindowValue,
-        conversationLength: conversationLengthValue,
-        maxTokens: maxTokensValue,
-        customThinkingTokens: isCustomThinkingTokensEnabled
-            ? customThinkingTokensValue
+        enableStream: enableStream.value,
+        topP: isTopPEnabled.value ? topPValue.value : null,
+        topK: isTopKEnabled.value ? topKValue.value : null,
+        temperature: isTemperatureEnabled.value ? temperatureValue.value : null,
+        contextWindow: contextWindowValue.value,
+        conversationLength: conversationLengthValue.value,
+        maxTokens: maxTokensValue.value,
+        customThinkingTokens: isCustomThinkingTokensEnabled.value
+            ? customThinkingTokensValue.value
             : null,
-        thinkingLevel: thinkingLevel,
+        thinkingLevel: thinkingLevel.value,
       ),
-      activeMcpServers: selectedMcpServerIds
+      activeMcpServers: selectedMcpServerIds.value
           .map((id) => ActiveMcpServer(id: id, activeToolIds: []))
           .toList(),
     );
@@ -109,81 +109,86 @@ class AddAgentController extends ChangeNotifier {
   }
 
   void toggleMcpServer(String serverId) {
-    if (selectedMcpServerIds.contains(serverId)) {
-      selectedMcpServerIds.remove(serverId);
+    final currentList = List<String>.from(selectedMcpServerIds.value);
+    if (currentList.contains(serverId)) {
+      currentList.remove(serverId);
     } else {
-      selectedMcpServerIds.add(serverId);
+      currentList.add(serverId);
     }
-    notifyListeners();
+    selectedMcpServerIds.value = currentList;
   }
 
   void toggleStream(bool value) {
-    enableStream = value;
-    notifyListeners();
+    enableStream.value = value;
   }
 
   void toggleTopP(bool value) {
-    isTopPEnabled = value;
-    notifyListeners();
+    isTopPEnabled.value = value;
   }
 
   void setTopPValue(double value) {
-    topPValue = value;
-    notifyListeners();
+    topPValue.value = value;
   }
 
   void toggleTopK(bool value) {
-    isTopKEnabled = value;
-    notifyListeners();
+    isTopKEnabled.value = value;
   }
 
   void setTopKValue(double value) {
-    topKValue = value;
-    notifyListeners();
+    topKValue.value = value;
   }
 
   void toggleTemperature(bool value) {
-    isTemperatureEnabled = value;
-    notifyListeners();
+    isTemperatureEnabled.value = value;
   }
 
   void setTemperatureValue(double value) {
-    temperatureValue = value;
-    notifyListeners();
+    temperatureValue.value = value;
   }
 
   void setContextWindowValue(int value) {
-    contextWindowValue = value;
+    contextWindowValue.value = value;
   }
 
   void setConversationLengthValue(int value) {
-    conversationLengthValue = value;
+    conversationLengthValue.value = value;
   }
 
   void setMaxTokensValue(int value) {
-    maxTokensValue = value;
+    maxTokensValue.value = value;
   }
 
   void toggleCustomThinkingTokens(bool value) {
-    isCustomThinkingTokensEnabled = value;
-    notifyListeners();
+    isCustomThinkingTokensEnabled.value = value;
   }
 
   void setCustomThinkingTokensValue(int value) {
-    customThinkingTokensValue = value;
-    notifyListeners();
+    customThinkingTokensValue.value = value;
   }
 
   void setThinkingLevel(ThinkingLevel value) {
-    thinkingLevel = value;
-    notifyListeners();
+    thinkingLevel.value = value;
   }
 
-  @override
   void dispose() {
     nameController.dispose();
     promptController.dispose();
-    super.dispose();
+    avatarController.dispose();
+    enableStream.dispose();
+    isTopPEnabled.dispose();
+    topPValue.dispose();
+    isTopKEnabled.dispose();
+    topKValue.dispose();
+    isTemperatureEnabled.dispose();
+    temperatureValue.dispose();
+    contextWindowValue.dispose();
+    conversationLengthValue.dispose();
+    maxTokensValue.dispose();
+    isCustomThinkingTokensEnabled.dispose();
+    customThinkingTokensValue.dispose();
+    thinkingLevel.dispose();
+    availableMcpServers.dispose();
+    selectedMcpServerIds.dispose();
   }
 
   void pickImage(BuildContext context) async {

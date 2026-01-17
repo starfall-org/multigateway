@@ -5,6 +5,7 @@ import 'package:multigateway/features/settings/presentation/widgets/appearance/a
 import 'package:multigateway/features/settings/presentation/widgets/appearance/appearance_controller_provider.dart';
 import 'package:multigateway/features/settings/presentation/widgets/appearance/color_scheme_selector.dart';
 import 'package:multigateway/features/settings/presentation/widgets/appearance/theme_mode_selector.dart';
+import 'package:signals/signals_flutter.dart';
 
 /// Màn hình cài đặt giao diện
 class AppearancePage extends StatefulWidget {
@@ -79,24 +80,23 @@ class _AppearancePageState extends State<AppearancePage> {
             }
             return AppearanceControllerProvider(
               controller: _controller,
-              child: ListenableBuilder(
-                listenable: _controller,
-                builder: (context, _) {
-                  return const SingleChildScrollView(
-                    padding: EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ThemeModeSelector(),
-                        SizedBox(height: 24),
-                        AdditionalSettingsSection(),
-                        SizedBox(height: 24),
-                        ColorSchemeSelector(),
-                      ],
-                    ),
-                  );
-                },
-              ),
+              child: Watch((context) {
+                // Watch settings signal to rebuild when it changes
+                _controller.settings.value;
+                return const SingleChildScrollView(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ThemeModeSelector(),
+                      SizedBox(height: 24),
+                      AdditionalSettingsSection(),
+                      SizedBox(height: 24),
+                      ColorSchemeSelector(),
+                    ],
+                  ),
+                );
+              }),
             );
           },
         ),

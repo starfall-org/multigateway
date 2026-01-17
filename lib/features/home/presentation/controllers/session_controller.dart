@@ -1,19 +1,21 @@
-import 'package:flutter/material.dart';
 import 'package:multigateway/core/chat/chat.dart';
+import 'package:signals/signals.dart';
 import 'package:uuid/uuid.dart';
 
 /// Controller responsible for managing chat sessions/conversations
-class SessionController extends ChangeNotifier {
+class SessionController {
   final ConversationStorage conversationRepository;
 
-  Conversation? currentSession;
-  bool isLoading = true;
-  bool continueLastConversation = true;
+  final currentSession = signal<Conversation?>(null);
+  final isLoading = signal<bool>(true);
+  final continueLastConversation = signal<bool>(true);
 
   SessionController({
     required this.conversationRepository,
-    this.continueLastConversation = true,
-  });
+    bool continueLastConversation = true,
+  }) {
+    this.continueLastConversation.value = continueLastConversation;
+  }
 
   Future<void> initChat() async {
     final sessions = conversationRepository.getItems();
@@ -29,13 +31,12 @@ class SessionController extends ChangeNotifier {
         .where((s) => s.messages.isNotEmpty)
         .toList();
 
-    if (continueLastConversation && nonEmptySessions.isNotEmpty) {
-      currentSession = nonEmptySessions.first;
-      isLoading = false;
+    if (continueLastConversation.value && nonEmptySessions.isNotEmpty) {
+      currentSession.value = nonEmptySessions.first;
+      isLoading.value = false;
     } else {
       await createNewSession();
     }
-    notifyListeners();
   }
 
   Future<void> createNewSession() async {
@@ -50,14 +51,12 @@ class SessionController extends ChangeNotifier {
       profileId: '',
     );
     await conversationRepository.saveItem(session);
-    currentSession = session;
-    isLoading = false;
-    notifyListeners();
+    currentSession.value = session;
+    isLoading.value = false;
   }
 
   Future<void> loadSession(String sessionId) async {
-    isLoading = true;
-    notifyListeners();
+    isLoading.value = true;
 
     final sessions = conversationRepository.getItems();
     final session = sessions.firstWhere(
@@ -65,40 +64,39 @@ class SessionController extends ChangeNotifier {
       orElse: () => sessions.first,
     );
 
-    currentSession = session;
-    isLoading = false;
-    notifyListeners();
+    currentSession.value = session;
+    isLoading.value = false;
   }
 
   Future<void> saveCurrentSession() async {
-    if (currentSession != null && currentSession!.messages.isNotEmpty) {
-      await conversationRepository.saveItem(currentSession!);
+    final session = currentSession.value;
+    if (session != null && session.messages.isNotEmpty) {
+      await conversationRepository.saveItem(session);
     }
   }
 
   Future<void> clearChat() async {
-    if (currentSession == null) return;
-    currentSession = currentSession!.copyWith(
+    final session = currentSession.value;
+    if (session == null) return;
+    currentSession.value = session.copyWith(
       messages: [],
       updatedAt: DateTime.now(),
     );
-    notifyListeners();
-    await conversationRepository.saveItem(currentSession!);
+    await conversationRepository.saveItem(currentSession.value!);
   }
 
   void updateSession(Conversation session) {
-    currentSession = session;
-    notifyListeners();
+    currentSession.value = session;
   }
 
   void clearLoadingState() {
-    isLoading = false;
-    notifyListeners();
+    isLoading.value = false;
   }
 
   String getTranscript({String? profileName}) {
-    if (currentSession == null) return '';
-    return currentSession!.messages
+    final session = currentSession.value;
+    if (session == null) return '';
+    return session.messages
         .map((m) {
           final who = m.role == ChatRole.user
               ? 'You'
@@ -106,5 +104,11 @@ class SessionController extends ChangeNotifier {
           return '$who: ${m.content}';
         })
         .join('\n\n');
+  }
+
+  void dispose() {
+    currentSession.dispose();
+    isLoading.dispose();
+    continueLastConversation.dispose();
   }
 }

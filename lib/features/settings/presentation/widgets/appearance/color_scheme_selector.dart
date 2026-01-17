@@ -43,7 +43,7 @@ class ColorSchemeSelector extends StatelessWidget {
     final theme = Theme.of(context);
 
     // Chỉ hiển thị khi dynamic color tắt
-    if (controller.settings.dynamicColor) {
+    if (controller.settings.value.dynamicColor) {
       return const SizedBox.shrink();
     }
 
@@ -75,7 +75,7 @@ class ColorSchemeSelector extends StatelessWidget {
                   runSpacing: 12,
                   children: ColorSchemePreset.values.map((preset) {
                     final isSelected =
-                        controller.settings.colorSchemePreset == preset;
+                        controller.settings.value.colorSchemePreset == preset;
                     final presetColor = _getPresetPrimaryColor(preset);
 
                     return _ColorSchemeChip(
@@ -88,7 +88,7 @@ class ColorSchemeSelector extends StatelessWidget {
                   }).toList(),
                 ),
                 // Hiển thị custom color pickers khi chọn Custom
-                if (controller.settings.colorSchemePreset ==
+                if (controller.settings.value.colorSchemePreset ==
                     ColorSchemePreset.custom) ...[
                   const SizedBox(height: 24),
                   const Divider(),

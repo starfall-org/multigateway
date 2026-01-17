@@ -26,14 +26,14 @@ class AdditionalSettingsSection extends StatelessWidget {
               SwitchListTile(
                 title: Text(tl('Super Dark Mode')),
                 subtitle: Text(tl('Use pure black background in dark mode')),
-                value: controller.settings.superDarkMode,
+                value: controller.settings.value.superDarkMode,
                 onChanged: (value) => controller.togglePureDark(value),
               ),
               const Divider(height: 1),
               SwitchListTile(
                 title: Text(tl('Dynamic Colors')),
                 subtitle: Text(tl('Use dynamic colors from wallpaper')),
-                value: controller.settings.dynamicColor,
+                value: controller.settings.value.dynamicColor,
                 onChanged: (value) => controller.toggleMaterialYou(value),
               ),
             ],

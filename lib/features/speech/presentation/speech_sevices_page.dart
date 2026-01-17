@@ -4,6 +4,7 @@ import 'package:multigateway/core/speech/speech.dart';
 import 'package:multigateway/features/speech/presentation/ui/edit_speech_service_screen.dart';
 import 'package:multigateway/features/speech/presentation/widgets/service_list_tile.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:signals/signals_flutter.dart';
 
 /// Màn hình quản lý speech services
 class SpeechServicesPage extends StatefulWidget {
@@ -14,8 +15,8 @@ class SpeechServicesPage extends StatefulWidget {
 }
 
 class _SpeechServicesPageState extends State<SpeechServicesPage> {
-  List<SpeechService> _profiles = [];
-  bool _isLoading = true;
+  final profiles = signal<List<SpeechService>>([]);
+  final isLoading = signal<bool>(true);
   late SpeechServiceStorage _repository;
 
   @override
@@ -24,14 +25,19 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
     _loadServices();
   }
 
+  @override
+  void dispose() {
+    profiles.dispose();
+    isLoading.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadServices() async {
     _repository = await SpeechServiceStorage.init();
     // Wait for box to be ready
     await Future.delayed(const Duration(milliseconds: 100));
-    setState(() {
-      _profiles = _repository.getItems();
-      _isLoading = false;
-    });
+    profiles.value = _repository.getItems();
+    isLoading.value = false;
   }
 
   Future<void> _deleteService(String id, String name) async {
@@ -43,14 +49,14 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
   }
 
   void _onReorder(int oldIndex, int newIndex) {
-    setState(() {
-      if (oldIndex < newIndex) {
-        newIndex -= 1;
-      }
-      final SpeechService item = _profiles.removeAt(oldIndex);
-      _profiles.insert(newIndex, item);
-    });
-    _repository.saveOrder(_profiles.map((e) => e.id).toList());
+    final currentProfiles = List<SpeechService>.from(profiles.value);
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final SpeechService item = currentProfiles.removeAt(oldIndex);
+    currentProfiles.insert(newIndex, item);
+    profiles.value = currentProfiles;
+    _repository.saveOrder(currentProfiles.map((e) => e.id).toList());
   }
 
   @override
@@ -109,28 +115,31 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
       body: SafeArea(
         top: false,
         bottom: true,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _profiles.isEmpty
-                ? Center(child: Text(tl('No TTS profiles configured')))
-                : ReorderableListView.builder(
-                    itemCount: _profiles.length,
-                    onReorder: _onReorder,
-                    itemBuilder: (context, index) {
-                      final profile = _profiles[index];
-                      return ServiceListTile(
-                        key: ValueKey(profile.id),
-                        service: profile,
-                        onTap: () {
-                          // Edit functionality could be added here
-                        },
-                        onDismissed: () => _deleteService(
-                          profile.id,
-                          profile.name,
-                        ),
-                      );
-                    },
-                  ),
+        child: Watch((context) {
+          if (isLoading.value) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (profiles.value.isEmpty) {
+            return Center(child: Text(tl('No TTS profiles configured')));
+          }
+
+          return ReorderableListView.builder(
+            itemCount: profiles.value.length,
+            onReorder: _onReorder,
+            itemBuilder: (context, index) {
+              final profile = profiles.value[index];
+              return ServiceListTile(
+                key: ValueKey(profile.id),
+                service: profile,
+                onTap: () {
+                  // Edit functionality could be added here
+                },
+                onDismissed: () => _deleteService(profile.id, profile.name),
+              );
+            },
+          );
+        }),
       ),
     );
   }

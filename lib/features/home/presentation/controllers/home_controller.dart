@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/core/core.dart';
 import 'package:multigateway/features/home/presentation/controllers/attachment_controller.dart';
@@ -12,7 +11,7 @@ import 'package:multigateway/features/home/services/ui_navigation_service.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
 
 /// Main ChatController orchestrates all sub-controllers
-class ChatController extends ChangeNotifier {
+class ChatController {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController textController = TextEditingController();
   final ScrollController scrollController = ScrollController();
@@ -21,12 +20,12 @@ class ChatController extends ChangeNotifier {
   final PreferencesStorage preferencesSp;
   final SpeechManager speechManager;
 
-  // Sub-controllers
-  late final SessionController sessionController;
-  late final MessageController messageController;
-  late final AttachmentController attachmentController;
-  late final ModelSelectionController modelSelectionController;
-  late final ProfileController profileController;
+  // Sub-controllers - tên ngắn gọn
+  final SessionController session;
+  final MessageController message;
+  final AttachmentController attachment;
+  final ModelSelectionController model;
+  final ProfileController profile;
 
   ChatController({
     required this.navigator,
@@ -38,80 +37,54 @@ class ChatController extends ChangeNotifier {
     required McpServerInfoStorage mcpServerStorage,
     required this.speechManager,
     bool continueLastConversation = true,
-  }) {
-    // Initialize sub-controllers
-    sessionController = SessionController(
-      conversationRepository: conversationRepository,
-      continueLastConversation: continueLastConversation,
-    );
-    messageController = MessageController();
-    attachmentController = AttachmentController();
-    modelSelectionController = ModelSelectionController(
-      pInfStorage: llmProviderInfoStorage,
-      pModStorage: llmProviderModelsStorage,
-    );
-    profileController = ProfileController(
-      aiProfileRepository: aiProfileRepository,
-      mcpServerStorage: mcpServerStorage,
-    );
+  }) : session = SessionController(
+         conversationRepository: conversationRepository,
+         continueLastConversation: continueLastConversation,
+       ),
+       message = MessageController(),
+       attachment = AttachmentController(),
+       model = ModelSelectionController(
+         pInfStorage: llmProviderInfoStorage,
+         pModStorage: llmProviderModelsStorage,
+       ),
+       profile = ProfileController(
+         aiProfileRepository: aiProfileRepository,
+         mcpServerStorage: mcpServerStorage,
+       );
 
-    // Listen to sub-controllers changes
-    sessionController.addListener(notifyListeners);
-    messageController.addListener(notifyListeners);
-    attachmentController.addListener(notifyListeners);
-    modelSelectionController.addListener(notifyListeners);
-    profileController.addListener(notifyListeners);
-  }
+  Future<void> initChat() => session.initChat();
+  Future<void> createNewSession() => session.createNewSession();
+  Future<void> loadSession(String sessionId) => session.loadSession(sessionId);
 
-  // Convenience getters for backward compatibility
-  Conversation? get currentSession => sessionController.currentSession;
-  ChatProfile? get selectedProfile => profileController.selectedProfile;
-  bool get isLoading => sessionController.isLoading;
-  bool get isGenerating => messageController.isGenerating;
-  List<String> get pendingFiles => attachmentController.pendingFiles;
-  List<String> get inspectingFiles => attachmentController.inspectingFiles;
-  List<LlmProviderInfo> get providers => modelSelectionController.providers;
-  List<McpServer> get mcpServers => profileController.mcpServers;
-  Map<String, bool> get providerCollapsed =>
-      modelSelectionController.providerCollapsed;
-  String? get selectedProviderName =>
-      modelSelectionController.selectedProviderName;
-  String? get selectedModelName => modelSelectionController.selectedModelName;
-  dynamic get selectedLlmModel => modelSelectionController.selectedLlmModel;
+  Future<void> loadSelectedProfile() => profile.loadSelectedProfile();
+  Future<void> updateProfile(ChatProfile p) => profile.updateProfile(p);
+  Future<void> loadMcpServers() => profile.loadMcpServers();
 
-  Future<void> initChat() => sessionController.initChat();
-  Future<void> createNewSession() => sessionController.createNewSession();
-  Future<void> loadSession(String sessionId) =>
-      sessionController.loadSession(sessionId);
-  void clearLoadingState() => sessionController.clearLoadingState();
+  Future<void> refreshProviders() => model.refreshProviders();
 
-  Future<void> loadSelectedProfile() => profileController.loadSelectedProfile();
-  Future<void> updateProfile(ChatProfile profile) =>
-      profileController.updateProfile(profile);
-  Future<void> loadMcpServers() => profileController.loadMcpServers();
-
-  Future<void> refreshProviders() =>
-      modelSelectionController.refreshProviders();
   void setProviderCollapsed(String providerName, bool collapsed) =>
-      modelSelectionController.setProviderCollapsed(providerName, collapsed);
+      model.setProviderCollapsed(providerName, collapsed);
+
+  void selectModel(String providerName, String modelName) =>
+      model.selectModel(providerName, modelName);
 
   Future<void> pickFromFiles(BuildContext context) =>
-      attachmentController.pickFromFiles(context);
+      attachment.pickFromFiles(context);
+
   Future<void> pickFromGallery(BuildContext context) =>
-      attachmentController.pickFromGallery(context);
-  void removeAttachmentAt(int index) =>
-      attachmentController.removeAttachmentAt(index);
-  void setInspectingAttachments(List<String> attachments) =>
-      attachmentController.setInspectingAttachments(attachments);
+      attachment.pickFromGallery(context);
+
+  void removeAttachmentAt(int index) => attachment.removeAttachmentAt(index);
+
   void openFilesDialog(List<String> attachments) =>
-      attachmentController.openFilesDialog(attachments);
+      attachment.openFilesDialog(attachments);
+
   void openEndDrawer() => navigator.openEndDrawer();
 
-  void selectModel(String providerName, String modelName) {
-    modelSelectionController.selectModel(providerName, modelName);
-  }
-
   Future<void> handleSubmitted(String text, BuildContext context) async {
+    final currentSession = session.currentSession.value;
+    final pendingFiles = attachment.pendingFiles.value;
+
     if (((text.trim().isEmpty) && pendingFiles.isEmpty) ||
         currentSession == null) {
       return;
@@ -119,33 +92,32 @@ class ChatController extends ChangeNotifier {
 
     final List<String> attachments = List<String>.from(pendingFiles);
     textController.clear();
-    attachmentController.clearPendingAttachments();
+    attachment.clearPendingAttachments();
 
     if (!context.mounted) return;
 
-    // Resolve provider and model using service
     final resolved = await ProviderResolutionService.resolveProviderAndModel(
-      selectedProviderName: selectedProviderName,
-      selectedModelName: selectedModelName,
+      selectedProviderName: model.selectedProviderName.value,
+      selectedModelName: model.selectedModelName.value,
       currentSession: currentSession,
     );
 
-    final profile =
-        selectedProfile ?? ProviderResolutionService.createDefaultProfile();
+    final p =
+        profile.selectedProfile.value ??
+        ProviderResolutionService.createDefaultProfile();
 
     try {
-      await messageController.sendMessage(
+      await message.sendMessage(
         text: text,
         attachments: attachments,
-        currentSession: currentSession!,
-        profile: profile,
+        currentSession: currentSession,
+        profile: p,
         providerName: resolved.providerName,
         modelName: resolved.modelName,
-        enableStream: profile.config.enableStream,
-        onSessionUpdate: (session) {
-          sessionController.updateSession(session);
-          // ignore: discarded_futures
-          sessionController.saveCurrentSession();
+        enableStream: p.config.enableStream,
+        onSessionUpdate: (s) {
+          session.updateSession(s);
+          session.saveCurrentSession();
         },
         onScrollToBottom: () =>
             UiNavigationService.scrollToBottom(scrollController),
@@ -158,32 +130,31 @@ class ChatController extends ChangeNotifier {
         context.showErrorSnackBar(e.toString());
       }
     }
-    // Không tự động cuộn - để người dùng tự quyết định hoặc dùng nút scroll to bottom
   }
 
   Future<void> regenerateLast(BuildContext context) async {
-    if (currentSession == null) return;
-    if (!context.mounted) return;
+    final currentSession = session.currentSession.value;
+    if (currentSession == null || !context.mounted) return;
 
     final resolved = await ProviderResolutionService.resolveProviderAndModel(
-      selectedProviderName: selectedProviderName,
-      selectedModelName: selectedModelName,
+      selectedProviderName: model.selectedProviderName.value,
+      selectedModelName: model.selectedModelName.value,
       currentSession: currentSession,
     );
 
-    final profile =
-        selectedProfile ?? ProviderResolutionService.createDefaultProfile();
+    final p =
+        profile.selectedProfile.value ??
+        ProviderResolutionService.createDefaultProfile();
 
-    final errorMessage = await messageController.regenerateLast(
-      currentSession: currentSession!,
-      profile: profile,
+    final errorMessage = await message.regenerateLast(
+      currentSession: currentSession,
+      profile: p,
       providerName: resolved.providerName,
       modelName: resolved.modelName,
-      enableStream: profile.config.enableStream,
-      onSessionUpdate: (session) {
-        sessionController.updateSession(session);
-        // ignore: discarded_futures
-        sessionController.saveCurrentSession();
+      enableStream: p.config.enableStream,
+      onSessionUpdate: (s) {
+        session.updateSession(s);
+        session.saveCurrentSession();
       },
       onScrollToBottom: () =>
           UiNavigationService.scrollToBottom(scrollController),
@@ -198,7 +169,9 @@ class ChatController extends ChangeNotifier {
   }
 
   String getTranscript() {
-    return sessionController.getTranscript(profileName: selectedProfile?.name);
+    return session.getTranscript(
+      profileName: profile.selectedProfile.value?.name,
+    );
   }
 
   Future<void> copyTranscript(BuildContext context) async {
@@ -206,80 +179,61 @@ class ChatController extends ChangeNotifier {
     await UiNavigationService.copyTranscriptToClipboard(context, txt);
   }
 
-  Future<void> clearChat() => sessionController.clearChat();
+  Future<void> clearChat() => session.clearChat();
 
-  Future<void> copyMessage(BuildContext context, dynamic message) =>
-      messageController.copyMessage(context, message);
+  Future<void> copyMessage(BuildContext context, dynamic m) =>
+      message.copyMessage(context, m);
 
-  Future<void> deleteMessage(dynamic message) async {
+  Future<void> deleteMessage(dynamic m) async {
+    final currentSession = session.currentSession.value;
     if (currentSession == null) return;
-    await messageController.deleteMessage(
-      message: message,
-      currentSession: currentSession!,
-      onSessionUpdate: (session) {
-        sessionController.updateSession(session);
-        // ignore: discarded_futures
-        sessionController.saveCurrentSession();
+    await message.deleteMessage(
+      message: m,
+      currentSession: currentSession,
+      onSessionUpdate: (s) {
+        session.updateSession(s);
+        session.saveCurrentSession();
       },
     );
   }
 
-  Future<void> openEditMessageDialog(
-    BuildContext context,
-    dynamic message,
-  ) async {
+  Future<void> openEditMessageDialog(BuildContext context, dynamic m) async {
+    final currentSession = session.currentSession.value;
     if (currentSession == null) return;
-    await messageController.openEditMessageDialog(
-      context,
-      message,
-      currentSession!,
-      (session) {
-        sessionController.updateSession(session);
-        // ignore: discarded_futures
-        sessionController.saveCurrentSession();
-      },
-      regenerateLast,
-    );
+    await message.openEditMessageDialog(context, m, currentSession, (s) {
+      session.updateSession(s);
+      session.saveCurrentSession();
+    }, regenerateLast);
   }
 
-  Future<void> switchMessageVersion(ChatMessage message, int index) async {
+  Future<void> switchMessageVersion(ChatMessage m, int index) async {
+    final currentSession = session.currentSession.value;
     if (currentSession == null) return;
-    await messageController.switchMessageVersion(
-      message: message,
+    await message.switchMessageVersion(
+      message: m,
       index: index,
-      currentSession: currentSession!,
-      onSessionUpdate: (session) {
-        sessionController.updateSession(session);
-        // ignore: discarded_futures
-        sessionController.saveCurrentSession();
+      currentSession: currentSession,
+      onSessionUpdate: (s) {
+        session.updateSession(s);
+        session.saveCurrentSession();
       },
     );
   }
 
-  // UI Actions
   void scrollToBottom() => UiNavigationService.scrollToBottom(scrollController);
   bool isNearBottom() => UiNavigationService.isNearBottom(scrollController);
   void openDrawer() => UiNavigationService.openDrawer(scaffoldKey);
   void closeEndDrawer() => UiNavigationService.closeEndDrawer(scaffoldKey);
 
-  @override
   void dispose() {
-    sessionController.removeListener(notifyListeners);
-    messageController.removeListener(notifyListeners);
-    attachmentController.removeListener(notifyListeners);
-    modelSelectionController.removeListener(notifyListeners);
-    profileController.removeListener(notifyListeners);
-
-    sessionController.dispose();
-    messageController.dispose();
-    attachmentController.dispose();
-    modelSelectionController.dispose();
-    profileController.dispose();
-
+    session.dispose();
+    message.dispose();
+    attachment.dispose();
+    model.dispose();
+    profile.dispose();
     textController.dispose();
     scrollController.dispose();
     speechManager.stop();
-    super.dispose();
   }
 }
 
