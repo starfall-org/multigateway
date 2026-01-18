@@ -19,7 +19,7 @@ class McpConfigTab extends StatelessWidget {
         // Transport Type Selection
         CommonDropdown<McpProtocol>(
           value: controller.selectedTransport.value,
-          labelText: tl('Transport Type'),
+          label: tl('Transport Type'),
           options: McpProtocol.values.map((transport) {
             return DropdownOption<McpProtocol>(
               value: transport,
@@ -39,10 +39,9 @@ class McpConfigTab extends StatelessWidget {
         // Basic Information
         Text(
           tl('Basic Information'),
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
 

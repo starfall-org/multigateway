@@ -31,15 +31,14 @@ class SttConfigurationSection extends StatelessWidget {
       children: [
         Text(
           tl('Speech to Text Configuration'),
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         CommonDropdown<ServiceType>(
           value: selectedType,
-          labelText: tl('Service Type'),
+          label: tl('Service Type'),
           options: ServiceType.values.map((type) {
             return DropdownOption<ServiceType>(
               value: type,
@@ -55,15 +54,15 @@ class SttConfigurationSection extends StatelessWidget {
         if (selectedType == ServiceType.provider) ...[
           CommonDropdown<String>(
             value: selectedProviderId,
-            labelText: tl('Provider'),
+            label: tl('Provider'),
             options: availableProviders.map((p) {
               final iconData = p.type == ProviderType.googleai
                   ? Icons.cloud
                   : p.type == ProviderType.openai
-                      ? Icons.api
-                      : p.type == ProviderType.anthropic
-                          ? Icons.psychology_alt
-                          : Icons.memory;
+                  ? Icons.api
+                  : p.type == ProviderType.anthropic
+                  ? Icons.psychology_alt
+                  : Icons.memory;
               return DropdownOption<String>(
                 value: p.name,
                 label: p.name,
@@ -98,14 +97,16 @@ class SttConfigurationSection extends StatelessWidget {
                     Text(
                       tl('System Speech Recognition'),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  tl('Currently using system default speech recognition service.'),
+                  tl(
+                    'Currently using system default speech recognition service.',
+                  ),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 14,

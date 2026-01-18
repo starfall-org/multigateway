@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/features/home/presentation/controllers/home_controller.dart';
-import 'package:multigateway/features/home/presentation/widgets/quick_actions_widgets/built_in_tool_tile.dart';
 import 'package:multigateway/features/home/presentation/widgets/quick_actions_widgets/mcp_server_tile.dart';
 import 'package:multigateway/features/home/presentation/widgets/quick_actions_widgets/section_header.dart';
 import 'package:signals_flutter/signals_flutter.dart';
@@ -41,24 +40,6 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
   void _updateProfile() {
     widget.controller.updateProfile(_profile);
     setState(() {});
-  }
-
-  void _toggleBuiltInTool(String toolId, bool enabled) {
-    final current = List<String>.from(_profile.activeBuiltInTools);
-    if (enabled) {
-      if (!current.contains(toolId)) current.add(toolId);
-    } else {
-      current.remove(toolId);
-    }
-
-    _profile = ChatProfile(
-      id: _profile.id,
-      name: _profile.name,
-      config: _profile.config,
-      activeMcpServers: _profile.activeMcpServers,
-      activeBuiltInTools: current,
-    );
-    _updateProfile();
   }
 
   void _toggleMcpServer(String serverId, bool enabled) {
@@ -167,59 +148,10 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
                   _profile = selectedProfile;
                 }
 
-                final model = widget.controller.model.selectedLlmModel;
-                final origin = model?.origin;
-                final tools = origin?.builtInTools;
                 final mcpServers = widget.controller.profile.mcpServers.value;
 
                 return ListView(
                   children: [
-                    if (tools != null &&
-                        (tools.googleSearch ||
-                            tools.codeExecution ||
-                            tools.urlContext)) ...[
-                      const SectionHeader(title: 'Built-in Tools'),
-                      if (tools.googleSearch)
-                        BuiltInToolTile(
-                          title: 'Google Search',
-                          id: 'google_search',
-                          icon: Icons.search,
-                          subtitle:
-                              'Search the web for up-to-date information.',
-                          isEnabled: _profile.activeBuiltInTools.contains(
-                            'google_search',
-                          ),
-                          onChanged: (val) =>
-                              _toggleBuiltInTool('google_search', val),
-                        ),
-                      if (tools.codeExecution)
-                        BuiltInToolTile(
-                          title: 'Code Execution',
-                          id: 'code_execution',
-                          icon: Icons.code,
-                          subtitle:
-                              'Execute Python code to solve complex problems.',
-                          isEnabled: _profile.activeBuiltInTools.contains(
-                            'code_execution',
-                          ),
-                          onChanged: (val) =>
-                              _toggleBuiltInTool('code_execution', val),
-                        ),
-                      if (tools.urlContext)
-                        BuiltInToolTile(
-                          title: 'URL Context',
-                          id: 'url_context',
-                          icon: Icons.link,
-                          subtitle:
-                              'Access and read content from specific URLs.',
-                          isEnabled: _profile.activeBuiltInTools.contains(
-                            'url_context',
-                          ),
-                          onChanged: (val) =>
-                              _toggleBuiltInTool('url_context', val),
-                        ),
-                      const Divider(),
-                    ],
                     const SectionHeader(title: 'MCP Servers'),
                     if (mcpServers.isEmpty)
                       Padding(

@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:llm/models/llm_model/basic_model.dart';
-import 'package:llm/models/llm_model/github_model.dart';
-import 'package:llm/models/llm_model/googleai_model.dart';
-import 'package:llm/models/llm_model/ollama_model.dart';
 import 'package:multigateway/core/llm/models/llm_provider_models.dart';
 import 'package:multigateway/shared/utils/icon_builder.dart';
 import 'package:multigateway/shared/widgets/item_card.dart';
@@ -35,90 +31,14 @@ class ModelCard extends StatelessWidget {
   }
 
   String _buildSubtitle() {
-    if (model.origin is BasicModel) {
-      final basicModel = model.origin as BasicModel;
-      return 'by ${basicModel.ownedBy}';
-    } else if (model.origin is GitHubModel) {
-      final githubModel = model.origin as GitHubModel;
-      return githubModel.id;
-    } else if (model.origin is OllamaModel) {
-      final ollamaModel = model.origin as OllamaModel;
-      return 'Model: ${ollamaModel.model}';
-    } else if (model.origin is GoogleAiModel) {
-      final googleModel = model.origin as GoogleAiModel;
-      return 'Top-K: ${googleModel.topK}, Top-P: ${googleModel.topP}';
+    if (model.providerName != null) {
+      return model.providerName!;
     }
     return model.id;
   }
 
   Widget? _buildOriginSpecificInfo(BuildContext context) {
-    final tags = <Widget>[];
-
-    if (model.origin is OllamaModel) {
-      final ollamaModel = model.origin as OllamaModel;
-      tags.addAll([
-        _ModelCardHelpers.buildTextTag(
-          context,
-          ollamaModel.parameterSize,
-          Theme.of(context).colorScheme.tertiary,
-        ),
-        _ModelCardHelpers.buildTextTag(
-          context,
-          ollamaModel.quantizationLevel,
-          Theme.of(context).colorScheme.secondary,
-        ),
-      ]);
-    } else if (model.origin is GoogleAiModel) {
-      final googleModel = model.origin as GoogleAiModel;
-
-      // Thinking capability
-      if (googleModel.thinking) {
-        tags.add(
-          _ModelCardHelpers.buildTextTag(
-            context,
-            'Thinking',
-            Theme.of(context).colorScheme.primary,
-          ),
-        );
-      }
-
-      // Supported generation methods
-      for (var method in googleModel.supportedGenerationMethods) {
-        tags.add(
-          _ModelCardHelpers.buildTextTag(
-            context,
-            method,
-            Theme.of(context).colorScheme.secondary,
-          ),
-        );
-      }
-
-      // Token limits
-      tags.addAll([
-        _ModelCardHelpers.buildTextTag(
-          context,
-          'In: ${_ModelCardHelpers.formatNumber(googleModel.inputTokenLimit)}',
-          Theme.of(context).colorScheme.tertiary,
-        ),
-        _ModelCardHelpers.buildTextTag(
-          context,
-          'Out: ${_ModelCardHelpers.formatNumber(googleModel.outputTokenLimit)}',
-          Theme.of(context).colorScheme.tertiary,
-        ),
-        _ModelCardHelpers.buildTextTag(
-          context,
-          'T: ${googleModel.temperature}-${googleModel.maxTemperature}',
-          Theme.of(context).colorScheme.tertiary,
-        ),
-      ]);
-    }
-
-    return tags.isNotEmpty
-        ? Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Wrap(spacing: 4, runSpacing: 4, children: tags),
-          )
-        : null;
+    return null;
   }
 
   Widget _buildTypeTag(BuildContext context) {
@@ -143,6 +63,14 @@ class ModelCard extends StatelessWidget {
         break;
       case LlmModelType.embed:
         iconData = Icons.data_array;
+        color = Theme.of(context).colorScheme.outline;
+        break;
+      case LlmModelType.media:
+        iconData = Icons.perm_media;
+        color = Theme.of(context).colorScheme.secondary;
+        break;
+      case LlmModelType.other:
+        iconData = Icons.device_unknown;
         color = Theme.of(context).colorScheme.outline;
         break;
     }

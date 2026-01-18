@@ -24,7 +24,7 @@ class ProviderEditTab extends StatelessWidget {
       children: [
         CommonDropdown<ProviderType>(
           value: controller.selectedType.value,
-          labelText: tl('Compatibility'),
+          label: tl('Compatibility'),
           options: ProviderType.values.map((type) {
             return DropdownOption<ProviderType>(
               value: type,

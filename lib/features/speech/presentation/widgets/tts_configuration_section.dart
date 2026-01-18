@@ -65,14 +65,11 @@ class TtsConfigurationSection extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        CustomTextField(
-          controller: nameController,
-          label: tl('Service Name'),
-        ),
+        CustomTextField(controller: nameController, label: tl('Service Name')),
         const SizedBox(height: 16),
         CommonDropdown<ServiceType>(
           value: selectedType,
-          labelText: tl('Service Type'),
+          label: tl('Service Type'),
           options: ServiceType.values.map((type) {
             return DropdownOption<ServiceType>(
               value: type,
@@ -88,15 +85,15 @@ class TtsConfigurationSection extends StatelessWidget {
         if (selectedType == ServiceType.provider) ...[
           CommonDropdown<String>(
             value: selectedProviderId,
-            labelText: tl('Provider'),
+            label: tl('Provider'),
             options: availableProviders.map((p) {
               final iconData = p.type == ProviderType.googleai
                   ? Icons.cloud
                   : p.type == ProviderType.openai
-                      ? Icons.api
-                      : p.type == ProviderType.anthropic
-                          ? Icons.psychology_alt
-                          : Icons.memory;
+                  ? Icons.api
+                  : p.type == ProviderType.anthropic
+                  ? Icons.psychology_alt
+                  : Icons.memory;
               return DropdownOption<String>(
                 value: p.name,
                 label: p.name,
@@ -143,7 +140,7 @@ class TtsConfigurationSection extends StatelessWidget {
                     ? const LinearProgressIndicator()
                     : CommonDropdown<String>(
                         value: selectedVoiceId,
-                        labelText: tl('Select Voice'),
+                        label: tl('Select Voice'),
                         options: availableVoices.map((voice) {
                           return DropdownOption<String>(
                             value: voice,
@@ -166,16 +163,16 @@ class TtsConfigurationSection extends StatelessWidget {
         const SizedBox(height: 24),
         Text(
           tl('Settings'),
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         // Language
         if (availableLanguages.isNotEmpty) ...[
           CommonDropdown<String>(
             value: selectedLanguage,
-            labelText: tl('Language'),
+            label: tl('Language'),
             options: availableLanguages.map((lang) {
               return DropdownOption<String>(
                 value: lang,
@@ -235,10 +232,7 @@ class TtsConfigurationSection extends StatelessWidget {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(tl('Pitch')),
-                Text(pitch.toStringAsFixed(1)),
-              ],
+              children: [Text(tl('Pitch')), Text(pitch.toStringAsFixed(1))],
             ),
             Slider(
               value: pitch,

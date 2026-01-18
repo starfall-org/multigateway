@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 ///
 /// Example:
 /// CommonDropdown<\String>(
-///   labelText: 'Provider',
+///   label: 'Provider',
 ///   hintText: 'Select a provider',
 ///   value: selected,
 ///   onChanged: (v) => setState(() => selected = v),
@@ -23,7 +23,7 @@ class CommonDropdown<T> extends StatelessWidget {
     required this.options,
     this.value,
     this.onChanged,
-    this.labelText,
+    this.label,
     this.hintText,
     this.helperText,
     this.errorText,
@@ -52,7 +52,7 @@ class CommonDropdown<T> extends StatelessWidget {
   final ValueChanged<T?>? onChanged;
 
   /// Texts
-  final String? labelText;
+  final String? label;
   final String? hintText;
   final String? helperText;
   final String? errorText;
@@ -133,7 +133,7 @@ class CommonDropdown<T> extends StatelessWidget {
           )
           .toList(),
       decoration: InputDecoration(
-        labelText: labelText,
+        label: label,
         hintText: hintText,
         helperText: helperText,
         errorText: errorText,

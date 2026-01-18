@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:llm/models/llm_model/basic_model.dart';
-import 'package:llm/models/llm_model/googleai_model.dart';
-import 'package:llm/models/llm_model/ollama_model.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/llm/models/llm_provider_models.dart';
 import 'package:multigateway/features/llm/presentation/controllers/edit_provider_controller.dart';
 import 'package:multigateway/features/llm/presentation/widgets/model_card.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 class FetchModelsSheet extends StatefulWidget {
   final AddProviderController controller;
-  final Function(dynamic) onShowCapabilities;
 
   const FetchModelsSheet({
     super.key,
     required this.controller,
-    required this.onShowCapabilities,
   });
 
   @override
@@ -32,20 +28,16 @@ class _FetchModelsSheetState extends State<FetchModelsSheet> {
   }
 
   String _getModelId(dynamic model) {
-    if (model is BasicModel) return model.id;
-    if (model is OllamaModel) return model.model;
-    if (model is GoogleAiModel) return model.name;
-    return 'unknown';
+    if (model is LlmModel) return model.id;
+    return '';
   }
 
   String _getModelDisplayName(dynamic model) {
-    if (model is BasicModel) return model.displayName;
-    if (model is OllamaModel) return model.name;
-    if (model is GoogleAiModel) return model.displayName;
-    return 'unknown';
+    if (model is LlmModel) return model.displayName;
+    return '';
   }
 
-  List<dynamic> _filterModels(List<dynamic> models) {
+  List<LlmModel> _filterModels(List<LlmModel> models) {
     if (_searchQuery.isEmpty) return models;
     final query = _searchQuery.toLowerCase();
     return models.where((model) {
@@ -79,10 +71,10 @@ class _FetchModelsSheetState extends State<FetchModelsSheet> {
   Widget _buildContent(
     BuildContext context,
     ColorScheme colorScheme,
-    List<dynamic> availableModels,
-    List<dynamic> selectedModels,
+    List<LlmModel> availableModels,
+    List<LlmModel> selectedModels,
     bool isFetchingModels,
-    List<dynamic> filteredModels,
+    List<LlmModel> filteredModels,
   ) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,

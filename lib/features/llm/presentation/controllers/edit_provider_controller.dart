@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:llm/models/llm_model/basic_model.dart';
-import 'package:llm/models/llm_model/github_model.dart';
-import 'package:llm/models/llm_model/googleai_model.dart';
-import 'package:llm/models/llm_model/ollama_model.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
+import 'package:multigateway/core/llm/models/llm_provider_models.dart';
 import 'package:multigateway/features/llm/services/fetch_models.dart'
     as fetch_tools;
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
@@ -65,13 +62,9 @@ class AddProviderController {
   // Headers
   final headers = signal<List<HeaderPair>>([]);
 
-  // Models - Using new model types from llm package
-  final availableModels = signal<List<dynamic>>(
-    [],
-  ); // Can be BasicModel, OllamaModel, GoogleAiModel
-  final selectedModels = signal<List<dynamic>>(
-    [],
-  ); // Can be BasicModel, OllamaModel, GoogleAiModel
+  // Models
+  final availableModels = signal<List<LlmModel>>([]);
+  final selectedModels = signal<List<LlmModel>>([]);
   final isFetchingModels = signal<bool>(false);
 
   void initialize({
@@ -128,11 +121,7 @@ class AddProviderController {
       }
 
       if (providerModels != null) {
-        // Extract models from LlmProviderModels and convert to their origin types
-        selectedModels.value = providerModels.models
-            .where((model) => model != null && model.origin != null)
-            .map((model) => model!.origin)
-            .toList();
+        selectedModels.value = providerModels.models.whereType<LlmModel>().toList();
       }
     } else {
       baseUrlController.text = 'https://api.openai.com/v1';
@@ -193,36 +182,30 @@ class AddProviderController {
     }
   }
 
-  String _getModelName(dynamic model) {
-    if (model is BasicModel) return model.id;
-    if (model is OllamaModel) return model.name;
-    if (model is GoogleAiModel) return model.name;
-    if (model is GitHubModel) return model.name;
-    return 'unknown';
-  }
+  String _getModelName(LlmModel model) => model.id;
 
   void removeModel(String modelName) {
-    final list = List<dynamic>.from(selectedModels.value);
+    final list = List<LlmModel>.from(selectedModels.value);
     list.removeWhere((m) => _getModelName(m) == modelName);
     selectedModels.value = list;
   }
 
-  void removeModelDirectly(dynamic model) {
+  void removeModelDirectly(LlmModel model) {
     removeModel(_getModelName(model));
   }
 
-  void addModelDirectly(dynamic model) {
+  void addModelDirectly(LlmModel model) {
     final modelName = _getModelName(model);
-    final list = List<dynamic>.from(selectedModels.value);
+    final list = List<LlmModel>.from(selectedModels.value);
     if (!list.any((m) => _getModelName(m) == modelName)) {
       list.add(model);
       selectedModels.value = list;
     }
   }
 
-  void updateModel(dynamic oldModel, dynamic newModel) {
+  void updateModel(LlmModel oldModel, LlmModel newModel) {
     final oldName = _getModelName(oldModel);
-    final list = List<dynamic>.from(selectedModels.value);
+    final list = List<LlmModel>.from(selectedModels.value);
     final index = list.indexWhere((m) => _getModelName(m) == oldName);
     if (index != -1) {
       list[index] = newModel;
@@ -231,13 +214,12 @@ class AddProviderController {
   }
 
   void addNewCustomModel() {
-    // Create a BasicModel for custom models
-    final newModel = BasicModel(
+    final newModel = LlmModel(
       id: 'custom-${DateTime.now().millisecondsSinceEpoch}',
       displayName: 'New Model',
-      ownedBy: 'user',
+      type: LlmModelType.chat,
     );
-    final list = List<dynamic>.from(selectedModels.value);
+    final list = List<LlmModel>.from(selectedModels.value);
     list.add(newModel);
     selectedModels.value = list;
   }
@@ -262,7 +244,6 @@ class AddProviderController {
       }
 
       // Fetch models based on provider type using new API
-      // Keep models in their original types (BasicModel, OllamaModel, GoogleAiModel)
       availableModels.value = await fetch_tools.fetchModels(
         providerType: selectedType.value,
         baseUrl: baseUrl,
@@ -359,45 +340,7 @@ class AddProviderController {
     // Convert selected models to LlmModel format
     final llmModels = <LlmModel>[];
 
-    for (var m in selectedModels.value) {
-      if (m is BasicModel) {
-        llmModels.add(
-          LlmModel(
-            id: m.id,
-            displayName: m.displayName,
-            type: LlmModelType.chat,
-            origin: m,
-          ),
-        );
-      } else if (m is OllamaModel) {
-        llmModels.add(
-          LlmModel(
-            id: m.name,
-            displayName: m.name,
-            type: LlmModelType.chat,
-            origin: m,
-          ),
-        );
-      } else if (m is GoogleAiModel) {
-        llmModels.add(
-          LlmModel(
-            id: m.name,
-            displayName: m.displayName,
-            type: LlmModelType.chat,
-            origin: m,
-          ),
-        );
-      } else if (m is GitHubModel) {
-        llmModels.add(
-          LlmModel(
-            id: m.name,
-            displayName: m.name,
-            type: LlmModelType.chat,
-            origin: m,
-          ),
-        );
-      }
-    }
+    llmModels.addAll(selectedModels.value);
 
     final providerModels = LlmProviderModels(id: id, models: llmModels);
 

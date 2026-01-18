@@ -1,154 +1,76 @@
-import 'package:llm/models/llm_api/ollama/tags.dart';
-import 'package:llm/models/llm_model/basic_model.dart';
-import 'package:llm/models/llm_model/github_model.dart';
-import 'package:llm/models/llm_model/googleai_model.dart';
-import 'package:llm/provider/anthropic/anthropic.dart';
-import 'package:llm/provider/googleai/aistudio.dart';
-import 'package:llm/provider/ollama/ollama.dart';
-import 'package:llm/provider/openai/openai.dart';
+import 'package:dartantic_ai/dartantic_ai.dart';
+import 'package:dartantic_interface/dartantic_interface.dart';
 import 'package:multigateway/core/llm/models/llm_provider_info.dart';
+import 'package:multigateway/core/llm/models/llm_provider_models.dart';
 
-/// Fetch models cho OpenAI provider
-Future<List<BasicModel>> fetchOpenLegacyAiModels({
-  required String baseUrl,
-  String? apiKey,
-  Map<String, String>? customHeaders,
-}) async {
-  final provider = OpenAiProvider(
-    baseUrl: baseUrl,
-    apiKey: apiKey ?? '',
-    headers: customHeaders ?? {},
-  );
-
-  final response = await provider.listModels();
-  return response.data;
+LlmModelType _mapKind(Set<ModelKind> kinds) {
+  final kind = kinds.first;
+  switch (kind) {
+    case ModelKind.chat:
+      return LlmModelType.chat;
+    case ModelKind.image:
+      return LlmModelType.image;
+    case ModelKind.audio:
+      return LlmModelType.audio;
+    case ModelKind.embeddings:
+      return LlmModelType.embed;
+    case ModelKind.media:
+      return LlmModelType.media;
+    default:
+      return LlmModelType.other;
+  }
 }
 
-/// Fetch models cho GitHub Models provider
-Future<List<GitHubModel>> fetchGitHubModels({
-  required String baseUrl,
-  String? apiKey,
-  Map<String, String>? customHeaders,
-}) async {
-  final provider = OpenAiProvider(
-    baseUrl: baseUrl,
-    apiKey: apiKey ?? '',
-    headers: customHeaders ?? {},
+LlmModel _fromModelInfo(ModelInfo info) {
+  return LlmModel(
+    id: info.name,
+    displayName: info.displayName ?? info.name,
+    type: _mapKind(info.kinds),
+    providerName: info.providerName,
+    metadata: info.extra,
   );
+}
 
-  final models = await provider.gitHubCatalogModels();
+Future<List<LlmModel>> _collectModels(Stream<ModelInfo> stream) async {
+  final models = <LlmModel>[];
+  await for (final info in stream) {
+    models.add(_fromModelInfo(info));
+  }
   return models;
 }
 
-/// Fetch models cho Anthropic provider
-Future<List<BasicModel>> fetchAnthropicModels({
-  required String baseUrl,
-  String? apiKey,
-  Map<String, String>? customHeaders,
-}) async {
-  final provider = AnthropicProvider(
-    baseUrl: baseUrl,
-    apiKey: apiKey ?? '',
-    headers: customHeaders ?? {},
-  );
-
-  final response = await provider.listModels();
-  return response.data;
-}
-
-/// Fetch models cho Ollama provider
-Future<List<OllamaModel>> fetchOllamaModels({
-  required String baseUrl,
-  String? apiKey,
-  Map<String, String>? customHeaders,
-}) async {
-  final provider = OllamaProvider(
-    baseUrl: baseUrl,
-    headers: customHeaders ?? {},
-  );
-
-  final response = await provider.listModels();
-  return response.models;
-}
-
-/// Fetch models cho Google AI provider
-Future<List<GoogleAiModel>> fetchGoogleLegacyAiModels({
-  required String baseUrl,
-  String? apiKey,
-  Map<String, String>? customHeaders,
-}) async {
-  final provider = GoogleAiStudio(
-    baseUrl: baseUrl,
-    apiKey: apiKey ?? '',
-    headers: customHeaders ?? {},
-  );
-
-  final response = await provider.listModels();
-
-  if (response.models == null || response.models!.isEmpty) {
-    return [];
-  }
-
-  // Convert GeminiModel to GoogleAiModel
-  return response.models!.map((geminiModel) {
-    return GoogleAiModel(
-      name: geminiModel.name ?? 'unknown',
-      displayName: geminiModel.displayName ?? 'Unknown Model',
-      inputTokenLimit: 32000, // Default value
-      outputTokenLimit: 8192, // Default value
-      supportedGenerationMethods: ['generateContent'], // Default
-      thinking: false,
-      temperature: 1.0,
-      maxTemperature: 2.0,
-      topP: 0.95,
-      topK: 40,
-    );
-  }).toList();
-}
-
-/// Main function để fetch models dựa trên provider type
-/// Returns dynamic type vì mỗi provider có model type khác nhau
-/// Special case: If baseUrl contains 'https://models.github.ai', returns GitHubModel list
-Future<List<dynamic>> fetchModels({
+Future<List<LlmModel>> fetchModels({
   required ProviderType providerType,
   required String baseUrl,
   String? apiKey,
   Map<String, String>? customHeaders,
 }) async {
-  // Special case: GitHub Models
-  if (baseUrl.contains('https://models.github.ai')) {
-    return fetchGitHubModels(
-      baseUrl: baseUrl,
-      apiKey: apiKey,
-      customHeaders: customHeaders,
-    );
-  }
-
-  // Regular providers
   switch (providerType) {
     case ProviderType.openai:
-      return fetchOpenLegacyAiModels(
-        baseUrl: baseUrl,
+      final provider = OpenAIProvider(
         apiKey: apiKey,
-        customHeaders: customHeaders,
+        baseUrl: Uri.tryParse(baseUrl),
+        headers: customHeaders,
       );
+      return _collectModels(provider.listModels());
     case ProviderType.anthropic:
-      return fetchAnthropicModels(
-        baseUrl: baseUrl,
+      final provider = AnthropicProvider(
         apiKey: apiKey,
-        customHeaders: customHeaders,
+        headers: customHeaders,
       );
+      return _collectModels(provider.listModels());
     case ProviderType.ollama:
-      return fetchOllamaModels(
-        baseUrl: baseUrl,
-        apiKey: apiKey,
-        customHeaders: customHeaders,
+      final provider = OllamaProvider(
+        baseUrl: Uri.tryParse(baseUrl),
+        headers: customHeaders,
       );
+      return _collectModels(provider.listModels());
     case ProviderType.googleai:
-      return fetchGoogleLegacyAiModels(
-        baseUrl: baseUrl,
+      final provider = GoogleProvider(
         apiKey: apiKey,
-        customHeaders: customHeaders,
+        baseUrl: Uri.tryParse(baseUrl),
+        headers: customHeaders,
       );
+      return _collectModels(provider.listModels());
   }
 }
