@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:multigateway/core/mcp/models/mcp_server_info.dart';
+import 'package:multigateway/core/mcp/models/mcp_info.dart';
 import 'package:multigateway/shared/utils/icon_builder.dart';
 import 'package:multigateway/shared/widgets/item_card.dart';
 
 /// Widget hiển thị MCP server dạng card trong grid view
-class McpServerCard extends StatelessWidget {
-  final McpServerInfo server;
+class McpItemCard extends StatelessWidget {
+  final McpInfo server;
   final String subtitle;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const McpServerCard({
+  const McpItemCard({
     super.key,
     required this.server,
     required this.subtitle,

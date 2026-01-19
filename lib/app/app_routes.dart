@@ -37,7 +37,7 @@ Route<dynamic> generateRoute(RouteSettings settings) {
     case AppRoutes.profiles:
       return MaterialPageRoute(builder: (_) => const ChatProfilesScreen());
     case AppRoutes.mcp:
-      return MaterialPageRoute(builder: (_) => const McpServersPage());
+      return MaterialPageRoute(builder: (_) => const McpItemsPage());
     default:
       // Log the undefined route for debugging
       debugPrint(

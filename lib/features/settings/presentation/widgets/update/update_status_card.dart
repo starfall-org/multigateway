@@ -6,12 +6,14 @@ class UpdateStatusCard extends StatelessWidget {
   final bool isChecking;
   final bool hasUpdate;
   final VoidCallback onCheckTap;
+  final VoidCallback onOpenReleaseTap;
 
   const UpdateStatusCard({
     super.key,
     required this.isChecking,
     required this.hasUpdate,
     required this.onCheckTap,
+    required this.onOpenReleaseTap,
   });
 
   @override
@@ -80,6 +82,15 @@ class UpdateStatusCard extends StatelessWidget {
                     width: 1,
                   ),
                 ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: onOpenReleaseTap,
+                icon: const Icon(Icons.launch),
+                label: Text(tl('Open GitHub Releases')),
               ),
             ),
           ],

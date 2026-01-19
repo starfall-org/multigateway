@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/llm/models/llm_provider_models.dart';
 import 'package:multigateway/features/llm/presentation/controllers/edit_provider_controller.dart';
 import 'package:multigateway/features/llm/presentation/widgets/edit_model_sheet.dart';
 import 'package:multigateway/features/llm/presentation/widgets/fetch_models_sheet.dart';
@@ -9,7 +10,7 @@ import 'package:signals_flutter/signals_flutter.dart';
 /// Section quản lý models (LlmProviderModels)
 /// Hiển thị tất cả 4 loại: BasicModel, OllamaModel, GoogleAiModel, GitHubModel
 class ModelsManagementSection extends StatelessWidget {
-  final AddProviderController controller;
+  final EditProviderController controller;
 
   const ModelsManagementSection({super.key, required this.controller});
 
@@ -35,7 +36,7 @@ class ModelsManagementSection extends StatelessWidget {
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.cloud_download),
+                      icon: const Icon(Icons.cloud),
                       tooltip: tl('Fetch Models'),
                       onPressed: () => _showFetchModelsSheet(context),
                     ),
@@ -56,7 +57,7 @@ class ModelsManagementSection extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.model_training,
+                            Icons.token,
                             size: 64,
                             color: Theme.of(
                               context,
@@ -96,7 +97,7 @@ class ModelsManagementSection extends StatelessWidget {
                               color: Theme.of(context).colorScheme.error,
                               size: 20,
                             ),
-                            onPressed: () => controller.removeModel(model.name),
+                            onPressed: () => controller.removeModel(model.id),
                           ),
                         );
                       },
@@ -117,8 +118,7 @@ class ModelsManagementSection extends StatelessWidget {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-      builder: (context) =>
-          FetchModelsSheet(controller: controller, onShowCapabilities: (_) {}),
+      builder: (context) => FetchModelsSheet(controller: controller),
     );
   }
 
@@ -129,23 +129,19 @@ class ModelsManagementSection extends StatelessWidget {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-      builder: (context) =>
-          EditModelSheet(controller: controller, onShowCapabilities: (_) {}),
+      builder: (context) => EditModelSheet(controller: controller),
     );
   }
 
-  void _showEditModelSheet(BuildContext context, dynamic model) {
+  void _showEditModelSheet(BuildContext context, LlmModel model) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-      builder: (context) => EditModelSheet(
-        controller: controller,
-        modelToEdit: model,
-        onShowCapabilities: (_) {},
-      ),
+      builder: (context) =>
+          EditModelSheet(controller: controller, modelToEdit: model),
     );
   }
 }

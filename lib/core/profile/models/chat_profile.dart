@@ -11,36 +11,35 @@ class ChatProfile {
   final String name;
   final String? icon;
   final LlmChatConfig config;
-  final List<ActiveMcpServer> activeMcpServers;
-  final List<String> activeBuiltInTools;
+  final List<ActiveMcp> activeMcp;
+  final List<ModelTool> activeModelTools;
 
   ChatProfile({
     required this.id,
     required this.name,
     this.icon,
     required this.config,
-    this.activeMcpServers = const [],
-    this.activeBuiltInTools = const [],
+    this.activeMcp = const [],
+    this.activeModelTools = const [],
   });
 
-  List<String> get activeMcpServerIds =>
-      activeMcpServers.map((e) => e.id).toList();
+  List<String> get activeMcpName => activeMcp.map((e) => e.id).toList();
 
   ChatProfile copyWith({
     String? id,
     String? name,
     String? icon,
     LlmChatConfig? config,
-    List<ActiveMcpServer>? activeMcpServers,
-    List<String>? activeBuiltInTools,
+    List<ActiveMcp>? activeMcp,
+    List<ModelTool>? activeModelTools,
   }) {
     return ChatProfile(
       id: id ?? this.id,
       name: name ?? this.name,
       icon: icon ?? this.icon,
       config: config ?? this.config,
-      activeMcpServers: activeMcpServers ?? this.activeMcpServers,
-      activeBuiltInTools: activeBuiltInTools ?? this.activeBuiltInTools,
+      activeMcp: activeMcp ?? this.activeMcp,
+      activeModelTools: activeModelTools ?? this.activeModelTools,
     );
   }
 
@@ -88,14 +87,32 @@ class LlmChatConfig {
 }
 
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
-class ActiveMcpServer {
+class ActiveMcp {
   final String id;
-  final List<String> activeToolIds;
+  final List<String> activeToolNames;
 
-  ActiveMcpServer({required this.id, required this.activeToolIds});
+  ActiveMcp({required this.id, required this.activeToolNames});
 
-  factory ActiveMcpServer.fromJson(Map<String, dynamic> json) =>
-      _$ActiveMcpServerFromJson(json);
+  factory ActiveMcp.fromJson(Map<String, dynamic> json) =>
+      _$ActiveMcpFromJson(json);
 
-  Map<String, dynamic> toJson() => _$ActiveMcpServerToJson(this);
+  Map<String, dynamic> toJson() => _$ActiveMcpToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
+class ModelTool {
+  final String modelId;
+  final String providerId;
+  final String toolName;
+
+  ModelTool({
+    required this.modelId,
+    required this.providerId,
+    required this.toolName,
+  });
+
+  factory ModelTool.fromJson(Map<String, dynamic> json) =>
+      _$ModelToolFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ModelToolToJson(this);
 }

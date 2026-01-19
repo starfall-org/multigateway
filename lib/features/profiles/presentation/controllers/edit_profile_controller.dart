@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mcp/mcp.dart';
-import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
-import 'package:multigateway/shared/widgets/app_snackbar.dart';
 import 'package:signals/signals_flutter.dart';
 import 'package:uuid/uuid.dart';
 
-class AddAgentController {
+class EditProfileController {
   // Controllers
   final TextEditingController nameController = TextEditingController();
   final TextEditingController promptController = TextEditingController();
@@ -27,14 +24,17 @@ class AddAgentController {
   final isCustomThinkingTokensEnabled = signal<bool>(false);
   final customThinkingTokensValue = signal<int>(0);
   final thinkingLevel = signal<ThinkingLevel>(ThinkingLevel.auto);
-  final availableMcpServers = signal<List<McpServer>>([]);
-  final selectedMcpServerIds = signal<List<String>>([]);
+  final availableMcpItems = signal<List<McpInfo>>([]);
+  final selectedMcpItemIds = signal<List<String>>([]);
+  EffectCleanup? _autoSaveCleanup;
+  String? _editingProfileId;
 
   // Initialize with optional existing profile
   void initialize(ChatProfile? profile) {
     if (profile != null) {
       nameController.text = profile.name;
       promptController.text = profile.config.systemPrompt;
+      avatarController.text = profile.icon ?? '';
       enableStream.value = profile.config.enableStream;
 
       if (profile.config.topP != null) {
@@ -58,30 +58,61 @@ class AddAgentController {
         customThinkingTokensValue.value = profile.config.customThinkingTokens!;
       }
 
-      thinkingLevel.value = profile.config.thinkingLevel;
-      selectedMcpServerIds.value = List.from(profile.activeMcpServerIds);
+      selectedMcpItemIds.value = List.from(profile.activeMcpName);
+      _editingProfileId = profile.id;
     }
-    _loadMcpServers();
+
+    _setupAutoSave();
+
+    nameController.addListener(_debouncedSave);
+    promptController.addListener(_debouncedSave);
+    avatarController.addListener(_debouncedSave);
+
+    _loadMcpClients();
   }
 
-  Future<void> _loadMcpServers() async {
-    final mcpRepo = await McpServerInfoStorage.init();
-    availableMcpServers.value = mcpRepo.getItems().cast<McpServer>();
+  void _setupAutoSave() {
+    _autoSaveCleanup = effect(() {
+      enableStream.value;
+      isTopPEnabled.value;
+      topPValue.value;
+      isTopKEnabled.value;
+      topKValue.value;
+      isTemperatureEnabled.value;
+      temperatureValue.value;
+      contextWindowValue.value;
+      conversationLengthValue.value;
+      maxTokensValue.value;
+      isCustomThinkingTokensEnabled.value;
+      customThinkingTokensValue.value;
+      thinkingLevel.value;
+      selectedMcpItemIds.value;
+
+      _debouncedSave();
+    });
   }
 
-  Future<void> saveAgent(
+  void _debouncedSave() {
+    saveAgent();
+  }
+
+  Future<void> _loadMcpClients() async {
+    final mcpRepo = await McpInfoStorage.init();
+    availableMcpItems.value = mcpRepo.getItems().cast<McpInfo>();
+  }
+
+  Future<void> saveAgent([
     ChatProfile? existingProfile,
-    BuildContext context,
-  ) async {
-    if (nameController.text.isEmpty) {
-      context.showInfoSnackBar(tl('AI Profile Name'));
-      return;
-    }
+    BuildContext? context,
+  ]) async {
+    final name = nameController.text.trim();
+    if (name.isEmpty) return;
 
     final repository = await ChatProfileStorage.init();
     final newProfile = ChatProfile(
-      id: existingProfile?.id ?? const Uuid().v4(),
-      name: nameController.text,
+      id: _editingProfileId ??= const Uuid().v4(),
+      name: name,
+      icon: avatarController.text.isNotEmpty ? avatarController.text : null,
       config: LlmChatConfig(
         systemPrompt: promptController.text,
         enableStream: enableStream.value,
@@ -96,8 +127,8 @@ class AddAgentController {
             : null,
         thinkingLevel: thinkingLevel.value,
       ),
-      activeMcpServers: selectedMcpServerIds.value
-          .map((id) => ActiveMcpServer(id: id, activeToolIds: []))
+      activeMcp: selectedMcpItemIds.value
+          .map((id) => ActiveMcp(id: id, activeToolNames: []))
           .toList(),
     );
 
@@ -108,14 +139,14 @@ class AddAgentController {
     }
   }
 
-  void toggleMcpServer(String serverId) {
-    final currentList = List<String>.from(selectedMcpServerIds.value);
+  void toggleMcpItem(String serverId) {
+    final currentList = List<String>.from(selectedMcpItemIds.value);
     if (currentList.contains(serverId)) {
       currentList.remove(serverId);
     } else {
       currentList.add(serverId);
     }
-    selectedMcpServerIds.value = currentList;
+    selectedMcpItemIds.value = currentList;
   }
 
   void toggleStream(bool value) {
@@ -171,6 +202,11 @@ class AddAgentController {
   }
 
   void dispose() {
+    _autoSaveCleanup?.call();
+    nameController.removeListener(_debouncedSave);
+    promptController.removeListener(_debouncedSave);
+    avatarController.removeListener(_debouncedSave);
+
     nameController.dispose();
     promptController.dispose();
     avatarController.dispose();
@@ -187,8 +223,8 @@ class AddAgentController {
     isCustomThinkingTokensEnabled.dispose();
     customThinkingTokensValue.dispose();
     thinkingLevel.dispose();
-    availableMcpServers.dispose();
-    selectedMcpServerIds.dispose();
+    availableMcpItems.dispose();
+    selectedMcpItemIds.dispose();
   }
 
   void pickImage(BuildContext context) async {

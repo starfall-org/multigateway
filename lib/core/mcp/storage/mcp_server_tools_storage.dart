@@ -1,23 +1,23 @@
-import 'package:multigateway/core/mcp/models/mcp_server_tools.dart';
+import 'package:multigateway/core/mcp/models/mcp_tools.dart';
 import 'package:multigateway/core/storage/base.dart';
 
-class McpServerToolsStorage extends HiveBaseStorage<McpServerTools> {
+class McpToolsListStorage extends HiveBaseStorage<McpToolsList> {
   static const String _prefix = 'mcp_server_tools';
 
-  static McpServerToolsStorage? _instance;
-  static Future<McpServerToolsStorage>? _instanceFuture;
+  static McpToolsListStorage? _instance;
+  static Future<McpToolsListStorage>? _instanceFuture;
 
-  McpServerToolsStorage();
+  McpToolsListStorage();
 
-  static Future<McpServerToolsStorage> get instance async {
+  static Future<McpToolsListStorage> get instance async {
     if (_instance != null) return _instance!;
     _instanceFuture ??= init();
     _instance = await _instanceFuture!;
     return _instance!;
   }
 
-  static Future<McpServerToolsStorage> init() async {
-    final instance = McpServerToolsStorage();
+  static Future<McpToolsListStorage> init() async {
+    final instance = McpToolsListStorage();
     await instance.ensureBoxReady();
     return instance;
   }
@@ -26,15 +26,15 @@ class McpServerToolsStorage extends HiveBaseStorage<McpServerTools> {
   String get prefix => _prefix;
 
   @override
-  String getItemId(McpServerTools item) => item.id;
+  String getItemId(McpToolsList item) => item.id;
 
   @override
-  Map<String, dynamic> serializeToFields(McpServerTools item) {
+  Map<String, dynamic> serializeToFields(McpToolsList item) {
     return item.toJson();
   }
 
   @override
-  McpServerTools deserializeFromFields(String id, Map<String, dynamic> fields) {
-    return McpServerTools.fromJson(fields);
+  McpToolsList deserializeFromFields(String id, Map<String, dynamic> fields) {
+    return McpToolsList.fromJson(fields);
   }
 }

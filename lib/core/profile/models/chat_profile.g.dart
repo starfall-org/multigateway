@@ -7,19 +7,21 @@ part of 'chat_profile.dart';
 // **************************************************************************
 
 ChatProfile _$ChatProfileFromJson(Map<String, dynamic> json) => ChatProfile(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      icon: json['icon'] as String?,
-      config: LlmChatConfig.fromJson(json['config'] as Map<String, dynamic>),
-      activeMcpServers: (json['active_mcp_servers'] as List<dynamic>?)
-              ?.map((e) => ActiveMcpServer.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          const [],
-      activeBuiltInTools: (json['active_built_in_tools'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-    );
+  id: json['id'] as String,
+  name: json['name'] as String,
+  icon: json['icon'] as String?,
+  config: LlmChatConfig.fromJson(json['config'] as Map<String, dynamic>),
+  activeMcp:
+      (json['active_mcp_servers'] as List<dynamic>?)
+          ?.map((e) => ActiveMcp.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  activeModelTools:
+      (json['active_model_tools'] as List<dynamic>?)
+          ?.map((e) => ModelTool.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+);
 
 Map<String, dynamic> _$ChatProfileToJson(ChatProfile instance) =>
     <String, dynamic>{
@@ -27,9 +29,10 @@ Map<String, dynamic> _$ChatProfileToJson(ChatProfile instance) =>
       'name': instance.name,
       'icon': instance.icon,
       'config': instance.config.toJson(),
-      'active_mcp_servers':
-          instance.activeMcpServers.map((e) => e.toJson()).toList(),
-      'active_built_in_tools': instance.activeBuiltInTools,
+      'active_mcp_servers': instance.activeMcp.map((e) => e.toJson()).toList(),
+      'active_model_tools': instance.activeModelTools
+          .map((e) => e.toJson())
+          .toList(),
     };
 
 LlmChatConfig _$LlmChatConfigFromJson(Map<String, dynamic> json) =>
@@ -45,7 +48,7 @@ LlmChatConfig _$LlmChatConfigFromJson(Map<String, dynamic> json) =>
       customThinkingTokens: (json['custom_thinking_tokens'] as num?)?.toInt(),
       thinkingLevel:
           $enumDecodeNullable(_$ThinkingLevelEnumMap, json['thinking_level']) ??
-              ThinkingLevel.auto,
+          ThinkingLevel.auto,
     );
 
 Map<String, dynamic> _$LlmChatConfigToJson(LlmChatConfig instance) =>
@@ -71,16 +74,26 @@ const _$ThinkingLevelEnumMap = {
   ThinkingLevel.custom: 'custom',
 };
 
-ActiveMcpServer _$ActiveMcpServerFromJson(Map<String, dynamic> json) =>
-    ActiveMcpServer(
-      id: json['id'] as String,
-      activeToolIds: (json['active_tool_ids'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList(),
-    );
+ActiveMcp _$ActiveMcpFromJson(Map<String, dynamic> json) => ActiveMcp(
+  id: json['id'] as String,
+  activeToolNames: (json['active_tool_names'] as List<dynamic>)
+      .map((e) => e as String)
+      .toList(),
+);
 
-Map<String, dynamic> _$ActiveMcpServerToJson(ActiveMcpServer instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'active_tool_ids': instance.activeToolIds,
-    };
+Map<String, dynamic> _$ActiveMcpToJson(ActiveMcp instance) => <String, dynamic>{
+  'id': instance.id,
+  'active_tool_names': instance.activeToolNames,
+};
+
+ModelTool _$ModelToolFromJson(Map<String, dynamic> json) => ModelTool(
+  modelId: json['model_id'] as String,
+  providerId: json['provider_id'] as String,
+  toolName: json['tool_name'] as String,
+);
+
+Map<String, dynamic> _$ModelToolToJson(ModelTool instance) => <String, dynamic>{
+  'model_id': instance.modelId,
+  'provider_id': instance.providerId,
+  'tool_name': instance.toolName,
+};

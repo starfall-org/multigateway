@@ -160,7 +160,7 @@ class ViewProfileDialog extends StatelessWidget {
               ),
 
               // MCP Servers
-              if (profile.activeMcpServerIds.isNotEmpty) ...[
+              if (profile.activeMcpName.isNotEmpty) ...[
                 _buildSectionHeader(
                   context,
                   'agents.active_mcp_servers',
@@ -170,7 +170,7 @@ class ViewProfileDialog extends StatelessWidget {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: profile.activeMcpServerIds
+                  children: profile.activeMcpName
                       .map(
                         (id) => Chip(
                           label: Text(

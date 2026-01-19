@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:mcp/mcp.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/llm/models/llm_provider_info.dart';
 import 'package:multigateway/core/llm/models/llm_provider_models.dart';
 import 'package:multigateway/core/llm/storage/llm_provider_info_storage.dart';
 import 'package:multigateway/core/llm/storage/llm_provider_models_storage.dart';
+import 'package:multigateway/core/mcp/models/mcp_info.dart';
 import 'package:multigateway/core/mcp/storage/mcp_server_info_storage.dart';
 import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/features/home/services/file_pick_service.dart';
@@ -32,17 +32,17 @@ class UiStateController {
   final selectedModelName = signal<String?>(null);
 
   // === Profile Management ===
-  final ChatProfileStorage aiProfileRepository;
-  final McpServerInfoStorage mcpServerStorage;
+  final ChatProfileStorage chatProfileRepository;
+  final McpInfoStorage mcpStorage;
 
   final selectedProfile = signal<ChatProfile?>(null);
-  final mcpServers = signal<List<McpServer>>([]);
+  final mcpItems = signal<List<McpInfo>>([]);
 
   UiStateController({
     required this.pInfStorage,
     required this.pModStorage,
-    required this.aiProfileRepository,
-    required this.mcpServerStorage,
+    required this.chatProfileRepository,
+    required this.mcpStorage,
   }) {
     _providerSubscription = pInfStorage.changes.listen((_) {
       refreshProviders();
@@ -53,8 +53,8 @@ class UiStateController {
   Future<void> pickFromFiles(BuildContext context) async {
     try {
       final files = List<String>.from(pendingFiles.value);
-      filePickService(files);
-      pendingFiles.value = files;
+      await filePickService(files);
+      pendingFiles.value = List<String>.from(files);
     } catch (e) {
       if (context.mounted) {
         context.showErrorSnackBar(tl('Unable to pick files: ${e.toString()}'));
@@ -65,8 +65,8 @@ class UiStateController {
   Future<void> pickFromGallery(BuildContext context) async {
     try {
       final files = List<String>.from(pendingFiles.value);
-      galleryPickService(files);
-      pendingFiles.value = files;
+      await galleryPickService(files);
+      pendingFiles.value = List<String>.from(files);
     } catch (e) {
       if (context.mounted) {
         context.showErrorSnackBar(tl('Unable to pick files: ${e.toString()}'));
@@ -155,39 +155,22 @@ class UiStateController {
 
   // === Profile Methods ===
   Future<void> loadSelectedProfile() async {
-    final profile = await aiProfileRepository.getOrInitSelectedProfile();
+    final profile = await chatProfileRepository.getOrInitSelectedProfile();
     selectedProfile.value = profile;
   }
 
   Future<void> updateProfile(ChatProfile profile) async {
     selectedProfile.value = profile;
-    await aiProfileRepository.saveItem(profile);
+    await chatProfileRepository.saveItem(profile);
   }
 
-  Future<void> loadMcpServers() async {
-    mcpServers.value = mcpServerStorage
-        .getItems()
-        .whereType<McpServer>()
-        .toList();
+  Future<void> loadMcpClients() async {
+    mcpItems.value = mcpStorage.getItems().toList();
   }
 
   Future<List<String>> snapshotEnabledToolNames(ChatProfile profile) async {
-    try {
-      final mcpRepo = await McpServerInfoStorage.instance;
-      final servers = profile.activeMcpServerIds
-          .map((id) => mcpRepo.getItem(id))
-          .whereType<McpServer>()
-          .toList();
-      final names = <String>{};
-      for (final s in servers) {
-        for (final t in s.tools) {
-          if (t.enabled) names.add(t.name);
-        }
-      }
-      return names.toList();
-    } catch (_) {
-      return const <String>[];
-    }
+    // Tool metadata is not stored on McpInfo; return empty until tool cache is added.
+    return const <String>[];
   }
 
   void dispose() {
@@ -200,6 +183,6 @@ class UiStateController {
     selectedProviderName.dispose();
     selectedModelName.dispose();
     selectedProfile.dispose();
-    mcpServers.dispose();
+    mcpItems.dispose();
   }
 }

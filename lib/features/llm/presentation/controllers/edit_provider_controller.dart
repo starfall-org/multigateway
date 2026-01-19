@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:llm/models/llm_model/basic_model.dart';
-import 'package:llm/models/llm_model/github_model.dart';
-import 'package:llm/models/llm_model/googleai_model.dart';
-import 'package:llm/models/llm_model/ollama_model.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
 import 'package:multigateway/features/llm/services/fetch_models.dart'
@@ -11,131 +7,207 @@ import 'package:multigateway/shared/widgets/app_snackbar.dart';
 import 'package:signals/signals.dart';
 import 'package:uuid/uuid.dart';
 
-class HeaderPair {
-  final TextEditingController key = TextEditingController();
-  final TextEditingController value = TextEditingController();
+class EditProviderController {
+  // Basic fields - using signals
+  final id = signal<String>('');
+  final name = signal<String>('');
+  final icon = signal<String>('');
+  final apiKey = signal<String>('');
+  final baseUrl = signal<String>('');
+  final customListModelsUrl = signal<String>('');
 
-  HeaderPair({String k = '', String v = ''}) {
-    key.text = k;
-    value.text = v;
-  }
+  // HTTP Proxy
+  final httpProxyHost = signal<String>('');
+  final httpProxyPort = signal<String>('');
+  final httpProxyUsername = signal<String>('');
+  final httpProxyPassword = signal<String>('');
 
-  void dispose() {
-    key.dispose();
-    value.dispose();
-  }
-}
-
-class AddProviderController {
-  // Controllers
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController apiKeyController = TextEditingController();
-  final TextEditingController baseUrlController = TextEditingController();
-  final TextEditingController customChatCompletionUrlController =
-      TextEditingController();
-  final TextEditingController customListModelsUrlController =
-      TextEditingController();
-
-  // HTTP Proxy controllers
-  final TextEditingController httpProxyHostController = TextEditingController();
-  final TextEditingController httpProxyPortController = TextEditingController();
-  final TextEditingController httpProxyUsernameController =
-      TextEditingController();
-  final TextEditingController httpProxyPasswordController =
-      TextEditingController();
-
-  // SOCKS Proxy controllers
-  final TextEditingController socksProxyHostController =
-      TextEditingController();
-  final TextEditingController socksProxyPortController =
-      TextEditingController();
-  final TextEditingController socksProxyUsernameController =
-      TextEditingController();
-  final TextEditingController socksProxyPasswordController =
-      TextEditingController();
+  // SOCKS Proxy
+  final socksProxyHost = signal<String>('');
+  final socksProxyPort = signal<String>('');
+  final socksProxyUsername = signal<String>('');
+  final socksProxyPassword = signal<String>('');
 
   // State
   final selectedType = signal<ProviderType>(ProviderType.openai);
   final selectedAuthMethod = signal<AuthMethod>(AuthMethod.bearerToken);
-  final TextEditingController customHeaderKeyController =
-      TextEditingController();
+  final customHeaderKey = signal<String>('');
   final responsesApi = signal<bool>(false);
   final supportStream = signal<bool>(true);
 
-  // Headers
-  final headers = signal<List<HeaderPair>>([]);
+  // Headers - using simple record type
+  final headers = signal<List<({String key, String value})>>([]);
 
-  // Models - Using new model types from llm package
-  final availableModels = signal<List<dynamic>>(
-    [],
-  ); // Can be BasicModel, OllamaModel, GoogleAiModel
-  final selectedModels = signal<List<dynamic>>(
-    [],
-  ); // Can be BasicModel, OllamaModel, GoogleAiModel
+  // Models
+  final availableModels = signal<List<LlmModel>>([]);
+  final selectedModels = signal<List<LlmModel>>([]);
   final isFetchingModels = signal<bool>(false);
+  EffectCleanup? _autoSaveCleanup;
 
   void initialize({
     LlmProviderInfo? providerInfo,
-    LlmProviderConfig? providerConfig,
     LlmProviderModels? providerModels,
   }) {
+    _autoSaveCleanup?.call();
     if (providerInfo != null) {
-      nameController.text = providerInfo.name;
-      apiKeyController.text = providerInfo.auth.key ?? '';
-      baseUrlController.text = providerInfo.baseUrl;
+      id.value = providerInfo.id;
+      name.value = providerInfo.name;
+      apiKey.value = providerInfo.auth.key ?? '';
+      baseUrl.value = providerInfo.baseUrl;
       selectedType.value = providerInfo.type;
 
-      if (providerConfig != null) {
-        responsesApi.value = providerConfig.responsesApi;
-        supportStream.value = providerConfig.supportStream;
+      responsesApi.value = providerInfo.config.responsesApi;
+      supportStream.value = providerInfo.config.supportStream;
+      customListModelsUrl.value =
+          providerInfo.config.customListModelsUrl ?? '/models';
 
-        // Custom URLs
-        customChatCompletionUrlController.text =
-            providerConfig.customChatCompletionUrl ?? '';
-        customListModelsUrlController.text =
-            providerConfig.customListModelsUrl ?? '';
+      // HTTP Proxy
+      httpProxyHost.value =
+          providerInfo.config.httpProxy['host']?.toString() ?? '';
+      httpProxyPort.value =
+          providerInfo.config.httpProxy['port']?.toString() ?? '';
+      httpProxyUsername.value =
+          providerInfo.config.httpProxy['username']?.toString() ?? '';
+      httpProxyPassword.value =
+          providerInfo.config.httpProxy['password']?.toString() ?? '';
 
-        // HTTP Proxy
-        if (providerConfig.httpProxy != null) {
-          httpProxyHostController.text =
-              providerConfig.httpProxy!['host']?.toString() ?? '';
-          httpProxyPortController.text =
-              providerConfig.httpProxy!['port']?.toString() ?? '';
-          httpProxyUsernameController.text =
-              providerConfig.httpProxy!['username']?.toString() ?? '';
-          httpProxyPasswordController.text =
-              providerConfig.httpProxy!['password']?.toString() ?? '';
-        }
+      // SOCKS Proxy
+      socksProxyHost.value =
+          providerInfo.config.socksProxy['host']?.toString() ?? '';
+      socksProxyPort.value =
+          providerInfo.config.socksProxy['port']?.toString() ?? '';
+      socksProxyUsername.value =
+          providerInfo.config.socksProxy['username']?.toString() ?? '';
+      socksProxyPassword.value =
+          providerInfo.config.socksProxy['password']?.toString() ?? '';
 
-        // SOCKS Proxy
-        if (providerConfig.socksProxy != null) {
-          socksProxyHostController.text =
-              providerConfig.socksProxy!['host']?.toString() ?? '';
-          socksProxyPortController.text =
-              providerConfig.socksProxy!['port']?.toString() ?? '';
-          socksProxyUsernameController.text =
-              providerConfig.socksProxy!['username']?.toString() ?? '';
-          socksProxyPasswordController.text =
-              providerConfig.socksProxy!['password']?.toString() ?? '';
-        }
-
-        // Headers
-        final headersList = <HeaderPair>[];
-        providerConfig.headers?.forEach((k, v) {
-          headersList.add(HeaderPair(k: k, v: v.toString()));
-        });
-        headers.value = headersList;
-      }
+      // Headers
+      headers.value = providerInfo.config.headers.entries
+          .map((e) => (key: e.key, value: e.value.toString()))
+          .toList();
 
       if (providerModels != null) {
-        // Extract models from LlmProviderModels and convert to their origin types
         selectedModels.value = providerModels.models
-            .where((model) => model != null && model.origin != null)
-            .map((model) => model!.origin)
+            .whereType<LlmModel>()
             .toList();
       }
     } else {
-      baseUrlController.text = 'https://api.openai.com/v1';
+      id.value = const Uuid().v4();
+    }
+
+    // Start auto-saving after initialization
+    _setupAutoSave();
+  }
+
+  void _setupAutoSave() {
+    _autoSaveCleanup = effect(() {
+      // Trigger on any of these changes
+      name.value;
+      apiKey.value;
+      baseUrl.value;
+      selectedType.value;
+      selectedAuthMethod.value;
+      responsesApi.value;
+      supportStream.value;
+      customListModelsUrl.value;
+      httpProxyHost.value;
+      httpProxyPort.value;
+      httpProxyUsername.value;
+      httpProxyPassword.value;
+      socksProxyHost.value;
+      socksProxyPort.value;
+      socksProxyUsername.value;
+      socksProxyPassword.value;
+      headers.value;
+      selectedModels.value;
+
+      // We use a small delay to avoid excessive writes while typing
+      saveProvider();
+    });
+  }
+
+  Future<bool> saveProvider([BuildContext? context]) async {
+    final providerName = name.value.trim();
+    if (providerName.isEmpty) return false;
+
+    final providerId = id.value;
+
+    // Build headers map
+    final headerMap = <String, dynamic>{};
+    for (var h in headers.value) {
+      if (h.key.isNotEmpty) {
+        headerMap[h.key] = h.value;
+      }
+    }
+
+    // Build HTTP Proxy map
+    final httpProxy = <String, dynamic>{};
+    if (httpProxyHost.value.trim().isNotEmpty) {
+      httpProxy['host'] = httpProxyHost.value.trim();
+      httpProxy['port'] = int.tryParse(httpProxyPort.value.trim()) ?? 0;
+      if (httpProxyUsername.value.trim().isNotEmpty) {
+        httpProxy['username'] = httpProxyUsername.value.trim();
+      }
+      if (httpProxyPassword.value.trim().isNotEmpty) {
+        httpProxy['password'] = httpProxyPassword.value.trim();
+      }
+    }
+
+    // Build SOCKS Proxy map
+    final socksProxy = <String, dynamic>{};
+    if (socksProxyHost.value.trim().isNotEmpty) {
+      socksProxy['host'] = socksProxyHost.value.trim();
+      socksProxy['port'] = int.tryParse(socksProxyPort.value.trim()) ?? 0;
+      if (socksProxyUsername.value.trim().isNotEmpty) {
+        socksProxy['username'] = socksProxyUsername.value.trim();
+      }
+      if (socksProxyPassword.value.trim().isNotEmpty) {
+        socksProxy['password'] = socksProxyPassword.value.trim();
+      }
+    }
+
+    final providerInfo = LlmProviderInfo(
+      id: providerId,
+      name: providerName,
+      type: selectedType.value,
+      auth: Authorization(
+        method: selectedAuthMethod.value,
+        key: apiKey.value.trim().isEmpty ? null : apiKey.value.trim(),
+      ),
+      baseUrl: baseUrl.value.trim(),
+      config: Configuration(
+        headers: headerMap,
+        httpProxy: httpProxy,
+        socksProxy: socksProxy,
+        responsesApi: responsesApi.value,
+        supportStream: supportStream.value,
+        customListModelsUrl: customListModelsUrl.value.trim().isEmpty
+            ? null
+            : customListModelsUrl.value.trim(),
+      ),
+    );
+
+    final providerModels = LlmProviderModels(
+      id: providerId,
+      models: selectedModels.value,
+    );
+
+    try {
+      final infoStorage = await LlmProviderInfoStorage.init();
+      final modelsStorage = await LlmProviderModelsStorage.init();
+
+      await infoStorage.saveItem(providerInfo);
+      await modelsStorage.saveItem(providerModels);
+
+      if (context != null && context.mounted) {
+        context.showSuccessSnackBar(tl('Provider saved successfully'));
+      }
+      return true;
+    } catch (e) {
+      if (context != null && context.mounted) {
+        context.showErrorSnackBar(tl('Failed to save provider: $e'));
+      }
+      return false;
     }
   }
 
@@ -144,130 +216,154 @@ class AddProviderController {
     // Set defaults
     switch (type) {
       case ProviderType.openai:
-        baseUrlController.text = 'https://api.openai.com/v1';
+        name.value = 'OpenAI';
+        baseUrl.value = 'https://api.openai.com/v1';
         selectedAuthMethod.value = AuthMethod.bearerToken;
         break;
       case ProviderType.anthropic:
-        baseUrlController.text = 'https://api.anthropic.com/v1';
+        name.value = 'Anthropic';
+        baseUrl.value = 'https://api.anthropic.com/v1';
         selectedAuthMethod.value = AuthMethod.bearerToken;
         break;
       case ProviderType.ollama:
-        baseUrlController.text = 'http://localhost:11434/api';
+        name.value = 'Ollama';
+        baseUrl.value = 'https://ollama.com/api';
         selectedAuthMethod.value = AuthMethod.bearerToken;
         break;
-      case ProviderType.googleai:
-        baseUrlController.text = '';
+      case ProviderType.google:
+        name.value = 'Google AI Studio';
+        baseUrl.value = 'https://generativelanguage.googleapis.com/v1beta';
         selectedAuthMethod.value = AuthMethod.queryParam;
         break;
     }
   }
 
-  void updateResponsesApi(bool value) {
-    responsesApi.value = value;
-  }
-
-  void updateSupportStream(bool value) {
-    supportStream.value = value;
-  }
-
-  void updateAuthMethod(AuthMethod method) {
-    selectedAuthMethod.value = method;
-  }
-
-  void updateCustomHeaderKey(String value) {
-    customHeaderKeyController.text = value;
-  }
-
   void addHeader() {
-    final list = List<HeaderPair>.from(headers.value);
-    list.add(HeaderPair());
-    headers.value = list;
+    headers.value = [...headers.value, (key: '', value: '')];
+  }
+
+  void updateHeader(int index, {String? key, String? value}) {
+    final list = List.of(headers.value);
+    if (index >= 0 && index < list.length) {
+      final current = list[index];
+      list[index] = (key: key ?? current.key, value: value ?? current.value);
+      headers.value = list;
+    }
   }
 
   void removeHeader(int index) {
-    final list = List<HeaderPair>.from(headers.value);
-    if (index >= 0 && index < list.length) {
-      list[index].dispose();
+    if (index >= 0 && index < headers.value.length) {
+      final list = List.of(headers.value);
       list.removeAt(index);
       headers.value = list;
     }
   }
 
-  String _getModelName(dynamic model) {
-    if (model is BasicModel) return model.id;
-    if (model is OllamaModel) return model.name;
-    if (model is GoogleAiModel) return model.name;
-    if (model is GitHubModel) return model.name;
-    return 'unknown';
-  }
-
-  void removeModel(String modelName) {
-    final list = List<dynamic>.from(selectedModels.value);
-    list.removeWhere((m) => _getModelName(m) == modelName);
+  void toggleModel(LlmModel model) {
+    final list = List.of(selectedModels.value);
+    final index = list.indexWhere((m) => m.id == model.id);
+    if (index != -1) {
+      list.removeAt(index);
+    } else {
+      list.add(model);
+    }
     selectedModels.value = list;
   }
 
-  void removeModelDirectly(dynamic model) {
-    removeModel(_getModelName(model));
+  void addModelDirectly(LlmModel model) {
+    final list = List.of(selectedModels.value);
+    if (list.any((m) => m.id == model.id)) return;
+    list.add(model);
+    selectedModels.value = list;
   }
 
-  void addModelDirectly(dynamic model) {
-    final modelName = _getModelName(model);
-    final list = List<dynamic>.from(selectedModels.value);
-    if (!list.any((m) => _getModelName(m) == modelName)) {
-      list.add(model);
-      selectedModels.value = list;
-    }
+  void removeModelDirectly(LlmModel model) {
+    removeModel(model.id);
   }
 
-  void updateModel(dynamic oldModel, dynamic newModel) {
-    final oldName = _getModelName(oldModel);
-    final list = List<dynamic>.from(selectedModels.value);
-    final index = list.indexWhere((m) => _getModelName(m) == oldName);
+  void removeModel(String modelId) {
+    final list = List.of(selectedModels.value)
+      ..removeWhere((m) => m.id == modelId);
+    selectedModels.value = list;
+  }
+
+  void updateModel(LlmModel oldModel, LlmModel newModel) {
+    final list = List.of(selectedModels.value);
+    final index = list.indexWhere((m) => m.id == oldModel.id);
     if (index != -1) {
       list[index] = newModel;
       selectedModels.value = list;
     }
   }
 
-  void addNewCustomModel() {
-    // Create a BasicModel for custom models
-    final newModel = BasicModel(
-      id: 'custom-${DateTime.now().millisecondsSinceEpoch}',
-      displayName: 'New Model',
-      ownedBy: 'user',
+  void addCustomModel({
+    required String modelId,
+    required String modelDisplayName,
+    String? modelIcon,
+    required Capabilities inputCapabilities,
+    required Capabilities outputCapabilities,
+    required Map<String, dynamic> modelInfo,
+  }) {
+    final newModel = LlmModel(
+      id: modelId,
+      displayName: modelDisplayName,
+      icon: modelIcon,
+      providerId: id.value,
+      inputCapabilities: inputCapabilities,
+      outputCapabilities: outputCapabilities,
+      modelInfo: modelInfo,
     );
-    final list = List<dynamic>.from(selectedModels.value);
-    list.add(newModel);
-    selectedModels.value = list;
+    selectedModels.value = [...selectedModels.value, newModel];
   }
 
   Future<void> fetchModels(BuildContext context) async {
     isFetchingModels.value = true;
 
     try {
-      final baseUrl = baseUrlController.text.trim();
-      final apiKey = apiKeyController.text.trim();
+      final url = baseUrl.value.trim();
+      final key = apiKey.value.trim();
 
-      if (baseUrl.isEmpty) {
+      if (url.isEmpty) {
         throw Exception(tl('Base URL is required'));
       }
 
       // Build custom headers
       final customHeaders = <String, String>{};
       for (var h in headers.value) {
-        if (h.key.text.isNotEmpty) {
-          customHeaders[h.key.text] = h.value.text;
+        if (h.key.isNotEmpty) {
+          customHeaders[h.key] = h.value;
         }
       }
 
-      // Fetch models based on provider type using new API
-      // Keep models in their original types (BasicModel, OllamaModel, GoogleAiModel)
+      final providerInfo = LlmProviderInfo(
+        id: id.value,
+        name: name.value,
+        type: selectedType.value,
+        auth: Authorization(method: selectedAuthMethod.value, key: key),
+        icon: icon.value,
+        baseUrl: url,
+        config: Configuration(
+          httpProxy: {
+            'host': httpProxyHost.value,
+            'port': httpProxyPort.value,
+            'username': httpProxyUsername.value,
+            'password': httpProxyPassword.value,
+          },
+          socksProxy: {
+            'host': socksProxyHost.value,
+            'port': socksProxyPort.value,
+            'username': socksProxyUsername.value,
+            'password': socksProxyPassword.value,
+          },
+          supportStream: supportStream.value,
+          headers: customHeaders,
+          responsesApi: responsesApi.value,
+          customListModelsUrl: customListModelsUrl.value,
+        ),
+      );
+
       availableModels.value = await fetch_tools.fetchModels(
-        providerType: selectedType.value,
-        baseUrl: baseUrl,
-        apiKey: apiKey.isEmpty ? null : apiKey,
-        customHeaders: customHeaders.isEmpty ? null : customHeaders,
+        providerInfo: providerInfo,
       );
 
       if (context.mounted) {
@@ -284,156 +380,23 @@ class AddProviderController {
     }
   }
 
-  Future<void> saveProvider(
-    BuildContext context, {
-    LlmProviderInfo? existingProvider,
-  }) async {
-    final name = nameController.text.trim();
-    if (name.isEmpty) {
-      context.showErrorSnackBar(tl('Name is required'));
-      return;
-    }
-
-    final id = existingProvider?.id ?? Uuid().v4();
-
-    final headerMap = <String, dynamic>{};
-    for (var h in headers.value) {
-      if (h.key.text.isNotEmpty) headerMap[h.key.text] = h.value.text;
-    }
-
-    // Build HTTP Proxy map
-    Map<String, dynamic>? httpProxy;
-    if (httpProxyHostController.text.trim().isNotEmpty) {
-      httpProxy = {
-        'host': httpProxyHostController.text.trim(),
-        'port': int.tryParse(httpProxyPortController.text.trim()) ?? 0,
-        if (httpProxyUsernameController.text.trim().isNotEmpty)
-          'username': httpProxyUsernameController.text.trim(),
-        if (httpProxyPasswordController.text.trim().isNotEmpty)
-          'password': httpProxyPasswordController.text.trim(),
-      };
-    }
-
-    // Build SOCKS Proxy map
-    Map<String, dynamic>? socksProxy;
-    if (socksProxyHostController.text.trim().isNotEmpty) {
-      socksProxy = {
-        'host': socksProxyHostController.text.trim(),
-        'port': int.tryParse(socksProxyPortController.text.trim()) ?? 0,
-        if (socksProxyUsernameController.text.trim().isNotEmpty)
-          'username': socksProxyUsernameController.text.trim(),
-        if (socksProxyPasswordController.text.trim().isNotEmpty)
-          'password': socksProxyPasswordController.text.trim(),
-      };
-    }
-
-    final providerInfo = LlmProviderInfo(
-      id: id,
-      name: name,
-      type: selectedType.value,
-      auth: Authorization(
-        type: selectedAuthMethod.value,
-        key: apiKeyController.text.trim().isEmpty
-            ? null
-            : apiKeyController.text.trim(),
-      ),
-      baseUrl: baseUrlController.text.trim(),
-    );
-
-    final providerConfig = LlmProviderConfig(
-      id: id,
-      headers: headerMap.isEmpty ? null : headerMap,
-      responsesApi: responsesApi.value,
-      supportStream: supportStream.value,
-      httpProxy: httpProxy,
-      socksProxy: socksProxy,
-      customChatCompletionUrl:
-          customChatCompletionUrlController.text.trim().isEmpty
-          ? null
-          : customChatCompletionUrlController.text.trim(),
-      customListModelsUrl: customListModelsUrlController.text.trim().isEmpty
-          ? null
-          : customListModelsUrlController.text.trim(),
-    );
-
-    // Convert selected models to LlmModel format
-    final llmModels = <LlmModel>[];
-
-    for (var m in selectedModels.value) {
-      if (m is BasicModel) {
-        llmModels.add(
-          LlmModel(
-            id: m.id,
-            displayName: m.displayName,
-            type: LlmModelType.chat,
-            origin: m,
-          ),
-        );
-      } else if (m is OllamaModel) {
-        llmModels.add(
-          LlmModel(
-            id: m.name,
-            displayName: m.name,
-            type: LlmModelType.chat,
-            origin: m,
-          ),
-        );
-      } else if (m is GoogleAiModel) {
-        llmModels.add(
-          LlmModel(
-            id: m.name,
-            displayName: m.displayName,
-            type: LlmModelType.chat,
-            origin: m,
-          ),
-        );
-      } else if (m is GitHubModel) {
-        llmModels.add(
-          LlmModel(
-            id: m.name,
-            displayName: m.name,
-            type: LlmModelType.chat,
-            origin: m,
-          ),
-        );
-      }
-    }
-
-    final providerModels = LlmProviderModels(id: id, models: llmModels);
-
-    final infoStorage = await LlmProviderInfoStorage.init();
-    final configStorage = await LlmProviderConfigStorage.init();
-    final modelsStorage = await LlmProviderModelsStorage.init();
-
-    await infoStorage.saveItem(providerInfo);
-    await configStorage.saveItem(providerConfig);
-    await modelsStorage.saveItem(providerModels);
-
-    if (context.mounted) {
-      context.showSuccessSnackBar(tl('Provider saved successfully'));
-    }
-  }
-
   void dispose() {
-    nameController.dispose();
-    apiKeyController.dispose();
-    baseUrlController.dispose();
-    customChatCompletionUrlController.dispose();
-    customListModelsUrlController.dispose();
-    httpProxyHostController.dispose();
-    httpProxyPortController.dispose();
-    httpProxyUsernameController.dispose();
-    httpProxyPasswordController.dispose();
-    socksProxyHostController.dispose();
-    socksProxyPortController.dispose();
-    socksProxyUsernameController.dispose();
-    socksProxyPasswordController.dispose();
-    customHeaderKeyController.dispose();
-    for (var h in headers.value) {
-      h.dispose();
-    }
+    _autoSaveCleanup?.call();
+    name.dispose();
+    apiKey.dispose();
+    baseUrl.dispose();
+    customListModelsUrl.dispose();
+    httpProxyHost.dispose();
+    httpProxyPort.dispose();
+    httpProxyUsername.dispose();
+    httpProxyPassword.dispose();
+    socksProxyHost.dispose();
+    socksProxyPort.dispose();
+    socksProxyUsername.dispose();
+    socksProxyPassword.dispose();
     selectedType.dispose();
     selectedAuthMethod.dispose();
+    customHeaderKey.dispose();
     responsesApi.dispose();
     supportStream.dispose();
     headers.dispose();

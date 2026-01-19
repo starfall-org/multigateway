@@ -19,7 +19,7 @@ class ProfileToolsTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (controller.availableMcpServers.value.isNotEmpty) ...[
+              if (controller.availableMcpItems.value.isNotEmpty) ...[
                 Text(
                   tl('MCP Servers'),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -29,16 +29,14 @@ class ProfileToolsTab extends StatelessWidget {
                 const SizedBox(height: 16),
                 SettingsCard(
                   child: Column(
-                    children: controller.availableMcpServers.value.map((
-                      server,
-                    ) {
+                    children: controller.availableMcpItems.value.map((mcp) {
                       return CheckboxListTile(
-                        title: Text(server.name),
-                        value: controller.selectedMcpServerIds.value.contains(
-                          server.id,
+                        title: Text(mcp.name),
+                        value: controller.selectedMcpItemIds.value.contains(
+                          mcp.id,
                         ),
                         onChanged: (bool? value) {
-                          controller.toggleMcpServer(server.id);
+                          controller.toggleMcpItem(mcp.id);
                         },
                       );
                     }).toList(),

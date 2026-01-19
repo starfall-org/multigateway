@@ -32,6 +32,14 @@ class EditSpeechServiceController {
   // STT State
   final sttSelectedType = signal<ServiceType>(ServiceType.system);
   final sttSelectedProviderId = signal<String?>(null);
+  final sttSelectedModelId = signal<String?>(null);
+
+  // Models cache
+  final availableModels = signal<List<LlmModel>>([]);
+  final sttAvailableModels = signal<List<LlmModel>>([]);
+  final isLoadingModels = signal<bool>(false);
+  EffectCleanup? _autoSaveCleanup;
+  String? _editingServiceId;
 
   // Available languages
   final List<String> availableLanguages = [
@@ -52,6 +60,36 @@ class EditSpeechServiceController {
   Future<void> _initialize() async {
     await _loadProviders();
     selectedLanguage.value = _getSystemLocale();
+
+    // Listen to text changes
+    nameController.addListener(_debouncedSave);
+    customVoiceController.addListener(_debouncedSave);
+    modelNameController.addListener(_debouncedSave);
+    sttModelNameController.addListener(_debouncedSave);
+
+    _setupAutoSave();
+  }
+
+  void _setupAutoSave() {
+    _autoSaveCleanup = effect(() {
+      selectedType.value;
+      selectedProviderId.value;
+      selectedVoiceId.value;
+      useCustomVoice.value;
+      selectedLanguage.value;
+      speechRate.value;
+      volume.value;
+      pitch.value;
+      sttSelectedType.value;
+      sttSelectedProviderId.value;
+      sttSelectedModelId.value;
+
+      _debouncedSave();
+    });
+  }
+
+  void _debouncedSave() {
+    saveService();
   }
 
   Future<void> _loadProviders() async {
@@ -110,16 +148,59 @@ class EditSpeechServiceController {
     isLoadingVoices.value = false;
   }
 
+  Future<void> _loadModels(String providerId, bool isTts) async {
+    isLoadingModels.value = true;
+    try {
+      final modelsStorage = await LlmProviderModelsStorage.instance;
+      final providerModels = modelsStorage.getItem(providerId);
+      if (providerModels != null) {
+        final filteredModels = providerModels.models
+            .whereType<LlmModel>()
+            .where((m) {
+              if (isTts) {
+                return m.outputCapabilities.audio == true;
+              } else {
+                return m.inputCapabilities.audio == true;
+              }
+            })
+            .toList();
+
+        if (isTts) {
+          availableModels.value = filteredModels;
+          if (modelNameController.text.isEmpty && filteredModels.isNotEmpty) {
+            modelNameController.text = filteredModels.first.id;
+          }
+        } else {
+          sttAvailableModels.value = filteredModels;
+          if (sttModelNameController.text.isEmpty &&
+              filteredModels.isNotEmpty) {
+            sttModelNameController.text = filteredModels.first.id;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading models: $e');
+    } finally {
+      isLoadingModels.value = false;
+    }
+  }
+
   void setServiceType(ServiceType type) {
     selectedType.value = type;
     selectedVoiceId.value = null;
     availableVoices.value = [];
+    if (type == ServiceType.provider && selectedProviderId.value != null) {
+      _loadModels(selectedProviderId.value!, true);
+    }
   }
 
   void setProvider(String? providerId) {
     selectedProviderId.value = providerId;
     selectedVoiceId.value = null;
     availableVoices.value = [];
+    if (providerId != null) {
+      _loadModels(providerId, true);
+    }
   }
 
   void toggleCustomVoice() {
@@ -151,21 +232,39 @@ class EditSpeechServiceController {
 
   void setSttType(ServiceType type) {
     sttSelectedType.value = type;
+    if (type == ServiceType.provider && sttSelectedProviderId.value != null) {
+      _loadModels(sttSelectedProviderId.value!, false);
+    }
   }
 
   void setSttProvider(String? providerId) {
     sttSelectedProviderId.value = providerId;
+    if (providerId != null) {
+      _loadModels(providerId, false);
+    }
   }
 
-  Future<bool> saveService(BuildContext context) async {
-    if (nameController.text.isEmpty) {
-      context.showInfoSnackBar(tl('Please enter a name'));
-      return false;
+  void setModelId(String? modelId) {
+    if (modelId != null) {
+      modelNameController.text = modelId;
     }
+  }
+
+  void setSttModelId(String? modelId) {
+    if (modelId != null) {
+      sttModelNameController.text = modelId;
+    }
+  }
+
+  Future<bool> saveService([BuildContext? context]) async {
+    final name = nameController.text.trim();
+    if (name.isEmpty) return false;
 
     if (selectedType.value == ServiceType.provider &&
         selectedProviderId.value == null) {
-      context.showInfoSnackBar(tl('Please select a provider'));
+      if (context != null) {
+        context.showInfoSnackBar(tl('Please select a provider'));
+      }
       return false;
     }
 
@@ -178,7 +277,9 @@ class EditSpeechServiceController {
 
     // Validate voice selection
     if (finalVoiceId == null || finalVoiceId.isEmpty) {
-      context.showInfoSnackBar(tl('Please select or enter a voice'));
+      if (context != null) {
+        context.showInfoSnackBar(tl('Please select or enter a voice'));
+      }
       return false;
     }
 
@@ -189,7 +290,7 @@ class EditSpeechServiceController {
       provider: selectedType.value == ServiceType.provider
           ? selectedProviderId.value
           : null,
-      modelName: modelNameController.text.isNotEmpty
+      modelId: modelNameController.text.isNotEmpty
           ? modelNameController.text
           : null,
       voiceId: finalVoiceId,
@@ -206,15 +307,15 @@ class EditSpeechServiceController {
       provider: sttSelectedType.value == ServiceType.provider
           ? sttSelectedProviderId.value
           : null,
-      modelName: sttModelNameController.text.isNotEmpty
+      modelId: sttModelNameController.text.isNotEmpty
           ? sttModelNameController.text
           : null,
       settings: const {},
     );
 
     final profile = SpeechService(
-      id: const Uuid().v4(),
-      name: nameController.text,
+      id: _editingServiceId ??= const Uuid().v4(),
+      name: name,
       icon: 'assets/brand_icons.json',
       tts: tts,
       stt: stt,
@@ -225,6 +326,12 @@ class EditSpeechServiceController {
   }
 
   void dispose() {
+    _autoSaveCleanup?.call();
+    nameController.removeListener(_debouncedSave);
+    customVoiceController.removeListener(_debouncedSave);
+    modelNameController.removeListener(_debouncedSave);
+    sttModelNameController.removeListener(_debouncedSave);
+
     nameController.dispose();
     customVoiceController.dispose();
     modelNameController.dispose();
@@ -242,5 +349,9 @@ class EditSpeechServiceController {
     pitch.dispose();
     sttSelectedType.dispose();
     sttSelectedProviderId.dispose();
+    sttSelectedModelId.dispose();
+    availableModels.dispose();
+    sttAvailableModels.dispose();
+    isLoadingModels.dispose();
   }
 }

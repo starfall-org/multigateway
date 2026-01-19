@@ -5,27 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:multigateway/app/storage/preferences_storage.dart';
+import 'package:multigateway/shared/utils/theme_aware_image.dart';
 import 'package:path_provider/path_provider.dart';
-
-/// Widget helper để điều chỉnh màu nền icon theo theme
-Widget _buildThemeAwareImage({
-  required Widget child,
-  required BuildContext context,
-}) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-
-  // Trong chế độ tối: tăng độ sáng một chút để hình ảnh trắng không bị khó nhìn
-  // Trong chế độ sáng: ám đen một chút để hình ảnh đen không bị khó nhìn
-  return ColorFiltered(
-    colorFilter: ColorFilter.mode(
-      isDark
-          ? Colors.white.withValues(alpha: 0.1)
-          : Colors.black.withValues(alpha: 0.1),
-      BlendMode.overlay,
-    ),
-    child: child,
-  );
-}
 
 Future<void> initIcons() async {
   final preferencesSp = await PreferencesStorage.instance;
@@ -59,8 +40,7 @@ Widget buildLogoIcon(String name, {double size = 24}) {
   return Builder(
     builder: (context) {
       if (name.isNotEmpty) {
-        return _buildThemeAwareImage(
-          context: context,
+        return ThemeAwareImage(
           child: Image.asset(
             'assets/brand_logos/$name.png',
             width: size,
@@ -107,10 +87,9 @@ Widget buildIcon(String name) {
     future: _getLocalIconFile(name),
     builder: (context, snapshot) {
       if (snapshot.hasData &&
-          snapshot.data != null &&
-          snapshot.data!.existsSync()) {
-        return _buildThemeAwareImage(
-          context: context,
+      snapshot.data != null &&
+      snapshot.data!.existsSync()) {
+        return ThemeAwareImage(
           child: Image.file(
             snapshot.data!,
             height: 24,
@@ -130,8 +109,7 @@ Widget buildIcon(String name) {
 }
 
 Widget _buildAssetFallback(String name, BuildContext context) {
-  return _buildThemeAwareImage(
-    context: context,
+  return ThemeAwareImage(
     child: Image.asset(
       'assets/brand_logos/fallback.png',
       height: 24,

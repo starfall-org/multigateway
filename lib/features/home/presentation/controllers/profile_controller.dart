@@ -1,49 +1,47 @@
-import 'package:mcp/mcp.dart';
-import 'package:multigateway/core/mcp/storage/mcp_server_info_storage.dart';
-import 'package:multigateway/core/profile/profile.dart';
+import 'package:multigateway/core/core.dart';
 import 'package:signals/signals.dart';
 
 /// Controller responsible for AI profile and MCP server management
 class ProfileController {
-  final ChatProfileStorage aiProfileRepository;
-  final McpServerInfoStorage mcpServerStorage;
+  final ChatProfileStorage chatProfileRepository;
+  final McpInfoStorage mcpStorage;
 
   final selectedProfile = signal<ChatProfile?>(null);
-  final mcpServers = listSignal<McpServer>([]);
+  final mcpItems = listSignal<McpInfo>([]);
+  final mcpTools = listSignal<McpToolsList>([]);
+  final modelTools = listSignal<ModelTool>([]);
 
   ProfileController({
-    required this.aiProfileRepository,
-    required this.mcpServerStorage,
+    required this.chatProfileRepository,
+    required this.mcpStorage,
   });
 
   Future<void> loadSelectedProfile() async {
-    final profile = await aiProfileRepository.getOrInitSelectedProfile();
+    final profile = await chatProfileRepository.getOrInitSelectedProfile();
     selectedProfile.value = profile;
   }
 
   Future<void> updateProfile(ChatProfile profile) async {
     selectedProfile.value = profile;
-    await aiProfileRepository.saveItem(profile);
+    await chatProfileRepository.saveItem(profile);
   }
 
-  Future<void> loadMcpServers() async {
-    mcpServers.value = mcpServerStorage
-        .getItems()
-        .whereType<McpServer>()
-        .toList();
+  Future<void> loadMcpClients() async {
+    mcpItems.value = mcpStorage.getItems().whereType<McpInfo>().toList();
+    mcpTools.value = mcpStorage.getItems().whereType<McpToolsList>().toList();
+  }
+
+  Future<void> loadModelTools() async {
+    modelTools.value = mcpStorage.getItems().whereType<ModelTool>().toList();
   }
 
   Future<List<String>> snapshotEnabledToolNames(ChatProfile profile) async {
     try {
-      final mcpRepo = await McpServerInfoStorage.instance;
-      final servers = profile.activeMcpServerIds
-          .map((id) => mcpRepo.getItem(id))
-          .whereType<McpServer>()
-          .toList();
+      final mcps = profile.activeMcp;
       final names = <String>{};
-      for (final s in servers) {
-        for (final t in s.tools) {
-          if (t.enabled) names.add(t.name);
+      for (final mcp in mcps) {
+        for (final t in mcp.activeToolNames) {
+          names.add(t);
         }
       }
       return names.toList();
@@ -54,6 +52,8 @@ class ProfileController {
 
   void dispose() {
     selectedProfile.dispose();
-    mcpServers.dispose();
+    mcpItems.dispose();
+    mcpTools.dispose();
+    modelTools.dispose();
   }
 }

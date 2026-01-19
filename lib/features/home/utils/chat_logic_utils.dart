@@ -28,11 +28,12 @@ class ChatLogicUtils {
     required Map<String, List<LlmModel>> providerModels,
   }) {
     if (persistSelection &&
-        currentSession?.providerId != null &&
-        currentSession?.modelName != null) {
+        currentSession != null &&
+        currentSession.providerId.isNotEmpty &&
+        currentSession.modelId.isNotEmpty) {
       return (
-        provider: currentSession!.providerId,
-        model: currentSession.modelName,
+        provider: currentSession.providerId,
+        model: currentSession.modelId,
       );
     }
 

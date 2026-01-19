@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:multigateway/core/chat/chat.dart';
 import 'package:multigateway/features/home/presentation/widgets/chat_message_widgets/assistant_message_card.dart';
 import 'package:multigateway/features/home/presentation/widgets/chat_message_widgets/user_message_card.dart';
+import 'package:multigateway/features/home/services/message_helper.dart';
 
 /// Widget hiển thị danh sách tin nhắn chat
 class ChatMessagesDisplay extends StatefulWidget {
-  final List<ChatMessage> messages;
+  final List<StoredMessage> messages;
   final ScrollController scrollController;
   final bool isGenerating;
 
   // Callbacks để liên kết với Controller/Screen
-  final void Function(ChatMessage message)? onCopy;
-  final void Function(ChatMessage message)? onEdit;
-  final void Function(ChatMessage message)? onDelete;
+  final void Function(StoredMessage message)? onCopy;
+  final void Function(StoredMessage message)? onEdit;
+  final void Function(StoredMessage message)? onDelete;
   final void Function(List<String> attachments)? onOpenAttachmentsSidebar;
   final VoidCallback? onRegenerate;
-  final void Function(ChatMessage message)? onRead;
-  final void Function(ChatMessage message, int versionIndex)? onSwitchVersion;
+  final void Function(StoredMessage message)? onRead;
+  final void Function(StoredMessage message, int versionIndex)? onSwitchVersion;
 
   const ChatMessagesDisplay({
     super.key,

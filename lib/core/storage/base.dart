@@ -42,7 +42,8 @@ abstract class HiveBaseStorage<T> {
 
   Future<void> _ensureHive() async {
     if (!_hiveInitialized) {
-      await Hive.initFlutter();
+      // Hive is initialized in main.dart
+      // We avoid calling Hive.initFlutter() again to prevent path conflicts
       _hiveInitialized = true;
     }
   }

@@ -1,23 +1,23 @@
-import 'package:multigateway/core/mcp/models/mcp_server_info.dart';
+import 'package:multigateway/core/mcp/models/mcp_info.dart';
 import 'package:multigateway/core/storage/base.dart';
 
-class McpServerInfoStorage extends HiveBaseStorage<McpServerInfo> {
+class McpInfoStorage extends HiveBaseStorage<McpInfo> {
   static const String _prefix = 'mcp_server_info';
 
-  static McpServerInfoStorage? _instance;
-  static Future<McpServerInfoStorage>? _instanceFuture;
+  static McpInfoStorage? _instance;
+  static Future<McpInfoStorage>? _instanceFuture;
 
-  McpServerInfoStorage();
+  McpInfoStorage();
 
-  static Future<McpServerInfoStorage> get instance async {
+  static Future<McpInfoStorage> get instance async {
     if (_instance != null) return _instance!;
     _instanceFuture ??= init();
     _instance = await _instanceFuture!;
     return _instance!;
   }
 
-  static Future<McpServerInfoStorage> init() async {
-    final instance = McpServerInfoStorage();
+  static Future<McpInfoStorage> init() async {
+    final instance = McpInfoStorage();
     await instance.ensureBoxReady();
     return instance;
   }
@@ -26,15 +26,15 @@ class McpServerInfoStorage extends HiveBaseStorage<McpServerInfo> {
   String get prefix => _prefix;
 
   @override
-  String getItemId(McpServerInfo item) => item.id;
+  String getItemId(McpInfo item) => item.id;
 
   @override
-  Map<String, dynamic> serializeToFields(McpServerInfo item) {
+  Map<String, dynamic> serializeToFields(McpInfo item) {
     return item.toJson();
   }
 
   @override
-  McpServerInfo deserializeFromFields(String id, Map<String, dynamic> fields) {
-    return McpServerInfo.fromJson(fields);
+  McpInfo deserializeFromFields(String id, Map<String, dynamic> fields) {
+    return McpInfo.fromJson(fields);
   }
 }

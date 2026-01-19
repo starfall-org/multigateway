@@ -38,10 +38,10 @@ class _ChatPageState extends State<ChatPage>
     try {
       final preferencesSp = await PreferencesStorage.instance;
       final conversationRepository = await ConversationStorage.instance;
-      final aiProfileRepository = await ChatProfileStorage.instance;
+      final chatProfileRepository = await ChatProfileStorage.instance;
       final pInfStorage = await LlmProviderInfoStorage.instance;
       final pModStorage = await LlmProviderModelsStorage.instance;
-      final mcpServerStorage = await McpServerInfoStorage.instance;
+      final mcpStorage = await McpInfoStorage.instance;
 
       final speechManager = SpeechManager(
         storage: await SpeechServiceStorage.instance,
@@ -53,11 +53,11 @@ class _ChatPageState extends State<ChatPage>
       _controller = ChatController(
         navigator: this,
         conversationRepository: conversationRepository,
-        aiProfileRepository: aiProfileRepository,
+        chatProfileRepository: chatProfileRepository,
         llmProviderInfoStorage: pInfStorage,
         llmProviderModelsStorage: pModStorage,
         preferencesSp: preferencesSp,
-        mcpServerStorage: mcpServerStorage,
+        mcpStorage: mcpStorage,
         speechManager: speechManager,
         continueLastConversation: continueLastConversation,
       );

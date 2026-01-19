@@ -8,7 +8,7 @@ import 'package:multigateway/shared/widgets/custom_text_field.dart';
 
 /// Widget tab chỉnh sửa thông tin provider
 class ProviderEditTab extends StatelessWidget {
-  final AddProviderController controller;
+  final EditProviderController controller;
   final ValueChanged<ProviderType> onTypeChanged;
 
   const ProviderEditTab({
@@ -24,7 +24,7 @@ class ProviderEditTab extends StatelessWidget {
       children: [
         CommonDropdown<ProviderType>(
           value: controller.selectedType.value,
-          labelText: tl('Compatibility'),
+          label: tl('Compatibility'),
           options: ProviderType.values.map((type) {
             return DropdownOption<ProviderType>(
               value: type,
@@ -32,7 +32,7 @@ class ProviderEditTab extends StatelessWidget {
               icon: buildLogoIcon(
                 type == ProviderType.openai
                     ? 'openai'
-                    : type == ProviderType.googleai
+                    : type == ProviderType.google
                     ? 'aistudio'
                     : type == ProviderType.anthropic
                     ? 'anthropic'
@@ -49,16 +49,16 @@ class ProviderEditTab extends StatelessWidget {
           },
         ),
         const SizedBox(height: 16),
-        CustomTextField(controller: controller.nameController, label: 'Name'),
+        CustomTextField(signal: controller.name, label: 'Name'),
         const SizedBox(height: 16),
         CustomTextField(
-          controller: controller.apiKeyController,
+          signal: controller.apiKey,
           label: 'API Key',
           obscureText: true,
         ),
         const SizedBox(height: 16),
         CustomTextField(
-          controller: controller.baseUrlController,
+          signal: controller.baseUrl,
           label: 'Base URL',
         ),
         const SizedBox(height: 8),
@@ -68,7 +68,7 @@ class ProviderEditTab extends StatelessWidget {
             value: controller.responsesApi.value,
             onChanged: (value) {
               if (value != null) {
-                controller.updateResponsesApi(value);
+                controller.responsesApi.value = value;
               }
             },
             controlAffinity: ListTileControlAffinity.leading,

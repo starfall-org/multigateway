@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/features/profiles/presentation/controllers/edit_profile_controller.dart';
 
-/// InheritedWidget để cung cấp AddAgentController (controller) cho các widget con
+/// InheritedWidget để cung cấp EditProfileController (controller) cho các widget con
 /// mà không cần truyền qua constructor
 class ProfileControllerProvider extends InheritedWidget {
-  final AddAgentController controller;
+  final EditProfileController controller;
 
   const ProfileControllerProvider({
     super.key,
@@ -13,7 +13,7 @@ class ProfileControllerProvider extends InheritedWidget {
   });
 
   /// Lấy controller từ context
-  static AddAgentController of(BuildContext context) {
+  static EditProfileController of(BuildContext context) {
     final provider = context
         .dependOnInheritedWidgetOfExactType<ProfileControllerProvider>();
     assert(provider != null, 'ProfileControllerProvider not found in context');
@@ -21,7 +21,7 @@ class ProfileControllerProvider extends InheritedWidget {
   }
 
   /// Lấy controller từ context (nullable)
-  static AddAgentController? maybeOf(BuildContext context) {
+  static EditProfileController? maybeOf(BuildContext context) {
     return context
         .dependOnInheritedWidgetOfExactType<ProfileControllerProvider>()
         ?.controller;

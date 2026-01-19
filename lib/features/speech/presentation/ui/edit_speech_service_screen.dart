@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/features/speech/presentation/controllers/edit_speechservice_controller.dart';
 import 'package:multigateway/features/speech/presentation/widgets/stt_configuration_section.dart';
 import 'package:multigateway/features/speech/presentation/widgets/tts_configuration_section.dart';
@@ -33,21 +32,9 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
     super.dispose();
   }
 
-  Future<void> _saveService() async {
-    final success = await _controller.saveService(context);
-    if (success && mounted) {
-      Navigator.pop(context, true);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _saveService,
-        label: Text(tl('Save')),
-        icon: const Icon(Icons.save),
-      ),
       bottomNavigationBar: BottomAppBar(
         elevation: 0,
         child: TabBar(
@@ -76,6 +63,8 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
                 availableVoices: _controller.availableVoices.value,
                 isLoadingVoices: _controller.isLoadingVoices.value,
                 modelNameController: _controller.modelNameController,
+                availableModels: _controller.availableModels.value,
+                isLoadingModels: _controller.isLoadingModels.value,
                 selectedLanguage: _controller.selectedLanguage.value,
                 availableLanguages: _controller.availableLanguages,
                 speechRate: _controller.speechRate.value,
@@ -88,6 +77,9 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
                 },
                 onProviderChanged: (value) {
                   _controller.setProvider(value);
+                },
+                onModelChanged: (value) {
+                  _controller.setModelId(value);
                 },
                 onToggleCustomVoice: () {
                   _controller.toggleCustomVoice();
@@ -116,6 +108,8 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
                 availableProviders: _controller.availableProviders.value,
                 selectedProviderId: _controller.sttSelectedProviderId.value,
                 modelNameController: _controller.sttModelNameController,
+                availableModels: _controller.sttAvailableModels.value,
+                isLoadingModels: _controller.isLoadingModels.value,
                 onTypeChanged: (value) {
                   if (value != null) {
                     _controller.setSttType(value);
@@ -123,6 +117,9 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
                 },
                 onProviderChanged: (value) {
                   _controller.setSttProvider(value);
+                },
+                onModelChanged: (value) {
+                  _controller.setSttModelId(value);
                 },
               ),
             ],

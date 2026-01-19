@@ -1,154 +1,129 @@
-import 'package:llm/models/llm_api/ollama/tags.dart';
-import 'package:llm/models/llm_model/basic_model.dart';
-import 'package:llm/models/llm_model/github_model.dart';
-import 'package:llm/models/llm_model/googleai_model.dart';
-import 'package:llm/provider/anthropic/anthropic.dart';
-import 'package:llm/provider/googleai/aistudio.dart';
-import 'package:llm/provider/ollama/ollama.dart';
-import 'package:llm/provider/openai/openai.dart';
+import 'package:dartantic_ai/dartantic_ai.dart';
 import 'package:multigateway/core/llm/models/llm_provider_info.dart';
+import 'package:multigateway/core/llm/models/llm_provider_models.dart';
 
-/// Fetch models cho OpenAI provider
-Future<List<BasicModel>> fetchOpenLegacyAiModels({
-  required String baseUrl,
-  String? apiKey,
-  Map<String, String>? customHeaders,
-}) async {
-  final provider = OpenAiProvider(
-    baseUrl: baseUrl,
-    apiKey: apiKey ?? '',
-    headers: customHeaders ?? {},
-  );
-
-  final response = await provider.listModels();
-  return response.data;
+Capabilities _mapKind(Set<ModelKind> kinds) {
+  if (kinds.contains(ModelKind.media)) {
+    return Capabilities(text: true, image: true, video: true);
+  }
+  if (kinds.contains(ModelKind.image)) {
+    return Capabilities(text: true, image: true);
+  }
+  if (kinds.contains(ModelKind.audio) || kinds.contains(ModelKind.tts)) {
+    return Capabilities(text: true, audio: true);
+  }
+  if (kinds.contains(ModelKind.embeddings)) {
+    return Capabilities(embed: true);
+  }
+  return Capabilities(text: true);
 }
 
-/// Fetch models cho GitHub Models provider
-Future<List<GitHubModel>> fetchGitHubModels({
-  required String baseUrl,
-  String? apiKey,
-  Map<String, String>? customHeaders,
-}) async {
-  final provider = OpenAiProvider(
-    baseUrl: baseUrl,
-    apiKey: apiKey ?? '',
-    headers: customHeaders ?? {},
-  );
+Map<String, dynamic> _mapInfo(ModelInfo info) {
+  return {
+    'model': info.model,
+    'name': info.displayName,
+    'description': info.description,
+    'display_name': info.displayName,
+    'extra': info.extra,
+    'kinds': info.kinds.map((k) => k.name).toList(),
+    'provider_name': info.providerName,
+  };
+}
 
-  final models = await provider.gitHubCatalogModels();
+LlmModel _fromModelInfo({
+  required ModelInfo info,
+  required String providerId,
+}) {
+  return LlmModel(
+    id: info.name,
+    displayName: info.displayName ?? info.name,
+    inputCapabilities: _mapKind(info.kinds),
+    outputCapabilities: _mapKind(info.kinds),
+    providerId: providerId,
+    modelInfo: _mapInfo(info),
+  );
+}
+
+Future<List<LlmModel>> _collectModels(
+  Stream<ModelInfo> stream, {
+  required String providerId,
+}) async {
+  final models = <LlmModel>[];
+  await for (final info in stream) {
+    models.add(_fromModelInfo(info: info, providerId: providerId));
+  }
   return models;
 }
 
-/// Fetch models cho Anthropic provider
-Future<List<BasicModel>> fetchAnthropicModels({
-  required String baseUrl,
-  String? apiKey,
-  Map<String, String>? customHeaders,
+Future<List<LlmModel>> fetchModels({
+  required LlmProviderInfo providerInfo,
 }) async {
-  final provider = AnthropicProvider(
-    baseUrl: baseUrl,
-    apiKey: apiKey ?? '',
-    headers: customHeaders ?? {},
-  );
+  final headers = <String, String>{};
+  providerInfo.config.headers.forEach((key, value) {
+    headers[key] = value.toString();
+  });
 
-  final response = await provider.listModels();
-  return response.data;
-}
-
-/// Fetch models cho Ollama provider
-Future<List<OllamaModel>> fetchOllamaModels({
-  required String baseUrl,
-  String? apiKey,
-  Map<String, String>? customHeaders,
-}) async {
-  final provider = OllamaProvider(
-    baseUrl: baseUrl,
-    headers: customHeaders ?? {},
-  );
-
-  final response = await provider.listModels();
-  return response.models;
-}
-
-/// Fetch models cho Google AI provider
-Future<List<GoogleAiModel>> fetchGoogleLegacyAiModels({
-  required String baseUrl,
-  String? apiKey,
-  Map<String, String>? customHeaders,
-}) async {
-  final provider = GoogleAiStudio(
-    baseUrl: baseUrl,
-    apiKey: apiKey ?? '',
-    headers: customHeaders ?? {},
-  );
-
-  final response = await provider.listModels();
-
-  if (response.models == null || response.models!.isEmpty) {
-    return [];
+  final auth = providerInfo.auth;
+  final apiKey = auth.key;
+  Uri? parseUri(String url) {
+    if (url.isEmpty) return null;
+    return Uri.tryParse(url);
   }
 
-  // Convert GeminiModel to GoogleAiModel
-  return response.models!.map((geminiModel) {
-    return GoogleAiModel(
-      name: geminiModel.name ?? 'unknown',
-      displayName: geminiModel.displayName ?? 'Unknown Model',
-      inputTokenLimit: 32000, // Default value
-      outputTokenLimit: 8192, // Default value
-      supportedGenerationMethods: ['generateContent'], // Default
-      thinking: false,
-      temperature: 1.0,
-      maxTemperature: 2.0,
-      topP: 0.95,
-      topK: 40,
-    );
-  }).toList();
-}
-
-/// Main function để fetch models dựa trên provider type
-/// Returns dynamic type vì mỗi provider có model type khác nhau
-/// Special case: If baseUrl contains 'https://models.github.ai', returns GitHubModel list
-Future<List<dynamic>> fetchModels({
-  required ProviderType providerType,
-  required String baseUrl,
-  String? apiKey,
-  Map<String, String>? customHeaders,
-}) async {
-  // Special case: GitHub Models
-  if (baseUrl.contains('https://models.github.ai')) {
-    return fetchGitHubModels(
-      baseUrl: baseUrl,
-      apiKey: apiKey,
-      customHeaders: customHeaders,
-    );
+  if (auth.method == AuthMethod.customHeader) {
+    final headerKey = auth.value ?? 'Authorization';
+    if (apiKey != null) {
+      headers[headerKey] = apiKey;
+    }
   }
 
-  // Regular providers
-  switch (providerType) {
+  switch (providerInfo.type) {
     case ProviderType.openai:
-      return fetchOpenLegacyAiModels(
-        baseUrl: baseUrl,
+      if (providerInfo.config.responsesApi) {
+        final provider = OpenAIResponsesProvider(
+          apiKey: apiKey,
+          baseUrl: parseUri(providerInfo.baseUrl),
+          headers: headers,
+        );
+        return _collectModels(
+          provider.listModels(),
+          providerId: providerInfo.id,
+        );
+      }
+      final provider = OpenAIProvider(
         apiKey: apiKey,
-        customHeaders: customHeaders,
+        baseUrl: parseUri(providerInfo.baseUrl),
+        headers: headers,
+      );
+      return _collectModels(
+        provider.listModels(),
+        providerId: providerInfo.id,
       );
     case ProviderType.anthropic:
-      return fetchAnthropicModels(
-        baseUrl: baseUrl,
-        apiKey: apiKey,
-        customHeaders: customHeaders,
+      final provider =
+          AnthropicProvider(apiKey: apiKey, headers: headers);
+      return _collectModels(
+        provider.listModels(),
+        providerId: providerInfo.id,
       );
     case ProviderType.ollama:
-      return fetchOllamaModels(
-        baseUrl: baseUrl,
-        apiKey: apiKey,
-        customHeaders: customHeaders,
+      final provider = OllamaProvider(
+        baseUrl: parseUri(providerInfo.baseUrl),
+        headers: headers,
       );
-    case ProviderType.googleai:
-      return fetchGoogleLegacyAiModels(
-        baseUrl: baseUrl,
+      return _collectModels(
+        provider.listModels(),
+        providerId: providerInfo.id,
+      );
+    case ProviderType.google:
+      final provider = GoogleProvider(
         apiKey: apiKey,
-        customHeaders: customHeaders,
+        baseUrl: parseUri(providerInfo.baseUrl),
+        headers: headers,
+      );
+      return _collectModels(
+        provider.listModels(),
+        providerId: providerInfo.id,
       );
   }
 }

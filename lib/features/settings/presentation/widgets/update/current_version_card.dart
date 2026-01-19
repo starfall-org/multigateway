@@ -4,10 +4,12 @@ import 'package:multigateway/app/translate/tl.dart';
 /// Card hiển thị phiên bản hiện tại
 class CurrentVersionCard extends StatelessWidget {
   final String version;
+  final DateTime? lastCheckedAt;
 
   const CurrentVersionCard({
     super.key,
     required this.version,
+    this.lastCheckedAt,
   });
 
   @override
@@ -52,9 +54,12 @@ class CurrentVersionCard extends StatelessWidget {
             const SizedBox(height: 16),
             _VersionInfo(label: 'Version Number', value: version),
             const SizedBox(height: 8),
-            const _VersionInfo(label: 'Build Date', value: '2024-12-21'),
-            const SizedBox(height: 8),
-            const _VersionInfo(label: 'Update Channel', value: 'Stable'),
+            _VersionInfo(
+              label: 'Last Checked',
+              value: lastCheckedAt != null
+                  ? _formatDate(lastCheckedAt!)
+                  : tl('Not checked yet'),
+            ),
           ],
         ),
       ),
@@ -93,4 +98,11 @@ class _VersionInfo extends StatelessWidget {
       ],
     );
   }
+}
+
+String _formatDate(DateTime dateTime) {
+  final local = dateTime.toLocal();
+  final formatted = local.toIso8601String();
+  final withoutMillis = formatted.split('.').first;
+  return withoutMillis.replaceFirst('T', ' ');
 }

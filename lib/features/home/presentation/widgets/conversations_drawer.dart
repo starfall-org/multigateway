@@ -5,7 +5,6 @@ import 'package:multigateway/features/home/presentation/widgets/drawer_widgets/d
 import 'package:multigateway/features/home/presentation/widgets/drawer_widgets/drawer_header.dart'
     as drawer_widgets;
 import 'package:multigateway/features/home/presentation/widgets/drawer_widgets/history_list.dart';
-import 'package:multigateway/features/home/presentation/widgets/drawer_widgets/new_chat_button.dart';
 import 'package:multigateway/shared/widgets/app_sidebar.dart';
 
 /// Drawer hiển thị danh sách conversations
@@ -94,13 +93,14 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
       backgroundColor: colorScheme.surface,
       child: Column(
         children: [
-          drawer_widgets.DrawerHeader(searchController: _searchController),
+          drawer_widgets.DrawerHeader(
+            searchController: _searchController,
+            onNewChat: widget.onNewChat,
+          ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
               children: [
-                NewChatButton(onPressed: widget.onNewChat),
-                const SizedBox(height: 24),
                 HistoryList(
                   sessions: _filteredSessions,
                   onSessionSelected: widget.onSessionSelected,

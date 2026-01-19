@@ -6,7 +6,7 @@ part 'llm_provider_info.g.dart';
 
 enum ProviderType {
   openai("OpenAI"),
-  googleai('AI Studio'),
+  google('Google'),
   anthropic("Anthropic"),
   ollama("Ollama");
 
@@ -14,8 +14,6 @@ enum ProviderType {
 
   const ProviderType(this.name);
 }
-
-enum AuthMethod { queryParam, bearerToken, customHeader, other }
 
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class LlmProviderInfo {
@@ -25,6 +23,7 @@ class LlmProviderInfo {
   final Authorization auth;
   final String? icon;
   final String baseUrl;
+  final Configuration config;
 
   LlmProviderInfo({
     String? id,
@@ -33,9 +32,10 @@ class LlmProviderInfo {
     Authorization? auth,
     this.icon,
     String? baseUrl,
+    required this.config,
   }) : id = id ?? Uuid().v4(),
        name = name ?? _defaultName(type),
-       auth = auth ?? Authorization(type: AuthMethod.other),
+       auth = auth ?? Authorization(method: AuthMethod.other),
        baseUrl = baseUrl ?? _defaultBaseUrl(type);
 
   static String _defaultName(ProviderType type) {
@@ -46,7 +46,7 @@ class LlmProviderInfo {
         return 'Anthropic';
       case ProviderType.ollama:
         return 'Ollama';
-      case ProviderType.googleai:
+      case ProviderType.google:
         return 'Google';
     }
   }
@@ -59,7 +59,7 @@ class LlmProviderInfo {
         return 'https://api.anthropic.com/v1';
       case ProviderType.ollama:
         return 'https://ollama.com/api';
-      case ProviderType.googleai:
+      case ProviderType.google:
         return 'https://generativelanguage.googleapis.com/v1beta';
     }
   }
@@ -82,14 +82,40 @@ class LlmProviderInfo {
 
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class Authorization {
-  final AuthMethod type;
+  final AuthMethod method;
   final String? key;
   final String? value;
 
-  Authorization({required this.type, this.key, this.value});
+  Authorization({required this.method, this.key, this.value});
 
   factory Authorization.fromJson(Map<String, dynamic> json) =>
       _$AuthorizationFromJson(json);
 
   Map<String, dynamic> toJson() => _$AuthorizationToJson(this);
 }
+
+@JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
+class Configuration {
+  final Map<String, dynamic> httpProxy;
+  final Map<String, dynamic> socksProxy;
+  final bool supportStream;
+  final Map<String, dynamic> headers;
+  final bool responsesApi;
+  final String? customListModelsUrl;
+
+  Configuration({
+    required this.httpProxy,
+    required this.socksProxy,
+    this.supportStream = true,
+    required this.headers,
+    this.responsesApi = false,
+    this.customListModelsUrl,
+  });
+
+  factory Configuration.fromJson(Map<String, dynamic> json) =>
+      _$ConfigurationFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ConfigurationToJson(this);
+}
+
+enum AuthMethod { queryParam, bearerToken, customHeader, other }

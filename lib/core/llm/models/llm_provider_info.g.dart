@@ -16,6 +16,7 @@ LlmProviderInfo _$LlmProviderInfoFromJson(Map<String, dynamic> json) =>
           : Authorization.fromJson(json['auth'] as Map<String, dynamic>),
       icon: json['icon'] as String?,
       baseUrl: json['base_url'] as String?,
+      config: Configuration.fromJson(json['config'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$LlmProviderInfoToJson(LlmProviderInfo instance) =>
@@ -26,25 +27,26 @@ Map<String, dynamic> _$LlmProviderInfoToJson(LlmProviderInfo instance) =>
       'auth': instance.auth.toJson(),
       'icon': instance.icon,
       'base_url': instance.baseUrl,
+      'config': instance.config.toJson(),
     };
 
 const _$ProviderTypeEnumMap = {
   ProviderType.openai: 'openai',
-  ProviderType.googleai: 'googleai',
+  ProviderType.google: 'google',
   ProviderType.anthropic: 'anthropic',
   ProviderType.ollama: 'ollama',
 };
 
 Authorization _$AuthorizationFromJson(Map<String, dynamic> json) =>
     Authorization(
-      type: $enumDecode(_$AuthMethodEnumMap, json['type']),
+      method: $enumDecode(_$AuthMethodEnumMap, json['method']),
       key: json['key'] as String?,
       value: json['value'] as String?,
     );
 
 Map<String, dynamic> _$AuthorizationToJson(Authorization instance) =>
     <String, dynamic>{
-      'type': _$AuthMethodEnumMap[instance.type]!,
+      'method': _$AuthMethodEnumMap[instance.method]!,
       'key': instance.key,
       'value': instance.value,
     };
@@ -55,3 +57,23 @@ const _$AuthMethodEnumMap = {
   AuthMethod.customHeader: 'customHeader',
   AuthMethod.other: 'other',
 };
+
+Configuration _$ConfigurationFromJson(Map<String, dynamic> json) =>
+    Configuration(
+      httpProxy: json['http_proxy'] as Map<String, dynamic>,
+      socksProxy: json['socks_proxy'] as Map<String, dynamic>,
+      supportStream: json['support_stream'] as bool? ?? true,
+      headers: json['headers'] as Map<String, dynamic>,
+      responsesApi: json['responses_api'] as bool? ?? false,
+      customListModelsUrl: json['custom_list_models_url'] as String?,
+    );
+
+Map<String, dynamic> _$ConfigurationToJson(Configuration instance) =>
+    <String, dynamic>{
+      'http_proxy': instance.httpProxy,
+      'socks_proxy': instance.socksProxy,
+      'support_stream': instance.supportStream,
+      'headers': instance.headers,
+      'responses_api': instance.responsesApi,
+      'custom_list_models_url': instance.customListModelsUrl,
+    };

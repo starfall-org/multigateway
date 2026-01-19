@@ -22,8 +22,11 @@ class TtsConfigurationSection extends StatelessWidget {
   final double speechRate;
   final double volume;
   final double pitch;
+  final List<LlmModel> availableModels;
+  final bool isLoadingModels;
   final ValueChanged<ServiceType?> onTypeChanged;
   final ValueChanged<String?> onProviderChanged;
+  final ValueChanged<String?> onModelChanged;
   final VoidCallback onToggleCustomVoice;
   final ValueChanged<String?> onVoiceChanged;
   final VoidCallback onFetchVoices;
@@ -49,8 +52,11 @@ class TtsConfigurationSection extends StatelessWidget {
     required this.speechRate,
     required this.volume,
     required this.pitch,
+    required this.availableModels,
+    required this.isLoadingModels,
     required this.onTypeChanged,
     required this.onProviderChanged,
+    required this.onModelChanged,
     required this.onToggleCustomVoice,
     required this.onVoiceChanged,
     required this.onFetchVoices,
@@ -65,14 +71,11 @@ class TtsConfigurationSection extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        CustomTextField(
-          controller: nameController,
-          label: tl('Service Name'),
-        ),
+        CustomTextField(controller: nameController, label: tl('Service Name')),
         const SizedBox(height: 16),
         CommonDropdown<ServiceType>(
           value: selectedType,
-          labelText: tl('Service Type'),
+          label: tl('Service Type'),
           options: ServiceType.values.map((type) {
             return DropdownOption<ServiceType>(
               value: type,
@@ -88,29 +91,44 @@ class TtsConfigurationSection extends StatelessWidget {
         if (selectedType == ServiceType.provider) ...[
           CommonDropdown<String>(
             value: selectedProviderId,
-            labelText: tl('Provider'),
+            label: tl('Provider'),
             options: availableProviders.map((p) {
-              final iconData = p.type == ProviderType.googleai
-                  ? Icons.cloud
-                  : p.type == ProviderType.openai
-                      ? Icons.api
-                      : p.type == ProviderType.anthropic
-                          ? Icons.psychology_alt
-                          : Icons.memory;
               return DropdownOption<String>(
-                value: p.name,
+                value: p.id,
                 label: p.name,
-                icon: Icon(iconData),
+                icon: p.icon != null && p.icon!.isNotEmpty
+                    ? (p.icon!.endsWith('.json')
+                          ? null
+                          : Image.network(
+                              p.icon!,
+                              width: 20,
+                              height: 20,
+                              errorBuilder: (_, _, _) =>
+                                  const Icon(Icons.cloud),
+                            ))
+                    : Icon(_getProviderIcon(p.type)),
               );
             }).toList(),
             onChanged: onProviderChanged,
           ),
           const SizedBox(height: 16),
-          CustomTextField(
-            controller: modelNameController,
-            label: tl('Model Name'),
-            hint: tl('Enter model name (optional)'),
-          ),
+          if (isLoadingModels)
+            const LinearProgressIndicator()
+          else
+            CommonDropdown<String>(
+              value: modelNameController.text.isNotEmpty
+                  ? modelNameController.text
+                  : null,
+              label: tl('Model'),
+              options: availableModels.map((m) {
+                return DropdownOption<String>(
+                  value: m.id,
+                  label: m.displayName,
+                  icon: const Icon(Icons.psychology),
+                );
+              }).toList(),
+              onChanged: onModelChanged,
+            ),
           const SizedBox(height: 16),
         ],
         Row(
@@ -143,7 +161,7 @@ class TtsConfigurationSection extends StatelessWidget {
                     ? const LinearProgressIndicator()
                     : CommonDropdown<String>(
                         value: selectedVoiceId,
-                        labelText: tl('Select Voice'),
+                        label: tl('Select Voice'),
                         options: availableVoices.map((voice) {
                           return DropdownOption<String>(
                             value: voice,
@@ -166,16 +184,16 @@ class TtsConfigurationSection extends StatelessWidget {
         const SizedBox(height: 24),
         Text(
           tl('Settings'),
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         // Language
         if (availableLanguages.isNotEmpty) ...[
           CommonDropdown<String>(
             value: selectedLanguage,
-            labelText: tl('Language'),
+            label: tl('Language'),
             options: availableLanguages.map((lang) {
               return DropdownOption<String>(
                 value: lang,
@@ -235,10 +253,7 @@ class TtsConfigurationSection extends StatelessWidget {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(tl('Pitch')),
-                Text(pitch.toStringAsFixed(1)),
-              ],
+              children: [Text(tl('Pitch')), Text(pitch.toStringAsFixed(1))],
             ),
             Slider(
               value: pitch,
@@ -251,5 +266,18 @@ class TtsConfigurationSection extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  IconData _getProviderIcon(ProviderType type) {
+    switch (type) {
+      case ProviderType.google:
+        return Icons.cloud;
+      case ProviderType.openai:
+        return Icons.api;
+      case ProviderType.anthropic:
+        return Icons.psychology_alt;
+      case ProviderType.ollama:
+        return Icons.memory;
+    }
   }
 }

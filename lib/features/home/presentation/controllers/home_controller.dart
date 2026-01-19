@@ -6,6 +6,7 @@ import 'package:multigateway/features/home/presentation/controllers/message_cont
 import 'package:multigateway/features/home/presentation/controllers/model_selection_controller.dart';
 import 'package:multigateway/features/home/presentation/controllers/profile_controller.dart';
 import 'package:multigateway/features/home/presentation/controllers/session_controller.dart';
+import 'package:multigateway/features/home/services/message_helper.dart';
 import 'package:multigateway/features/home/services/provider_resolution_service.dart';
 import 'package:multigateway/features/home/services/ui_navigation_service.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
@@ -30,11 +31,11 @@ class ChatController {
   ChatController({
     required this.navigator,
     required ConversationStorage conversationRepository,
-    required ChatProfileStorage aiProfileRepository,
+    required ChatProfileStorage chatProfileRepository,
     required LlmProviderInfoStorage llmProviderInfoStorage,
     required LlmProviderModelsStorage llmProviderModelsStorage,
     required this.preferencesSp,
-    required McpServerInfoStorage mcpServerStorage,
+    required McpInfoStorage mcpStorage,
     required this.speechManager,
     bool continueLastConversation = true,
   }) : session = SessionController(
@@ -48,8 +49,8 @@ class ChatController {
          pModStorage: llmProviderModelsStorage,
        ),
        profile = ProfileController(
-         aiProfileRepository: aiProfileRepository,
-         mcpServerStorage: mcpServerStorage,
+         chatProfileRepository: chatProfileRepository,
+         mcpStorage: mcpStorage,
        );
 
   Future<void> initChat() => session.initChat();
@@ -58,7 +59,7 @@ class ChatController {
 
   Future<void> loadSelectedProfile() => profile.loadSelectedProfile();
   Future<void> updateProfile(ChatProfile p) => profile.updateProfile(p);
-  Future<void> loadMcpServers() => profile.loadMcpServers();
+  Future<void> loadMcpClients() => profile.loadMcpClients();
 
   Future<void> refreshProviders() => model.refreshProviders();
 
@@ -197,7 +198,7 @@ class ChatController {
     );
   }
 
-  Future<void> openEditMessageDialog(BuildContext context, dynamic m) async {
+  Future<void> openEditMessageDialog(BuildContext context, StoredMessage m) async {
     final currentSession = session.currentSession.value;
     if (currentSession == null) return;
     await message.openEditMessageDialog(context, m, currentSession, (s) {
@@ -206,7 +207,7 @@ class ChatController {
     }, regenerateLast);
   }
 
-  Future<void> switchMessageVersion(ChatMessage m, int index) async {
+  Future<void> switchMessageVersion(StoredMessage m, int index) async {
     final currentSession = session.currentSession.value;
     if (currentSession == null) return;
     await message.switchMessageVersion(

@@ -4,33 +4,32 @@ import 'package:multigateway/core/core.dart';
 import 'package:multigateway/features/mcp/presentation/controllers/edit_mcpserver_controller.dart';
 import 'package:multigateway/features/mcp/presentation/widgets/mcp_controller_provider.dart';
 import 'package:multigateway/features/mcp/presentation/widgets/mcp_tabs/mcp_config_tab.dart';
-import 'package:multigateway/features/mcp/presentation/widgets/mcp_tabs/mcp_connection_tab.dart';
-import 'package:multigateway/features/mcp/presentation/widgets/mcp_tabs/mcp_info_tab.dart';
+import 'package:multigateway/features/mcp/presentation/widgets/mcp_tabs/mcp_tools_tab.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 /// Màn hình thêm/chỉnh sửa MCP server
-class EditMcpServerscreen extends StatefulWidget {
-  final McpServerInfo? server;
+class EditMcpItemscreen extends StatefulWidget {
+  final McpInfo? server;
 
-  const EditMcpServerscreen({super.key, this.server});
+  const EditMcpItemscreen({super.key, this.server});
 
   @override
-  State<EditMcpServerscreen> createState() => _EditMcpServerscreenState();
+  State<EditMcpItemscreen> createState() => _EditMcpItemscreenState();
 }
 
-class _EditMcpServerscreenState extends State<EditMcpServerscreen>
+class _EditMcpItemscreenState extends State<EditMcpItemscreen>
     with SingleTickerProviderStateMixin {
-  late EditMcpServerController _controller;
+  late EditMcpItemController _controller;
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       setState(() {}); // Rebuild to show/hide FAB based on tab
     });
-    _controller = EditMcpServerController();
+    _controller = EditMcpItemController();
     _controller.initialize(widget.server);
   }
 
@@ -49,6 +48,13 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
         final isLoading = _controller.isLoading.value;
 
         return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              widget.server == null
+                  ? tl('Add MCP Server')
+                  : tl('Edit MCP Server'),
+            ),
+          ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _controller.saveServer(context),
             label: Text(tl('Save')),
@@ -56,7 +62,10 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : const Icon(Icons.save),
           ),
@@ -64,10 +73,9 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
             elevation: 0,
             child: TabBar(
               controller: _tabController,
-              tabs: const [
-                Tab(icon: Icon(Icons.edit), text: 'Config'),
-                Tab(icon: Icon(Icons.http), text: 'Connection'),
-                Tab(icon: Icon(Icons.info), text: 'Info'),
+              tabs: [
+                Tab(icon: const Icon(Icons.edit), text: tl('Config')),
+                Tab(icon: const Icon(Icons.build), text: tl('Tools')),
               ],
             ),
           ),
@@ -76,11 +84,7 @@ class _EditMcpServerscreenState extends State<EditMcpServerscreen>
             bottom: true,
             child: TabBarView(
               controller: _tabController,
-              children: const [
-                McpConfigTab(),
-                McpConnectionTab(),
-                McpInfoTab(),
-              ],
+              children: const [McpConfigTab(), McpToolsTab()],
             ),
           ),
         );

@@ -3,7 +3,16 @@ import 'package:multigateway/app/translate/tl.dart';
 
 /// Card hiển thị tổng quan dữ liệu
 class DataOverviewCard extends StatelessWidget {
-  const DataOverviewCard({super.key});
+  final int conversationCount;
+  final int profileCount;
+  final int providerCount;
+
+  const DataOverviewCard({
+    super.key,
+    required this.conversationCount,
+    required this.profileCount,
+    required this.providerCount,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -50,11 +59,19 @@ class DataOverviewCard extends StatelessWidget {
               children: [
                 _StatItem(
                   icon: Icons.chat_bubble,
-                  label: 'Conversations',
-                  value: '0',
+                  label: tl('Conversations'),
+                  value: '$conversationCount',
                 ),
-                _StatItem(icon: Icons.person, label: 'Profiles', value: '0'),
-                _StatItem(icon: Icons.cloud, label: 'Providers', value: '0'),
+                _StatItem(
+                  icon: Icons.person,
+                  label: tl('Profiles'),
+                  value: '$profileCount',
+                ),
+                _StatItem(
+                  icon: Icons.cloud,
+                  label: tl('Providers'),
+                  value: '$providerCount',
+                ),
               ],
             ),
           ],

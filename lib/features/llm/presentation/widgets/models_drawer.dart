@@ -1,25 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:llm/models/llm_model/basic_model.dart';
-import 'package:llm/models/llm_model/github_model.dart';
-import 'package:llm/models/llm_model/googleai_model.dart';
-import 'package:llm/models/llm_model/ollama_model.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/llm/models/llm_provider_models.dart';
 import 'package:multigateway/features/settings/presentation/widgets/settings_card.dart';
 import 'package:multigateway/shared/widgets/common_dropdown.dart';
 import 'package:multigateway/shared/widgets/item_card.dart';
 
 class ModelsDrawer extends StatefulWidget {
-  final List<dynamic>
-  availableModels; // Can be BasicModel, OllamaModel, GoogleAiModel
-  final List<dynamic>
-  selectedModels; // Can be BasicModel, OllamaModel, GoogleAiModel
-  final dynamic selectedModelToAdd;
+  final List<LlmModel> availableModels;
+  final List<LlmModel> selectedModels;
+  final LlmModel? selectedModelToAdd;
   final bool isFetchingModels;
   final Function() onFetchModels;
-  final Function(dynamic) onUpdateSelectedModel;
+  final ValueChanged<LlmModel?> onUpdateSelectedModel;
   final Function() onAddModel;
   final Function(String) onRemoveModel;
-  final Function(dynamic) onShowCapabilities;
+  final Function(LlmModel) onShowCapabilities;
 
   const ModelsDrawer({
     super.key,
@@ -39,14 +34,7 @@ class ModelsDrawer extends StatefulWidget {
 }
 
 class _ModelsDrawerState extends State<ModelsDrawer> {
-  // Helper to get model name from any model type
-  String _getModelName(dynamic model) {
-    if (model is BasicModel) return model.id;
-    if (model is OllamaModel) return model.name;
-    if (model is GoogleAiModel) return model.name;
-    if (model is GitHubModel) return model.id;
-    return 'unknown';
-  }
+  String _getModelName(LlmModel model) => model.id;
 
   @override
   Widget build(BuildContext context) {
@@ -190,10 +178,10 @@ class _ModelsDrawerState extends State<ModelsDrawer> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      CommonDropdown<dynamic>(
+                      CommonDropdown<LlmModel>(
                         value: widget.selectedModelToAdd,
                         options: widget.availableModels.map((model) {
-                          return DropdownOption<dynamic>(
+                          return DropdownOption<LlmModel>(
                             value: model,
                             label: _getModelName(model),
                             icon: const Icon(Icons.token), // Use Icons.token

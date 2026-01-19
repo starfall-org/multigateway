@@ -18,25 +18,19 @@ class SessionController {
   }
 
   Future<void> initChat() async {
+    // Chỉ đọc các session đã có tin nhắn
     final sessions = conversationRepository.getItems();
-
-    // Xóa các conversation rỗng (không có messages)
-    final emptySessions = sessions.where((s) => s.messages.isEmpty).toList();
-    for (final emptySession in emptySessions) {
-      await conversationRepository.deleteItem(emptySession.id);
-    }
-
-    // Lọc ra các conversation có nội dung
-    final nonEmptySessions = sessions
-        .where((s) => s.messages.isNotEmpty)
-        .toList();
+    final nonEmptySessions =
+        sessions.where((s) => s.messages.isNotEmpty).toList();
 
     if (continueLastConversation.value && nonEmptySessions.isNotEmpty) {
       currentSession.value = nonEmptySessions.first;
       isLoading.value = false;
-    } else {
-      await createNewSession();
+      return;
     }
+
+    // Quy tắc: không giữ conversation rỗng -> nếu không còn chat nào có tin nhắn, tạo mới
+    await createNewSession();
   }
 
   Future<void> createNewSession() async {
@@ -47,10 +41,9 @@ class SessionController {
       updatedAt: DateTime.now(),
       messages: [],
       providerId: '',
-      modelName: '',
+      modelId: '',
       profileId: '',
     );
-    await conversationRepository.saveItem(session);
     currentSession.value = session;
     isLoading.value = false;
   }
@@ -70,7 +63,10 @@ class SessionController {
 
   Future<void> saveCurrentSession() async {
     final session = currentSession.value;
-    if (session != null && session.messages.isNotEmpty) {
+    if (session == null) return;
+
+    // Chỉ lưu khi có ít nhất 1 tin nhắn
+    if (session.messages.isNotEmpty) {
       await conversationRepository.saveItem(session);
     }
   }
@@ -82,7 +78,7 @@ class SessionController {
       messages: [],
       updatedAt: DateTime.now(),
     );
-    await conversationRepository.saveItem(currentSession.value!);
+    // Không lưu phiên rỗng; giữ nguyên session mới trong bộ nhớ
   }
 
   void updateSession(Conversation session) {
@@ -98,10 +94,14 @@ class SessionController {
     if (session == null) return '';
     return session.messages
         .map((m) {
-          final who = m.role == ChatRole.user
+          final role = m['role'] as String?;
+          final content = m['content'] as String?;
+          final who = role == 'user'
               ? 'You'
-              : (m.role == ChatRole.model ? (profileName ?? 'AI') : 'System');
-          return '$who: ${m.content}';
+              : (role == 'model' || role == 'assistant'
+                  ? (profileName ?? 'AI')
+                  : 'System');
+          return '$who: ${content ?? ''}';
         })
         .join('\n\n');
   }

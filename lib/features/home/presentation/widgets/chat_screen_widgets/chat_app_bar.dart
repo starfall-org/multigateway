@@ -19,13 +19,12 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     return Watch((context) {
       final currentSession = ctrl.session.currentSession.value;
-      final selectedModelName = ctrl.model.selectedModelName.value;
       final selectedProfile = ctrl.profile.selectedProfile.value;
 
       return AppBar(
         leading: IconButton(
           icon: Icon(
-            Icons.history,
+            Icons.menu,
             color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.7),
           ),
           onPressed: onOpenDrawer,
@@ -42,7 +41,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
             ),
             Text(
-              selectedModelName ?? '',
+              selectedProfile?.name ?? 'No Profile',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.primary,
                 fontSize: 12,

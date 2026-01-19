@@ -10,18 +10,18 @@ import 'package:multigateway/shared/widgets/app_snackbar.dart';
 import 'package:multigateway/shared/widgets/confirm_dialog.dart';
 import 'package:multigateway/shared/widgets/empty_state.dart';
 
-class McpServersPage extends StatefulWidget {
-  const McpServersPage({super.key});
+class McpItemsPage extends StatefulWidget {
+  const McpItemsPage({super.key});
 
   @override
-  State<McpServersPage> createState() => _McpServersPageState();
+  State<McpItemsPage> createState() => _McpItemsPageState();
 }
 
-class _McpServersPageState extends State<McpServersPage> {
-  List<McpServerInfo> _servers = [];
+class _McpItemsPageState extends State<McpItemsPage> {
+  List<McpInfo> _servers = [];
   bool _isLoading = true;
   bool _isGridView = false;
-  late McpServerInfoStorage _repository;
+  late McpInfoStorage _repository;
 
   @override
   void initState() {
@@ -39,7 +39,7 @@ class _McpServersPageState extends State<McpServersPage> {
 
     try {
       // Add timeout to prevent infinite loading
-      _repository = await McpServerInfoStorage.init().timeout(
+      _repository = await McpInfoStorage.init().timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           throw TimeoutException(
@@ -85,7 +85,7 @@ class _McpServersPageState extends State<McpServersPage> {
     }
   }
 
-  String _getServerSubtitle(McpServerInfo server) {
+  String _getServerSubtitle(McpInfo server) {
     final List<String> parts = [];
 
     // Add transport type
@@ -101,7 +101,7 @@ class _McpServersPageState extends State<McpServersPage> {
         break;
     }
 
-    // Note: Tool/resource counts would come from McpServerTools
+    // Note: Tool/resource counts would come from McpToolsList
     // For now, just show the protocol
     return parts.isEmpty ? 'No protocol' : parts.join(' • ');
   }
@@ -178,7 +178,7 @@ class _McpServersPageState extends State<McpServersPage> {
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const EditMcpServerscreen(),
+                      builder: (context) => const EditMcpItemscreen(),
                     ),
                   );
                   if (result == true) {
@@ -198,7 +198,7 @@ class _McpServersPageState extends State<McpServersPage> {
                 itemCount: _servers.length,
                 itemBuilder: (context, index) {
                   final server = _servers[index];
-                  return McpServerCard(
+                  return McpItemCard(
                     server: server,
                     subtitle: _getServerSubtitle(server),
                     onTap: () => _navigateToEdit(server),
@@ -213,7 +213,7 @@ class _McpServersPageState extends State<McpServersPage> {
                 onReorder: _onReorder,
                 itemBuilder: (context, index) {
                   final server = _servers[index];
-                  return McpServerTile(
+                  return McpItemTile(
                     key: ValueKey(server.id),
                     server: server,
                     subtitle: _getServerSubtitle(server),
@@ -232,17 +232,17 @@ class _McpServersPageState extends State<McpServersPage> {
       if (oldIndex < newIndex) {
         newIndex -= 1;
       }
-      final McpServerInfo item = _servers.removeAt(oldIndex);
+      final McpInfo item = _servers.removeAt(oldIndex);
       _servers.insert(newIndex, item);
     });
     _repository.saveOrder(_servers.map((e) => e.id).toList());
   }
 
-  Future<void> _navigateToEdit(McpServerInfo? server) async {
+  Future<void> _navigateToEdit(McpInfo? server) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EditMcpServerscreen(server: server),
+        builder: (context) => EditMcpItemscreen(server: server),
       ),
     );
     if (result == true) {
@@ -250,7 +250,7 @@ class _McpServersPageState extends State<McpServersPage> {
     }
   }
 
-  Future<void> _confirmDelete(McpServerInfo server) async {
+  Future<void> _confirmDelete(McpInfo server) async {
     final confirm = await ConfirmDialog.show(
       context,
       title: tl('Delete'),

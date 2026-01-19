@@ -88,10 +88,7 @@ class ModelPickerSheet extends StatelessWidget {
                               ).colorScheme.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(
-                              _getProviderIcon(provider.type),
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+                            child: _ProviderIcon(type: provider.type),
                           ),
                           title: Text(provider.name),
                           trailing: Icon(
@@ -113,6 +110,7 @@ class ModelPickerSheet extends StatelessWidget {
                                 bottom: 4,
                               ),
                               title: Text(model.id),
+                              leading: _ModelIcon(path: model.icon),
                               trailing: isSelected
                                   ? Icon(
                                       Icons.check,
@@ -137,19 +135,6 @@ class ModelPickerSheet extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  IconData _getProviderIcon(ProviderType type) {
-    switch (type) {
-      case ProviderType.googleai:
-        return Icons.android;
-      case ProviderType.openai:
-        return Icons.token; // Changed from Icons.smart_toy
-      case ProviderType.anthropic:
-        return Icons.psychology;
-      case ProviderType.ollama:
-        return Icons.terminal;
-    }
   }
 
   /// Static method to show the drawer as a modal bottom sheet
@@ -183,5 +168,43 @@ class ModelPickerSheet extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _ProviderIcon extends StatelessWidget {
+  final ProviderType type;
+  const _ProviderIcon({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    switch (type) {
+      case ProviderType.google:
+        return Icon(Icons.android, color: color);
+      case ProviderType.openai:
+        return Icon(Icons.token, color: color);
+      case ProviderType.anthropic:
+        return Icon(Icons.psychology, color: color);
+      case ProviderType.ollama:
+        return Icon(Icons.terminal, color: color);
+    }
+  }
+}
+
+class _ModelIcon extends StatelessWidget {
+  final String? path;
+  const _ModelIcon({this.path});
+
+  @override
+  Widget build(BuildContext context) {
+    if (path != null && path!.isNotEmpty) {
+      return Image.asset(
+        path!,
+        width: 20,
+        height: 20,
+        errorBuilder: (_, _, _) => const Icon(Icons.token, size: 20),
+      );
+    }
+    return const Icon(Icons.token, size: 20);
   }
 }

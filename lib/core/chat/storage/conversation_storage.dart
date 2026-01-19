@@ -43,6 +43,8 @@ class ConversationStorage extends HiveBaseStorage<Conversation> {
   @override
   List<Conversation> getItems() {
     final sessions = super.getItems();
+    // Loại bỏ các session trống để không trả về/hiển thị
+    sessions.removeWhere((s) => s.messages.isEmpty);
     // Sort by updated at descending
     sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return sessions;

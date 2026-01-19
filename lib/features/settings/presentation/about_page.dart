@@ -6,6 +6,7 @@ import 'package:multigateway/features/settings/presentation/widgets/about/legal_
 import 'package:multigateway/features/settings/presentation/widgets/about/support_section.dart';
 import 'package:multigateway/shared/utils/app_version.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Màn hình thông tin về ứng dụng
 class AboutPage extends StatefulWidget {
@@ -17,6 +18,14 @@ class AboutPage extends StatefulWidget {
 
 class _AboutPageState extends State<AboutPage> {
   String _version = '';
+  final Uri _repoUrl = Uri.parse('https://github.com/starfall-org/multigateway');
+  final Uri _issuesUrl =
+      Uri.parse('https://github.com/starfall-org/multigateway/issues/new/choose');
+  final Uri _featureRequestUrl = Uri.parse(
+    'https://github.com/starfall-org/multigateway/issues/new?labels=enhancement',
+  );
+  final Uri _licenseUrl =
+      Uri.parse('https://github.com/starfall-org/multigateway/blob/main/LICENSE');
 
   @override
   void initState() {
@@ -86,7 +95,6 @@ class _AboutPageState extends State<AboutPage> {
               SupportSection(
                 onReportBugTap: _reportBug,
                 onRequestFeatureTap: _requestFeature,
-                onHelpCenterTap: _openHelpCenter,
               ),
             ],
           ),
@@ -96,27 +104,33 @@ class _AboutPageState extends State<AboutPage> {
   }
 
   /// Handlers cho các hành động
-  void _openPrivacyPolicy() {
-    context.showInfoSnackBar(tl('Privacy policy opened'));
+  Future<void> _openPrivacyPolicy() async {
+    await _openLink(_repoUrl, tl('Could not open privacy policy link'));
   }
 
-  void _openTermsOfService() {
-    context.showInfoSnackBar(tl('Terms of service opened'));
+  Future<void> _openTermsOfService() async {
+    await _openLink(_repoUrl, tl('Could not open terms link'));
   }
 
-  void _openOpenSource() {
-    context.showInfoSnackBar(tl('Open source info opened'));
+  Future<void> _openOpenSource() async {
+    await _openLink(_licenseUrl, tl('Could not open license link'));
   }
 
-  void _reportBug() {
-    context.showInfoSnackBar(tl('Bug report opened'));
+  Future<void> _reportBug() async {
+    await _openLink(_issuesUrl, tl('Could not open GitHub issues'));
   }
 
-  void _requestFeature() {
-    context.showInfoSnackBar(tl('Feature request opened'));
+  Future<void> _requestFeature() async {
+    await _openLink(
+      _featureRequestUrl,
+      tl('Could not open feature request link'),
+    );
   }
 
-  void _openHelpCenter() {
-    context.showInfoSnackBar(tl('Help center opened'));
+  Future<void> _openLink(Uri url, String errorMessage) async {
+    final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      context.showErrorSnackBar(errorMessage);
+    }
   }
 }

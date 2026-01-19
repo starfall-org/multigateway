@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/features/settings/presentation/controllers/update_controller.dart';
 
 /// Section hiển thị lịch sử cập nhật
 class UpdateHistorySection extends StatelessWidget {
-  const UpdateHistorySection({super.key});
+  final List<ReleaseInfo> releases;
+  final bool isLoading;
+
+  const UpdateHistorySection({
+    super.key,
+    required this.releases,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -18,16 +26,31 @@ class UpdateHistorySection extends StatelessWidget {
               ?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        Card(
-          child: _HistoryItem(
-            version: '0.0.0',
-            date: DateTime.now().toString(),
-            features: const [
-              'No update history',
-              "This feature will be added in the future",
-            ],
+        if (isLoading)
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          )
+        else if (releases.isEmpty)
+          Card(
+            child: _HistoryItem(
+              version: tl('No releases found'),
+              date: '',
+              features: const [],
+            ),
+          )
+        else
+          ...releases.map(
+            (release) => Card(
+              child: _HistoryItem(
+                version: release.version,
+                date: _formatDate(release.publishedAt),
+                features: release.highlights,
+              ),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -47,6 +70,11 @@ class _HistoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final versionLabel = version.contains(' ') ? version : 'v$version';
+    final displayFeatures =
+        features.isEmpty ? <String>[tl('No release notes provided')] : features;
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -55,18 +83,19 @@ class _HistoryItem extends StatelessWidget {
           Row(
             children: [
               Text(
-                tl('v$version'),
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
+                versionLabel,
+                style: theme.textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.bold),
               ),
               const Spacer(),
-              Text(date, style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                date.isEmpty ? tl('Unknown date') : date,
+                style: theme.textTheme.bodySmall,
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          ...features.map(
+          ...displayFeatures.map(
             (feature) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
@@ -74,7 +103,7 @@ class _HistoryItem extends StatelessWidget {
                   Icon(
                     Icons.circle,
                     size: 4,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: theme.colorScheme.primary,
                   ),
                   const SizedBox(width: 8),
                   Expanded(child: Text(feature)),
@@ -86,4 +115,10 @@ class _HistoryItem extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatDate(DateTime? dateTime) {
+  if (dateTime == null) return tl('Unknown date');
+  final local = dateTime.toLocal();
+  return local.toIso8601String().split('T').first;
 }

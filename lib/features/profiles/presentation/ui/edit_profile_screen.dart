@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/features/llm/presentation/widgets/view_profile_dialog.dart';
 import 'package:multigateway/features/profiles/presentation/controllers/edit_profile_controller.dart';
@@ -20,7 +19,7 @@ class AddProfileScreen extends StatefulWidget {
 
 class _AddProfileScreenState extends State<AddProfileScreen>
     with SingleTickerProviderStateMixin {
-  late AddAgentController _controller;
+  late EditProfileController _controller;
   late TabController _tabController;
 
   @override
@@ -30,7 +29,7 @@ class _AddProfileScreenState extends State<AddProfileScreen>
     _tabController.addListener(() {
       setState(() {}); // Rebuild to show/hide FAB based on tab
     });
-    _controller = AddAgentController();
+    _controller = EditProfileController();
     _controller.initialize(widget.profile);
   }
 
@@ -39,13 +38,6 @@ class _AddProfileScreenState extends State<AddProfileScreen>
     _tabController.dispose();
     _controller.dispose();
     super.dispose();
-  }
-
-  Future<void> _saveAgent() async {
-    await _controller.saveAgent(widget.profile, context);
-    if (mounted) {
-      Navigator.pop(context, true);
-    }
   }
 
   @override
@@ -74,12 +66,6 @@ class _AddProfileScreenState extends State<AddProfileScreen>
                   child: const Icon(Icons.info_outline),
                 ),
               if (isEditing) const SizedBox(width: 16),
-              FloatingActionButton.extended(
-                heroTag: "save",
-                onPressed: _saveAgent,
-                label: Text(tl('Save')),
-                icon: const Icon(Icons.check),
-              ),
             ],
           ),
           bottomNavigationBar: BottomAppBar(
