@@ -53,8 +53,8 @@ class UiStateController {
   Future<void> pickFromFiles(BuildContext context) async {
     try {
       final files = List<String>.from(pendingFiles.value);
-      filePickService(files);
-      pendingFiles.value = files;
+      await filePickService(files);
+      pendingFiles.value = List<String>.from(files);
     } catch (e) {
       if (context.mounted) {
         context.showErrorSnackBar(tl('Unable to pick files: ${e.toString()}'));
@@ -65,8 +65,8 @@ class UiStateController {
   Future<void> pickFromGallery(BuildContext context) async {
     try {
       final files = List<String>.from(pendingFiles.value);
-      galleryPickService(files);
-      pendingFiles.value = files;
+      await galleryPickService(files);
+      pendingFiles.value = List<String>.from(files);
     } catch (e) {
       if (context.mounted) {
         context.showErrorSnackBar(tl('Unable to pick files: ${e.toString()}'));

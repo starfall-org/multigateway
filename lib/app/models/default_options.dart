@@ -78,10 +78,10 @@ class DefaultModels {
 
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.snake)
 class DefaultModel {
-  final String modelName;
+  final String modelId;
   final String providerId;
 
-  DefaultModel({required this.modelName, required this.providerId});
+  DefaultModel({required this.modelId, required this.providerId});
 
   factory DefaultModel.fromJson(Map<String, dynamic> json) =>
       _$DefaultModelFromJson(json);

@@ -4,6 +4,7 @@ import 'package:multigateway/features/home/presentation/widgets/chat_messages_di
 import 'package:multigateway/features/home/presentation/widgets/model_picker_sheet.dart';
 import 'package:multigateway/features/home/presentation/widgets/quick_actions_sheet.dart';
 import 'package:multigateway/features/home/presentation/widgets/user_input_area.dart';
+import 'package:multigateway/features/home/services/message_helper.dart';
 import 'package:multigateway/shared/widgets/empty_state.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 

@@ -36,14 +36,14 @@ class SpeechService {
 class TextToSpeech {
   final ServiceType type;
   final String? provider;
-  final String? modelName;
+  final String? modelId;
   final String? voiceId;
   final Map<dynamic, dynamic> settings;
 
   const TextToSpeech({
     required this.type,
     this.provider,
-    this.modelName,
+    this.modelId,
     this.voiceId,
     this.settings = const {},
   });
@@ -70,13 +70,13 @@ class TextToSpeech {
 class SpeechToText {
   final ServiceType type;
   final String? provider;
-  final String? modelName;
+  final String? modelId;
   final Map<dynamic, dynamic> settings;
 
   const SpeechToText({
     required this.type,
     this.provider,
-    this.modelName,
+    this.modelId,
     this.settings = const {},
   });
 

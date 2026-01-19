@@ -5,21 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/shared/widgets/app_dialog.dart';
 import 'package:multigateway/shared/widgets/custom_text_field.dart';
-
-/// Helper để tạo theme-aware image cho edit message sheet
-Widget _buildThemeAwareImageForEditSheet(BuildContext context, Widget child) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-
-  return ColorFiltered(
-    colorFilter: ColorFilter.mode(
-      isDark
-          ? Colors.white.withValues(alpha: 0.1)
-          : Colors.black.withValues(alpha: 0.1),
-      BlendMode.overlay,
-    ),
-    child: child,
-  );
-}
+import 'package:multigateway/shared/widgets/theme_aware_image.dart';
 
 class EditMessageResult {
   final String content;
@@ -121,22 +107,21 @@ class _EditMessageSheetState extends State<EditMessageSheet> {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Container(
-            width: size,
-            height: size,
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: isImg
-                ? _buildThemeAwareImageForEditSheet(
-                    context,
-                    Image.file(
-                      File(path),
-                      fit: BoxFit.cover,
-                      errorBuilder: (c, e, s) => _fallbackTile(path),
-                    ),
-                  )
-                : _fallbackTile(path),
+            child: Container(
+              width: size,
+              height: size,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: isImg
+                  ? ThemeAwareImage(
+                      child: Image.file(
+                        File(path),
+                        fit: BoxFit.cover,
+                        errorBuilder: (c, e, s) => _fallbackTile(path),
+                      ),
+                    )
+                  : _fallbackTile(path),
+            ),
           ),
-        ),
         Positioned(
           right: -6,
           top: -6,

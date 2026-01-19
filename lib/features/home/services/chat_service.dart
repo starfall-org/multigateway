@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:dartantic_ai/dartantic_ai.dart' hide ChatMessage;
+import 'package:dartantic_ai/dartantic_ai.dart';
 import 'package:dartantic_ai/dartantic_ai.dart' as dai;
 
 import 'package:multigateway/core/core.dart';
@@ -140,36 +140,10 @@ class ChatService {
     return tools;
   }
 
-  static List<dai.ChatMessage> _buildMessages({
+  static Stream<ChatResult> generateStream({
     required String userText,
-    required List<ChatMessage> history,
-    required String systemPrompt,
-  }) {
-    final messages = <dai.ChatMessage>[];
-
-    if (systemPrompt.isNotEmpty) {
-      messages.add(dai.ChatMessage.system(systemPrompt));
-    }
-
-    for (final msg in history) {
-      final content = msg.content ?? '';
-      final role = _mapRole(msg.role);
-      messages.add(dai.ChatMessage(role: role, parts: [dai.TextPart(content)]));
-    }
-
-    messages.add(
-      dai.ChatMessage(
-        role: dai.ChatMessageRole.user,
-        parts: [dai.TextPart(userText)],
-      ),
-    );
-
-    return messages;
-  }
-
-  static Stream<String> generateStream({
-    required String userText,
-    required List<ChatMessage> history,
+    required List<dai.ChatMessage> history,
+    required List<dai.Part>? files,
     required ChatProfile profile,
     required String providerName,
     required String modelName,
@@ -197,12 +171,6 @@ class ChatService {
     }
     final tools = mcpTools;
 
-    final messages = _buildMessages(
-      userText: userText,
-      history: history,
-      systemPrompt: profile.config.systemPrompt,
-    );
-
     dai.ChatModel chatModel;
     final headers = _stringHeaders(providerInfo.config.headers) ?? const {};
     final useResponsesApi = providerInfo.config.responsesApi;
@@ -217,9 +185,11 @@ class ChatService {
       useResponsesApi: useResponsesApi,
     );
 
+    Provider provider;
+
     switch (providerInfo.type) {
       case ProviderType.google:
-        final provider = GoogleProvider(
+        provider = GoogleProvider(
           apiKey: providerInfo.auth.key,
           baseUrl: baseUrl,
           headers: headers,
@@ -234,7 +204,7 @@ class ChatService {
         break;
       case ProviderType.openai:
         if (useResponsesApi) {
-          final provider = OpenAIResponsesProvider(
+          provider = OpenAIResponsesProvider(
             apiKey: providerInfo.auth.key,
             baseUrl: baseUrl,
             headers: headers,
@@ -247,7 +217,7 @@ class ChatService {
             options: _buildOpenAIResponsesOptions(config),
           );
         } else {
-          final provider = OpenAIProvider(
+          provider = OpenAIProvider(
             apiKey: providerInfo.auth.key,
             baseUrl: baseUrl,
             headers: headers,
@@ -261,7 +231,7 @@ class ChatService {
         }
         break;
       case ProviderType.anthropic:
-        final provider = AnthropicProvider(
+        provider = AnthropicProvider(
           apiKey: providerInfo.auth.key,
           headers: headers,
         );
@@ -277,7 +247,7 @@ class ChatService {
         );
         break;
       case ProviderType.ollama:
-        final provider = OllamaProvider(baseUrl: baseUrl, headers: headers);
+        provider = OllamaProvider(baseUrl: baseUrl, headers: headers);
         chatModel = provider.createChatModel(
           name: modelName,
           tools: tools,
@@ -288,52 +258,147 @@ class ChatService {
         break;
     }
 
-    try {
-      await for (final resp in chatModel.sendStream(messages)) {
-        final text = resp.output.parts
-            .whereType<dai.TextPart>()
-            .map((p) => p.text)
-            .join();
-        if (text.isNotEmpty) yield text;
-      }
-    } finally {
-      chatModel.dispose();
+    final agent = Agent.forProvider(provider, chatModelName: chatModel.name);
+
+    final result = agent.sendStream(
+      userText,
+      history: history,
+      attachments: files ?? [],
+    );
+    await for (final event in result) {
+      yield event;
     }
   }
 
-  static Future<String> generateReply({
+  static Future<ChatResult> generateReply({
     required String userText,
-    required List<ChatMessage> history,
+    required List<dai.ChatMessage> history,
+    List<Part>? files,
     required ChatProfile profile,
     required String providerName,
     required String modelName,
     List<String>? allowedToolNames,
   }) async {
-    final buffer = StringBuffer();
-    await for (final chunk in generateStream(
-      userText: userText,
-      history: history,
-      profile: profile,
-      providerName: providerName,
-      modelName: modelName,
-      allowedToolNames: allowedToolNames,
-    )) {
-      buffer.write(chunk);
-    }
-    return buffer.toString();
-  }
+    final providerRepo = await LlmProviderInfoStorage.init();
 
-  static dai.ChatMessageRole _mapRole(ChatRole role) {
-    switch (role) {
-      case ChatRole.user:
-        return dai.ChatMessageRole.user;
-      case ChatRole.model:
-        return dai.ChatMessageRole.model;
-      case ChatRole.system:
-        return dai.ChatMessageRole.system;
-      case ChatRole.tool:
-      case ChatRole.developer:
-        return dai.ChatMessageRole.user;
+    final providers = providerRepo.getItems();
+    if (providers.isEmpty) {
+      throw Exception(
+        'No provider configuration found. Please add a provider in Settings.',
+      );
     }
+
+    final providerInfo = providers.firstWhere(
+      (p) => p.name == providerName,
+      orElse: () => throw Exception('Provider "$providerName" not found.'),
+    );
+
+    var mcpTools = await _collectMcpTools(profile);
+    if (allowedToolNames != null && allowedToolNames.isNotEmpty) {
+      mcpTools = mcpTools
+          .where((t) => allowedToolNames.contains(t.name))
+          .toList();
+    }
+    final tools = mcpTools;
+
+    final headers = _stringHeaders(providerInfo.config.headers) ?? const {};
+    final useResponsesApi = providerInfo.config.responsesApi;
+    final baseUrl = _resolveBaseUrl(
+      providerInfo: providerInfo,
+      useResponsesApi: useResponsesApi,
+    );
+    final config = profile.config;
+    final enableThinking = _shouldEnableThinking(
+      config.thinkingLevel,
+      providerInfo.type,
+      useResponsesApi: useResponsesApi,
+    );
+
+    dai.Provider provider;
+    dai.ChatModel chatModel;
+
+    switch (providerInfo.type) {
+      case ProviderType.google:
+        provider = GoogleProvider(
+          apiKey: providerInfo.auth.value,
+          baseUrl: baseUrl,
+          headers: headers,
+        );
+        chatModel = provider.createChatModel(
+          name: modelName,
+          tools: tools,
+          temperature: config.temperature,
+          enableThinking: enableThinking,
+          options: _buildGoogleOptions(config, enableThinking: enableThinking),
+        );
+        break;
+      case ProviderType.openai:
+        if (useResponsesApi) {
+          provider = OpenAIResponsesProvider(
+            apiKey: providerInfo.auth.value,
+            baseUrl: baseUrl,
+            headers: headers,
+          );
+          chatModel = provider.createChatModel(
+            name: modelName,
+            tools: tools,
+            temperature: config.temperature,
+            enableThinking: enableThinking,
+            options: _buildOpenAIResponsesOptions(config),
+          );
+        } else {
+          provider = OpenAIProvider(
+            apiKey: providerInfo.auth.value,
+            baseUrl: baseUrl,
+            headers: headers,
+          );
+          chatModel = provider.createChatModel(
+            name: modelName,
+            tools: tools,
+            temperature: config.temperature,
+            options: _buildOpenAIOptions(config),
+          );
+        }
+        break;
+      case ProviderType.anthropic:
+        provider = AnthropicProvider(
+          apiKey: providerInfo.auth.value,
+          headers: headers,
+        );
+        chatModel = provider.createChatModel(
+          name: modelName,
+          tools: tools,
+          temperature: config.temperature,
+          enableThinking: enableThinking,
+          options: _buildAnthropicOptions(
+            config,
+            enableThinking: enableThinking,
+          ),
+        );
+        break;
+      case ProviderType.ollama:
+        provider = OllamaProvider(
+          baseUrl: baseUrl,
+          apiKey: providerInfo.auth.value,
+          headers: headers,
+        );
+        chatModel = provider.createChatModel(
+          name: modelName,
+          tools: tools,
+          temperature: config.temperature,
+          enableThinking: false,
+          options: _buildOllamaOptions(config),
+        );
+        break;
+    }
+
+    final agent = Agent.forProvider(provider, chatModelName: chatModel.name);
+
+    final response = await agent.send(
+      userText,
+      history: history,
+      attachments: files ?? [],
+    );
+    return response;
   }
 }

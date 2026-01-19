@@ -34,6 +34,7 @@ class EditProfileController {
     if (profile != null) {
       nameController.text = profile.name;
       promptController.text = profile.config.systemPrompt;
+      avatarController.text = profile.icon ?? '';
       enableStream.value = profile.config.enableStream;
 
       if (profile.config.topP != null) {
@@ -81,6 +82,7 @@ class EditProfileController {
     final newProfile = ChatProfile(
       id: existingProfile?.id ?? const Uuid().v4(),
       name: nameController.text,
+      icon: avatarController.text.isNotEmpty ? avatarController.text : null,
       config: LlmChatConfig(
         systemPrompt: promptController.text,
         enableStream: enableStream.value,

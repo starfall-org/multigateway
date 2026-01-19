@@ -54,5 +54,6 @@ class ProfileController {
     selectedProfile.dispose();
     mcpItems.dispose();
     mcpTools.dispose();
+    modelTools.dispose();
   }
 }

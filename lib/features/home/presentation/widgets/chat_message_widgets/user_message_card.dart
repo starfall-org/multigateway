@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:multigateway/app/config/theme.dart';
 import 'package:multigateway/app/translate/tl.dart';
-import 'package:multigateway/core/chat/chat.dart';
+import 'package:multigateway/features/home/services/message_helper.dart';
 import 'package:multigateway/features/home/presentation/widgets/chat_message_widgets/message_attachments_bar.dart';
 /// Widget hiển thị tin nhắn của người dùng
 class UserMessageCard extends StatelessWidget {
-  final ChatMessage message;
+  final StoredMessage message;
   final VoidCallback? onCopy;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;

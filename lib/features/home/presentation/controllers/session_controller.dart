@@ -47,7 +47,7 @@ class SessionController {
       updatedAt: DateTime.now(),
       messages: [],
       providerId: '',
-      modelName: '',
+      modelId: '',
       profileId: '',
     );
     await conversationRepository.saveItem(session);
@@ -98,10 +98,14 @@ class SessionController {
     if (session == null) return '';
     return session.messages
         .map((m) {
-          final who = m.role == ChatRole.user
+          final role = m['role'] as String?;
+          final content = m['content'] as String?;
+          final who = role == 'user'
               ? 'You'
-              : (m.role == ChatRole.model ? (profileName ?? 'AI') : 'System');
-          return '$who: ${m.content}';
+              : (role == 'model' || role == 'assistant'
+                  ? (profileName ?? 'AI')
+                  : 'System');
+          return '$who: ${content ?? ''}';
         })
         .join('\n\n');
   }

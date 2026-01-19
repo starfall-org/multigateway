@@ -4,21 +4,7 @@ import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/llm/models/llm_provider_models.dart';
 import 'package:multigateway/features/home/presentation/widgets/files_action_sheet.dart';
 import 'package:multigateway/features/home/presentation/widgets/input_widgets/attachment_chips.dart';
-
-/// Helper để tạo theme-aware image
-Widget _buildThemeAwareImageForUserInput(BuildContext context, Widget child) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-
-  return ColorFiltered(
-    colorFilter: ColorFilter.mode(
-      isDark
-          ? Colors.white.withValues(alpha: 0.1)
-          : Colors.black.withValues(alpha: 0.1),
-      BlendMode.overlay,
-    ),
-    child: child,
-  );
-}
+import 'package:multigateway/shared/utils/theme_aware_image.dart';
 
 class UserInputArea extends StatefulWidget {
   final TextEditingController controller;
@@ -252,9 +238,8 @@ class _UserInputAreaState extends State<UserInputArea> {
                             if (widget.selectedLlmModel!.icon != null)
                               Padding(
                                 padding: const EdgeInsets.only(right: 8.0),
-                                child: _buildThemeAwareImageForUserInput(
-                                  context,
-                                  Image.asset(
+                                child: ThemeAwareImage(
+                                  child: Image.asset(
                                     widget.selectedLlmModel!.icon!,
                                     width: 20,
                                     height: 20,

@@ -27,11 +27,12 @@ class ProviderResolutionService {
     final providersList = providerRepo.getItems();
 
     if (persistSelection &&
-        currentSession?.providerId != null &&
-        currentSession?.modelName != null) {
+        currentSession != null &&
+        currentSession.providerId.isNotEmpty &&
+        currentSession.modelId.isNotEmpty) {
       return (
-        providerName: currentSession!.providerId,
-        modelName: currentSession.modelName,
+        providerName: currentSession.providerId,
+        modelName: currentSession.modelId,
       );
     }
 

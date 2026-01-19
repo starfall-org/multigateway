@@ -1,3 +1,4 @@
+import 'package:dartantic_ai/dartantic_ai.dart' as dai;
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/chat/chat.dart';
@@ -104,11 +105,15 @@ class MessageController {
       return tl('No user message found to regenerate');
     }
 
-    final userText = msgs[lastUserIndex].content;
+    final userMessage = msgs[lastUserIndex];
+    final userText = ChatLogicUtils.formatFilesForPrompt(
+      userMessage.content ?? '',
+      userMessage.files,
+    );
     final history = MessageHelper.getHistoryUpTo(msgs, lastUserIndex);
 
     // Check if there's an existing model response following the last user message
-    ChatMessage? existingModelMessage;
+    StoredMessage? existingModelMessage;
     if (lastUserIndex < msgs.length - 1) {
       final next = msgs[lastUserIndex + 1];
       if (next.role == ChatRole.model) {
@@ -120,7 +125,7 @@ class MessageController {
 
     try {
       // Preserve the message list up to the user message, plus the model message if we are regenerating it
-      final List<ChatMessage> baseMessages;
+      final List<StoredMessage> baseMessages;
       if (existingModelMessage != null) {
         baseMessages = [...msgs.take(lastUserIndex + 1), existingModelMessage];
       } else {
@@ -134,7 +139,7 @@ class MessageController {
 
       if (enableStream) {
         await MessageStreamService.handleStreamResponse(
-          userText: userText ?? '',
+          userText: userText,
           history: history,
           profile: profile,
           providerName: providerName,
@@ -149,7 +154,7 @@ class MessageController {
         );
       } else {
         await MessageStreamService.handleNonStreamResponse(
-          userText: userText ?? '',
+          userText: userText,
           history: history,
           profile: profile,
           providerName: providerName,
@@ -175,12 +180,12 @@ class MessageController {
     isGenerating.dispose();
   }
 
-  Future<void> copyMessage(BuildContext context, ChatMessage message) async {
+  Future<void> copyMessage(BuildContext context, StoredMessage message) async {
     await UiNavigationService.copyMessageToClipboard(context, message.content);
   }
 
   Future<void> deleteMessage({
-    required ChatMessage message,
+    required StoredMessage message,
     required Conversation currentSession,
     required Function(Conversation) onSessionUpdate,
   }) async {
@@ -193,7 +198,7 @@ class MessageController {
 
   Future<void> openEditMessageDialog(
     BuildContext context,
-    ChatMessage message,
+    StoredMessage message,
     Conversation currentSession,
     Function(Conversation) onSessionUpdate,
     Function(BuildContext) regenerateCallback,
@@ -220,7 +225,7 @@ class MessageController {
   }
 
   Future<void> applyMessageEdit({
-    required ChatMessage original,
+    required StoredMessage original,
     required String newContent,
     required List<String> newAttachments,
     bool resend = false,
@@ -231,10 +236,12 @@ class MessageController {
     final session = MessageHelper.addVersionToMessageInSession(
       currentSession,
       original.id,
-      newContent,
+      dai.ChatMessage.model(
+        newContent,
+        metadata: {'files': newAttachments},
+      ),
       files: newAttachments,
       reasoningContent: original.reasoningContent,
-      toolCall: original.toolCall,
     );
     onSessionUpdate(session);
 
@@ -244,7 +251,7 @@ class MessageController {
   }
 
   Future<void> switchMessageVersion({
-    required ChatMessage message,
+    required StoredMessage message,
     required int index,
     required Conversation currentSession,
     required Function(Conversation) onSessionUpdate,

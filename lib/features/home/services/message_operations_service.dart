@@ -1,5 +1,6 @@
+import 'package:dartantic_ai/dartantic_ai.dart' as dai;
 import 'package:flutter/material.dart';
-import 'package:multigateway/core/chat/chat.dart';
+import 'package:multigateway/core/chat/models/conversation.dart';
 import 'package:multigateway/features/home/presentation/widgets/edit_message_sheet.dart';
 import 'package:multigateway/features/home/services/message_helper.dart';
 
@@ -7,7 +8,7 @@ import 'package:multigateway/features/home/services/message_helper.dart';
 class MessageOperationsService {
   /// Xóa message từ session
   static Future<void> deleteMessage({
-    required ChatMessage message,
+    required StoredMessage message,
     required Conversation currentSession,
     required Function(Conversation) onSessionUpdate,
   }) async {
@@ -21,7 +22,7 @@ class MessageOperationsService {
   /// Mở dialog edit message
   static Future<void> openEditMessageDialog(
     BuildContext context,
-    ChatMessage message,
+    StoredMessage message,
     Conversation currentSession,
     Function(Conversation) onSessionUpdate,
     Function(BuildContext) regenerateCallback,
@@ -49,7 +50,7 @@ class MessageOperationsService {
 
   /// Áp dụng chỉnh sửa message
   static Future<void> _applyMessageEdit({
-    required ChatMessage original,
+    required StoredMessage original,
     required String newContent,
     required List<String> newAttachments,
     bool resend = false,
@@ -60,10 +61,12 @@ class MessageOperationsService {
     final session = MessageHelper.addVersionToMessageInSession(
       currentSession,
       original.id,
-      newContent,
+      dai.ChatMessage.model(
+        newContent,
+        metadata: {'files': newAttachments},
+      ),
       files: newAttachments,
       reasoningContent: original.reasoningContent,
-      toolCall: original.toolCall,
     );
     onSessionUpdate(session);
 
@@ -74,7 +77,7 @@ class MessageOperationsService {
 
   /// Chuyển đổi version của message
   static Future<void> switchMessageVersion({
-    required ChatMessage message,
+    required StoredMessage message,
     required int index,
     required Conversation currentSession,
     required Function(Conversation) onSessionUpdate,
@@ -88,23 +91,23 @@ class MessageOperationsService {
   }
 
   /// Tìm index của user message cuối cùng trong regenerate
-  static int findLastUserMessageIndex(List<ChatMessage> messages) {
+  static int findLastUserMessageIndex(List<StoredMessage> messages) {
     return MessageHelper.findLastUserMessageIndex(messages);
   }
 
   /// Lấy history messages đến một index nhất định
-  static List<ChatMessage> getHistoryUpTo(
-    List<ChatMessage> messages,
+  static List<StoredMessage> getHistoryUpTo(
+    List<StoredMessage> messages,
     int index,
   ) {
     return MessageHelper.getHistoryUpTo(messages, index);
   }
 
   /// Chuẩn bị base messages cho regenerate
-  static List<ChatMessage> prepareBaseMessagesForRegenerate(
-    List<ChatMessage> messages,
+  static List<StoredMessage> prepareBaseMessagesForRegenerate(
+    List<StoredMessage> messages,
     int lastUserIndex,
-    ChatMessage? existingModelMessage,
+    StoredMessage? existingModelMessage,
   ) {
     if (existingModelMessage != null) {
       return [...messages.take(lastUserIndex + 1), existingModelMessage];

@@ -189,7 +189,7 @@ class EditSpeechServiceController {
       provider: selectedType.value == ServiceType.provider
           ? selectedProviderId.value
           : null,
-      modelName: modelNameController.text.isNotEmpty
+      modelId: modelNameController.text.isNotEmpty
           ? modelNameController.text
           : null,
       voiceId: finalVoiceId,
@@ -206,7 +206,7 @@ class EditSpeechServiceController {
       provider: sttSelectedType.value == ServiceType.provider
           ? sttSelectedProviderId.value
           : null,
-      modelName: sttModelNameController.text.isNotEmpty
+      modelId: sttModelNameController.text.isNotEmpty
           ? sttModelNameController.text
           : null,
       settings: const {},

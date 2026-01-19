@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:json_annotation/json_annotation.dart';
-import 'package:multigateway/core/chat/models/message.dart';
 
 part 'conversation.g.dart';
 
@@ -11,11 +10,13 @@ class Conversation {
   final String title;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final List<ChatMessage> messages;
+  final List<Map<String, dynamic>> messages;
   final int? tokenCount;
   final String providerId;
-  final String modelName;
+  final String modelId;
   final String profileId;
+
+  String get modelName => modelId;
 
   Conversation({
     required this.id,
@@ -25,18 +26,17 @@ class Conversation {
     this.messages = const [],
     this.tokenCount,
     required this.providerId,
-    required this.modelName,
+    required this.modelId,
     required this.profileId,
   });
 
   Conversation copyWith({
     String? title,
     DateTime? updatedAt,
-    List<ChatMessage>? messages,
+    List<Map<String, dynamic>>? messages,
     int? tokenCount,
-    bool? isAgentConversation,
     String? providerId,
-    String? modelName,
+    String? modelId,
     String? profileId,
   }) {
     return Conversation(
@@ -47,7 +47,7 @@ class Conversation {
       messages: messages ?? this.messages,
       tokenCount: tokenCount ?? this.tokenCount,
       providerId: providerId ?? this.providerId,
-      modelName: modelName ?? this.modelName,
+      modelId: modelId ?? this.modelId,
       profileId: profileId ?? this.profileId,
     );
   }
