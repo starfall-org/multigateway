@@ -263,14 +263,14 @@ class EditProviderController {
     }
   }
 
-  Future<void> saveProvider(
+  Future<bool> saveProvider(
     BuildContext context, {
     LlmProviderInfo? existingProvider,
   }) async {
     final providerName = name.value.trim();
     if (providerName.isEmpty) {
       context.showErrorSnackBar(tl('Name is required'));
-      return;
+      return false;
     }
 
     final id = existingProvider?.id ?? Uuid().v4();
@@ -335,14 +335,22 @@ class EditProviderController {
       models: selectedModels.value,
     );
 
-    final infoStorage = await LlmProviderInfoStorage.init();
-    final modelsStorage = await LlmProviderModelsStorage.init();
+    try {
+      final infoStorage = await LlmProviderInfoStorage.init();
+      final modelsStorage = await LlmProviderModelsStorage.init();
 
-    await infoStorage.saveItem(providerInfo);
-    await modelsStorage.saveItem(providerModels);
+      await infoStorage.saveItem(providerInfo);
+      await modelsStorage.saveItem(providerModels);
 
-    if (context.mounted) {
-      context.showSuccessSnackBar(tl('Provider saved successfully'));
+      if (context.mounted) {
+        context.showSuccessSnackBar(tl('Provider saved successfully'));
+      }
+      return true;
+    } catch (e) {
+      if (context.mounted) {
+        context.showErrorSnackBar(tl('Failed to save provider: $e'));
+      }
+      return false;
     }
   }
 

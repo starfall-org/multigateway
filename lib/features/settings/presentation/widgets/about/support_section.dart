@@ -5,13 +5,11 @@ import 'package:multigateway/app/translate/tl.dart';
 class SupportSection extends StatelessWidget {
   final VoidCallback onReportBugTap;
   final VoidCallback onRequestFeatureTap;
-  final VoidCallback onHelpCenterTap;
 
   const SupportSection({
     super.key,
     required this.onReportBugTap,
     required this.onRequestFeatureTap,
-    required this.onHelpCenterTap,
   });
 
   @override
@@ -42,13 +40,6 @@ class SupportSection extends StatelessWidget {
                 title: 'Feature Request',
                 subtitle: 'Propose new features',
                 onTap: onRequestFeatureTap,
-              ),
-              const Divider(height: 1),
-              _ControlTile(
-                icon: Icons.help_outline,
-                title: 'Help Center',
-                subtitle: 'Learn how to use the app',
-                onTap: onHelpCenterTap,
               ),
             ],
           ),

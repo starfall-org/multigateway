@@ -63,10 +63,15 @@ class _AddProviderScreenState extends State<AddProviderScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _controller.saveProvider(
-          context,
-          existingProvider: widget.providerInfo,
-        ),
+        onPressed: () async {
+          final saved = await _controller.saveProvider(
+            context,
+            existingProvider: widget.providerInfo,
+          );
+          if (saved && context.mounted) {
+            Navigator.pop(context, true);
+          }
+        },
         label: const Text('Save'),
         icon: const Icon(Icons.save),
       ),

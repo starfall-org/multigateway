@@ -53,6 +53,13 @@ class UserDataController {
         await refreshStats();
       });
 
+  /// Xóa toàn bộ lịch sử trò chuyện
+  Future<void> deleteConversationHistory() => _runAction(() async {
+        final conversationStorage = await ConversationStorage.instance;
+        await conversationStorage.clear();
+        await refreshStats();
+      });
+
   Future<void> cleanCache() => _runAction(() async {
         final translationCache = await TranslationCacheStorage.init();
         await translationCache.clearCache();

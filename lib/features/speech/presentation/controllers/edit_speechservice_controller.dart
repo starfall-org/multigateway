@@ -32,6 +32,12 @@ class EditSpeechServiceController {
   // STT State
   final sttSelectedType = signal<ServiceType>(ServiceType.system);
   final sttSelectedProviderId = signal<String?>(null);
+  final sttSelectedModelId = signal<String?>(null);
+
+  // Models cache
+  final availableModels = signal<List<LlmModel>>([]);
+  final sttAvailableModels = signal<List<LlmModel>>([]);
+  final isLoadingModels = signal<bool>(false);
 
   // Available languages
   final List<String> availableLanguages = [
@@ -110,16 +116,59 @@ class EditSpeechServiceController {
     isLoadingVoices.value = false;
   }
 
+  Future<void> _loadModels(String providerId, bool isTts) async {
+    isLoadingModels.value = true;
+    try {
+      final modelsStorage = await LlmProviderModelsStorage.instance;
+      final providerModels = modelsStorage.getItem(providerId);
+      if (providerModels != null) {
+        final filteredModels = providerModels.models
+            .whereType<LlmModel>()
+            .where((m) {
+              if (isTts) {
+                return m.outputCapabilities.audio == true;
+              } else {
+                return m.inputCapabilities.audio == true;
+              }
+            })
+            .toList();
+
+        if (isTts) {
+          availableModels.value = filteredModels;
+          if (modelNameController.text.isEmpty && filteredModels.isNotEmpty) {
+            modelNameController.text = filteredModels.first.id;
+          }
+        } else {
+          sttAvailableModels.value = filteredModels;
+          if (sttModelNameController.text.isEmpty &&
+              filteredModels.isNotEmpty) {
+            sttModelNameController.text = filteredModels.first.id;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading models: $e');
+    } finally {
+      isLoadingModels.value = false;
+    }
+  }
+
   void setServiceType(ServiceType type) {
     selectedType.value = type;
     selectedVoiceId.value = null;
     availableVoices.value = [];
+    if (type == ServiceType.provider && selectedProviderId.value != null) {
+      _loadModels(selectedProviderId.value!, true);
+    }
   }
 
   void setProvider(String? providerId) {
     selectedProviderId.value = providerId;
     selectedVoiceId.value = null;
     availableVoices.value = [];
+    if (providerId != null) {
+      _loadModels(providerId, true);
+    }
   }
 
   void toggleCustomVoice() {
@@ -151,10 +200,28 @@ class EditSpeechServiceController {
 
   void setSttType(ServiceType type) {
     sttSelectedType.value = type;
+    if (type == ServiceType.provider && sttSelectedProviderId.value != null) {
+      _loadModels(sttSelectedProviderId.value!, false);
+    }
   }
 
   void setSttProvider(String? providerId) {
     sttSelectedProviderId.value = providerId;
+    if (providerId != null) {
+      _loadModels(providerId, false);
+    }
+  }
+
+  void setModelId(String? modelId) {
+    if (modelId != null) {
+      modelNameController.text = modelId;
+    }
+  }
+
+  void setSttModelId(String? modelId) {
+    if (modelId != null) {
+      sttModelNameController.text = modelId;
+    }
   }
 
   Future<bool> saveService(BuildContext context) async {
@@ -242,5 +309,9 @@ class EditSpeechServiceController {
     pitch.dispose();
     sttSelectedType.dispose();
     sttSelectedProviderId.dispose();
+    sttSelectedModelId.dispose();
+    availableModels.dispose();
+    sttAvailableModels.dispose();
+    isLoadingModels.dispose();
   }
 }

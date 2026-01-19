@@ -36,7 +36,7 @@ class ModelsManagementSection extends StatelessWidget {
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.cloud_download),
+                      icon: const Icon(Icons.cloud),
                       tooltip: tl('Fetch Models'),
                       onPressed: () => _showFetchModelsSheet(context),
                     ),
@@ -57,7 +57,7 @@ class ModelsManagementSection extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.model_training,
+                            Icons.token,
                             size: 64,
                             color: Theme.of(
                               context,
@@ -140,10 +140,8 @@ class ModelsManagementSection extends StatelessWidget {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-      builder: (context) => EditModelSheet(
-        controller: controller,
-        modelToEdit: model,
-      ),
+      builder: (context) =>
+          EditModelSheet(controller: controller, modelToEdit: model),
     );
   }
 }

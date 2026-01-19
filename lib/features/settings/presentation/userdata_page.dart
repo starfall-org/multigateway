@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/features/settings/presentation/controllers/userdata_controller.dart';
-import 'package:multigateway/features/settings/presentation/widgets/userdata/data_management_section.dart';
 import 'package:multigateway/features/settings/presentation/widgets/userdata/data_overview_card.dart';
-import 'package:multigateway/features/settings/presentation/widgets/userdata/privacy_controls_section.dart';
-import 'package:multigateway/features/settings/presentation/widgets/userdata/storage_controls_section.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
 import 'package:signals/signals_flutter.dart';
 
@@ -89,20 +86,35 @@ class _DataControlsView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          DataManagementSection(
-                            onBackupTap: () => _handleBackup(context, controller),
-                            onRestoreTap: () => _handleRestore(context, controller),
-                            onExportTap: () => _handleExport(context, controller),
+                          Text(
+                            tl('Data actions'),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                          const SizedBox(height: 24),
-                          PrivacyControlsSection(
-                            onAnonymizeTap: () => _handleAnonymize(context, controller),
-                            onDeleteAllTap: () => _handleDeleteAll(context, controller),
+                          const SizedBox(height: 12),
+                          _ActionTile(
+                            icon: Icons.history_toggle_off,
+                            title: tl('Delete conversation history'),
+                            subtitle: tl('Clear all chats while keeping settings'),
+                            onTap: () =>
+                                _handleDeleteConversations(context, controller),
+                            isDestructive: true,
                           ),
-                          const SizedBox(height: 24),
-                          StorageControlsSection(
-                            onCleanCacheTap: () => _handleCleanCache(context, controller),
-                            onManageFilesTap: () => _handleManageFiles(context, controller),
+                          const Divider(height: 1),
+                          _ActionTile(
+                            icon: Icons.delete_forever,
+                            title: tl('Delete all data'),
+                            subtitle: tl('Remove all chats and cached translations'),
+                            onTap: () => _handleDeleteAll(context, controller),
+                            isDestructive: true,
+                          ),
+                          const Divider(height: 1),
+                          _ActionTile(
+                            icon: Icons.cleaning_services,
+                            title: tl('Clean cache'),
+                            subtitle: tl('Clear temporary cache files'),
+                            onTap: () => _handleCleanCache(context, controller),
                           ),
                         ],
                       ),
@@ -190,41 +202,6 @@ class UserDataControllerProvider extends InheritedWidget {
 }
 
 /// Handlers cho các hành động (giữ Stateless UI, logic nằm ở controller)
-Future<void> _handleBackup(
-  BuildContext context,
-  UserDataController controller,
-) async {
-  await controller.backupData();
-  if (!context.mounted) return;
-  context.showInfoSnackBar(tl('Data backup started'));
-}
-
-Future<void> _handleRestore(
-  BuildContext context,
-  UserDataController controller,
-) async {
-  await controller.restoreData();
-  if (!context.mounted) return;
-  context.showInfoSnackBar(tl('Data restore started'));
-}
-
-Future<void> _handleExport(
-  BuildContext context,
-  UserDataController controller,
-) async {
-  await controller.exportData();
-  if (!context.mounted) return;
-  context.showInfoSnackBar(tl('Data export started'));
-}
-
-Future<void> _handleAnonymize(
-  BuildContext context,
-  UserDataController controller,
-) async {
-  await controller.anonymizeData();
-  if (!context.mounted) return;
-  context.showInfoSnackBar(tl('Data anonymization started'));
-}
 
 Future<void> _handleDeleteAll(
   BuildContext context,
@@ -267,6 +244,45 @@ Future<void> _handleDeleteAll(
   );
 }
 
+Future<void> _handleDeleteConversations(
+  BuildContext context,
+  UserDataController controller,
+) async {
+  showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(tl('Clear conversation history')),
+      content: Text(
+        tl('This will delete all chat sessions. Your settings and providers remain unchanged.'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: Text(tl('Cancel')),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(dialogContext);
+            await controller.deleteConversationHistory();
+            if (!context.mounted) return;
+            context.showSuccessSnackBar(tl('Conversation history cleared'));
+          },
+          style: TextButton.styleFrom(
+            foregroundColor: Theme.of(context).colorScheme.error,
+            side: BorderSide(
+              color:
+                  Theme.of(context).inputDecorationTheme.hintStyle?.color ??
+                      Theme.of(context).colorScheme.outline,
+              width: 1,
+            ),
+          ),
+          child: Text(tl('Delete')),
+        ),
+      ],
+    ),
+  );
+}
+
 Future<void> _handleCleanCache(
   BuildContext context,
   UserDataController controller,
@@ -276,11 +292,36 @@ Future<void> _handleCleanCache(
   context.showSuccessSnackBar(tl('Cache cleaned'));
 }
 
-Future<void> _handleManageFiles(
-  BuildContext context,
-  UserDataController controller,
-) async {
-  await controller.manageFiles();
-  if (!context.mounted) return;
-  context.showInfoSnackBar(tl('File manager opened'));
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.isDestructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool isDestructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final leadingColor = isDestructive ? colorScheme.error : colorScheme.primary;
+    final textColor = isDestructive ? colorScheme.error : null;
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: leadingColor),
+      title: Text(
+        title,
+        style: TextStyle(color: textColor),
+      ),
+      subtitle: Text(subtitle),
+      onTap: onTap,
+    );
+  }
 }

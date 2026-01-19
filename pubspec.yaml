@@ -53,6 +53,7 @@ dependencies:
   translator: ^1.0.4+1
   image_picker: ^1.2.1
   json_annotation: ^4.9.0
+  url_launcher: ^6.3.1
   
   # State management
   signals: ^6.3.0

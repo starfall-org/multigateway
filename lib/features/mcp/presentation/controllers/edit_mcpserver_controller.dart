@@ -1,3 +1,4 @@
+import 'package:dartantic_ai/dartantic_ai.dart';
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
@@ -16,6 +17,9 @@ class EditMcpItemController {
   final selectedTransport = signal<McpProtocol>(McpProtocol.sse);
   final headers = signal<List<HeaderPair>>([]);
   final isLoading = signal<bool>(false);
+  final mcpTools = signal<List<Map<String, dynamic>>>([]);
+  final isLoadingTools = signal<bool>(false);
+  final toolsError = signal<String?>(null);
   String? _editingServerId;
 
   // Getters
@@ -142,6 +146,14 @@ class EditMcpItemController {
 
       await _repository.saveItem(serverInfo);
 
+      // Save tools if fetched
+      if (mcpTools.value.isNotEmpty) {
+        final toolsStorage = await McpToolsListStorage.instance;
+        await toolsStorage.saveItem(
+          McpToolsList(serverInfo.id, serverInfo.name, mcpTools.value),
+        );
+      }
+
       if (context.mounted) {
         if (isEditMode) {
           context.showSuccessSnackBar(tl('MCP server updated successfully'));
@@ -171,6 +183,46 @@ class EditMcpItemController {
     selectedTransport.dispose();
     headers.dispose();
     isLoading.dispose();
+    mcpTools.dispose();
+    isLoadingTools.dispose();
+    toolsError.dispose();
+  }
+
+  Future<void> fetchTools() async {
+    if (selectedTransport.value == McpProtocol.stdio) return;
+    final url = urlController.text.trim();
+    if (url.isEmpty) return;
+
+    isLoadingTools.value = true;
+    toolsError.value = null;
+
+    McpClient? client;
+    try {
+      final uri = Uri.tryParse(url);
+      if (uri == null) throw Exception(tl('Invalid URL'));
+
+      final headersMap = <String, String>{};
+      for (final header in headers.value) {
+        final key = header.key.text.trim();
+        final value = header.value.text.trim();
+        if (key.isNotEmpty && value.isNotEmpty) {
+          headersMap[key] = value;
+        }
+      }
+
+      client = McpClient.remote(
+        nameController.text.trim(),
+        url: uri,
+        headers: headersMap,
+      );
+      final tools = await client.listTools();
+      mcpTools.value = tools.map((t) => t.toJson()).toList();
+    } catch (e) {
+      toolsError.value = e.toString();
+    } finally {
+      client?.dispose();
+      isLoadingTools.value = false;
+    }
   }
 }
 

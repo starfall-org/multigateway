@@ -5,12 +5,14 @@ import 'package:multigateway/app/app.dart';
 import 'package:multigateway/app/storage/appearance_storage.dart';
 import 'package:multigateway/app/storage/translation_cache_storage.dart';
 import 'package:multigateway/shared/utils/icon_builder.dart';
+import 'package:path_provider/path_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Hive (lazy initialization for storage will use this)
-  await Hive.initFlutter();
+  final supportDir = await getApplicationSupportDirectory();
+  await Hive.initFlutter(supportDir.path);
 
   // Load settings
   final appearanceStorage = await AppearanceStorage.instance;
