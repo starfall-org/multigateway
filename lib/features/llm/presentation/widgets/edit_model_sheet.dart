@@ -8,8 +8,14 @@ import 'package:multigateway/shared/widgets/custom_text_field.dart';
 class EditModelSheet extends StatefulWidget {
   final EditProviderController controller;
   final LlmModel? modelToEdit;
+  final ScrollController scrollController;
 
-  const EditModelSheet({super.key, required this.controller, this.modelToEdit});
+  const EditModelSheet({
+    super.key,
+    required this.controller,
+    this.modelToEdit,
+    required this.scrollController,
+  });
 
   @override
   State<EditModelSheet> createState() => _EditModelSheetState();
@@ -81,87 +87,73 @@ class _EditModelSheetState extends State<EditModelSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final isEditing = widget.modelToEdit != null;
 
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+    return Form(
+      key: _formKey,
+      child: SingleChildScrollView(
+        controller: widget.scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      isEditing ? tl('Edit Model') : tl('Add Model'),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                Text(
+                  isEditing ? tl('Edit Model') : tl('Add Model'),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
                 ),
-                const SizedBox(height: 12),
-                CustomTextField(
-                  controller: _idController,
-                  label: tl('Model ID'),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? tl('Required') : null,
-                ),
-                const SizedBox(height: 12),
-                CustomTextField(
-                  controller: _displayNameController,
-                  label: tl('Display Name'),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? tl('Required') : null,
-                ),
-                const SizedBox(height: 12),
-                CustomTextField(
-                  controller: _iconController,
-                  label: tl('Icon (optional)'),
-                ),
-                const SizedBox(height: 16),
-                CapabilitiesSection(
-                  title: tl('Input Capabilities'),
-                  capabilities: _inputCapabilities,
-                  onUpdate: (cap) => setState(() => _inputCapabilities = cap),
-                ),
-                const SizedBox(height: 16),
-                CapabilitiesSection(
-                  title: tl('Output Capabilities'),
-                  capabilities: _outputCapabilities,
-                  onUpdate: (cap) => setState(() => _outputCapabilities = cap),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _save,
-                    icon: const Icon(Icons.save),
-                    label: Text(isEditing ? tl('Save') : tl('Add')),
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 12),
+            CustomTextField(
+              controller: _idController,
+              label: tl('Model ID'),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? tl('Required') : null,
+            ),
+            const SizedBox(height: 12),
+            CustomTextField(
+              controller: _displayNameController,
+              label: tl('Display Name'),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? tl('Required') : null,
+            ),
+            const SizedBox(height: 12),
+            CustomTextField(
+              controller: _iconController,
+              label: tl('Icon (optional)'),
+            ),
+            const SizedBox(height: 16),
+            CapabilitiesSection(
+              title: tl('Input Capabilities'),
+              capabilities: _inputCapabilities,
+              onUpdate: (cap) => setState(() => _inputCapabilities = cap),
+            ),
+            const SizedBox(height: 16),
+            CapabilitiesSection(
+              title: tl('Output Capabilities'),
+              capabilities: _outputCapabilities,
+              onUpdate: (cap) => setState(() => _outputCapabilities = cap),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _save,
+                icon: const Icon(Icons.save),
+                label: Text(isEditing ? tl('Save') : tl('Add')),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/llm/models/llm_provider_info.dart';
 import 'package:multigateway/core/llm/models/llm_provider_models.dart';
+import 'package:multigateway/shared/widgets/bottom_sheet.dart';
 
 class ModelPickerSheet extends StatelessWidget {
   final List<LlmProviderInfo> providers;
@@ -11,6 +12,7 @@ class ModelPickerSheet extends StatelessWidget {
   final String? selectedModelName;
   final Function(String providerName, bool collapsed) onToggleProvider;
   final Function(String providerName, String modelName) onSelectModel;
+  final ScrollController scrollController;
 
   const ModelPickerSheet({
     super.key,
@@ -21,54 +23,36 @@ class ModelPickerSheet extends StatelessWidget {
     this.selectedModelName,
     required this.onToggleProvider,
     required this.onSelectModel,
+    required this.scrollController,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle bar
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.outline.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            // Title
-            Padding(
-              padding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
-              child: Text(
-                tl('Select Model'),
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ),
-            const Divider(),
-            // Models list
-            if (providers.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(tl('No providers configured')),
-              )
-            else
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: providers.map((provider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
+          child: Text(
+            tl('Select Model'),
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+        const Divider(),
+        Expanded(
+          child: ListView(
+            controller: scrollController,
+            children: providers.isEmpty
+                ? [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(tl('No providers configured')),
+                    ),
+                  ]
+                : providers.map((provider) {
                     final collapsed = providerCollapsed[provider.name] ?? false;
                     final models = providerModels[provider.id] ?? [];
                     return Column(
@@ -128,12 +112,10 @@ class ModelPickerSheet extends StatelessWidget {
                       ],
                     );
                   }).toList(),
-                ),
-              ),
-            const SizedBox(height: 8),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 
@@ -148,24 +130,21 @@ class ModelPickerSheet extends StatelessWidget {
     required Function(String providerName, bool collapsed) onToggleProvider,
     required Function(String providerName, String modelName) onSelectModel,
   }) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.6,
-        child: ModelPickerSheet(
-          providers: providers,
-          providerModels: providerModels,
-          providerCollapsed: providerCollapsed,
-          selectedProviderName: selectedProviderName,
-          selectedModelName: selectedModelName,
-          onToggleProvider: onToggleProvider,
-          onSelectModel: onSelectModel,
-        ),
+    CustomBottomSheet.show(
+      context,
+      initialChildSize: 0.6,
+      minChildSize: 0.35,
+      maxChildSize: 0.9,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      builder: (ctx, scrollController) => ModelPickerSheet(
+        providers: providers,
+        providerModels: providerModels,
+        providerCollapsed: providerCollapsed,
+        selectedProviderName: selectedProviderName,
+        selectedModelName: selectedModelName,
+        onToggleProvider: onToggleProvider,
+        onSelectModel: onSelectModel,
+        scrollController: scrollController,
       ),
     );
   }

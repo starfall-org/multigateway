@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:multigateway/features/home/presentation/widgets/agent_avatar_button.dart';
 import 'package:multigateway/features/home/presentation/widgets/chat_controller_provider.dart';
-import 'package:multigateway/features/home/presentation/widgets/chat_screen_widgets/agent_avatar_button.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {

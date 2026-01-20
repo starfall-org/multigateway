@@ -2,27 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/features/home/presentation/controllers/home_controller.dart';
-import 'package:multigateway/features/home/presentation/widgets/quick_actions_widgets/mcp_item_tile.dart';
-import 'package:multigateway/features/home/presentation/widgets/quick_actions_widgets/section_header.dart';
+import 'package:multigateway/features/home/presentation/widgets/mcp_item_tile.dart';
+import 'package:multigateway/features/home/presentation/widgets/section_header.dart';
+import 'package:multigateway/shared/widgets/bottom_sheet.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 class QuickActionsSheet extends StatefulWidget {
   final ChatController controller;
+  final ScrollController scrollController;
 
-  const QuickActionsSheet({super.key, required this.controller});
+  const QuickActionsSheet({
+    super.key,
+    required this.controller,
+    required this.scrollController,
+  });
 
   @override
   State<QuickActionsSheet> createState() => _QuickActionsSheetState();
 
   static void show(BuildContext context, ChatController controller) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    CustomBottomSheet.show(
+      context,
+      initialChildSize: 0.7,
+      minChildSize: 0.45,
+      maxChildSize: 0.9,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      builder: (ctx, scrollController) => QuickActionsSheet(
+        controller: controller,
+        scrollController: scrollController,
       ),
-      builder: (ctx) => QuickActionsSheet(controller: controller),
     );
   }
 }
@@ -103,83 +111,61 @@ class _QuickActionsSheetState extends State<QuickActionsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            tl('Tools Configuration'),
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.outline.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                tl('Tools Configuration'),
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ),
-            const Divider(),
-            Expanded(
-              child: Watch((context) {
-                final selectedProfile =
-                    widget.controller.profile.selectedProfile.value;
-                if (selectedProfile != null) {
-                  _profile = selectedProfile;
-                }
+        const Divider(),
+        Expanded(
+          child: Watch((context) {
+            final selectedProfile =
+                widget.controller.profile.selectedProfile.value;
+            if (selectedProfile != null) {
+              _profile = selectedProfile;
+            }
 
-                final mcpItems = widget.controller.profile.mcpItems.value;
+            final mcpItems = widget.controller.profile.mcpItems.value;
 
-                return ListView(
-                  children: [
-                    const SectionHeader(title: 'MCP Servers'),
-                    if (mcpItems.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Text(
-                          tl('No MCP servers configured.'),
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                      ),
-                    ...mcpItems.map((client) {
-                      return McpItemTile(
-                        client: client,
-                        toolsList: widget.controller.profile.mcpTools.value
-                            .firstWhere((t) => t.id == client.id),
-                        profile: _profile,
-                        onServerToggle: _toggleMcpItem,
-                        onToolToggle: _toggleMcpTool,
-                      );
-                    }),
-                  ],
-                );
-              }),
-            ),
-          ],
+            return ListView(
+              controller: widget.scrollController,
+              children: [
+                const SectionHeader(title: 'MCP Servers'),
+                if (mcpItems.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      tl('No MCP servers configured.'),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                    ),
+                  ),
+                ...mcpItems.map((client) {
+                  return McpItemTile(
+                    client: client,
+                    toolsList: widget.controller.profile.mcpTools.value
+                        .firstWhere((t) => t.id == client.id),
+                    profile: _profile,
+                    onServerToggle: _toggleMcpItem,
+                    onToolToggle: _toggleMcpTool,
+                  );
+                }),
+              ],
+            );
+          }),
         ),
-      ),
+      ],
     );
   }
 }

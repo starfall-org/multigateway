@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/llm/models/llm_provider_info.dart';
 import 'package:multigateway/core/llm/storage/llm_provider_models_storage.dart';
 import 'package:multigateway/features/llm/presentation/controllers/edit_provider_controller.dart';
-import 'package:multigateway/features/llm/presentation/widgets/provider_config/http_config_section.dart';
-import 'package:multigateway/features/llm/presentation/widgets/provider_config/models_management_section.dart';
-import 'package:multigateway/features/llm/presentation/widgets/provider_config/provider_info_section.dart';
+import 'package:multigateway/features/llm/presentation/widgets/http_config_section.dart';
+import 'package:multigateway/features/llm/presentation/widgets/models_management_section.dart';
+import 'package:multigateway/features/llm/presentation/widgets/provider_info_section.dart';
 
 /// Màn hình thêm/chỉnh sửa provider
 class AddProviderScreen extends StatefulWidget {
@@ -62,6 +63,13 @@ class _AddProviderScreenState extends State<AddProviderScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.providerInfo == null
+              ? tl('Add Provider')
+              : tl('Edit Provider'),
+        ),
+      ),
       bottomNavigationBar: BottomAppBar(
         elevation: 0,
         child: TabBar(

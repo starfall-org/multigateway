@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/core/chat/chat.dart';
 import 'package:multigateway/core/profile/profile.dart';
-import 'package:multigateway/features/home/presentation/widgets/drawer_widgets/drawer_footer.dart';
-import 'package:multigateway/features/home/presentation/widgets/drawer_widgets/drawer_header.dart'
+import 'package:multigateway/features/home/presentation/widgets/drawer_footer.dart';
+import 'package:multigateway/features/home/presentation/widgets/drawer_header.dart'
     as drawer_widgets;
-import 'package:multigateway/features/home/presentation/widgets/drawer_widgets/history_list.dart';
+import 'package:multigateway/features/home/presentation/widgets/history_list.dart';
 import 'package:multigateway/shared/widgets/app_sidebar.dart';
 
 /// Drawer hiển thị danh sách conversations

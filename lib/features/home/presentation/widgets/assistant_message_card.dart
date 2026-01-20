@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
-import 'package:multigateway/features/home/presentation/widgets/chat_message_widgets/animated_avatar_border.dart';
-import 'package:multigateway/features/home/presentation/widgets/chat_message_widgets/animated_markdown.dart';
-import 'package:multigateway/features/home/presentation/widgets/chat_message_widgets/message_version_switcher.dart';
-import 'package:multigateway/features/home/presentation/widgets/chat_message_widgets/reasoning_dropdown.dart';
+import 'package:multigateway/features/home/presentation/widgets/animated_avatar_border.dart';
+import 'package:multigateway/features/home/presentation/widgets/animated_markdown.dart';
+import 'package:multigateway/features/home/presentation/widgets/message_version_switcher.dart';
+import 'package:multigateway/features/home/presentation/widgets/reasoning_dropdown.dart';
 import 'package:multigateway/features/home/services/message_helper.dart';
 import 'package:multigateway/shared/utils/theme_aware_image.dart';
 

@@ -97,7 +97,7 @@ abstract class HiveBaseStorage<T> {
       // Ensure map is a Map<String, dynamic>
       final map = raw is String
           ? (json.decode(raw) as Map<String, dynamic>)
-          : Map<String, dynamic>.from(raw as Map);
+          : (json.decode(json.encode(raw)) as Map<String, dynamic>);
 
       return deserializeFromFields(id, map);
     } catch (_) {
@@ -134,10 +134,11 @@ abstract class HiveBaseStorage<T> {
       try {
         final map = raw is String
             ? (json.decode(raw) as Map<String, dynamic>)
-            : Map<String, dynamic>.from(raw as Map);
+            : (json.decode(json.encode(raw)) as Map<String, dynamic>);
         final item = deserializeFromFields(id, map);
         items.add(item);
-      } catch (_) {
+      } catch (e, stack) {
+        debugPrint('Error deserializing item $id in $_boxName: $e\n$stack');
         // skip malformed entry
       }
     }

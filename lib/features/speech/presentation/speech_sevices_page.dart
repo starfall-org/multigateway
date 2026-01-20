@@ -131,8 +131,14 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
                       return ServiceListTile(
                         key: ValueKey(profile.id),
                         service: profile,
-                        onTap: () {
-                          // Edit functionality could be added here
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  EditSpeechServiceScreen(service: profile),
+                            ),
+                          );
                         },
                         onDismissed: () =>
                             _deleteService(profile.id, profile.name),

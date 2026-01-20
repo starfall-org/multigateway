@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:multigateway/app/models/translation_cache_entry.dart';
 import 'package:multigateway/app/storage/translation_cache_storage.dart';
 import 'package:multigateway/app/translate/tl.dart';
@@ -24,6 +25,8 @@ class TranslationManagementController {
   final isLoading = signal<bool>(true);
   final selectedLanguage = signal<String>('en');
   final translations = signal<List<TranslationCacheEntry>>([]);
+  final searchQuery = signal<String>('');
+  final lastError = signal<String?>(null);
 
   final List<LanguageOption> languageOptions = [
     const LanguageOption(code: 'en', label: 'English'),
@@ -39,6 +42,7 @@ class TranslationManagementController {
 
   Future<void> initialize() async {
     isLoading.value = true;
+    lastError.value = null;
     _subscription?.cancel();
     _cacheStorage = await TranslationCacheStorage.init();
     final initialLanguage = await _resolveInitialLanguage();
@@ -84,12 +88,23 @@ class TranslationManagementController {
     _refreshFiltered();
   }
 
+  void updateSearch(String query) {
+    searchQuery.value = query.trim();
+    _refreshFiltered();
+  }
+
   void _refreshFiltered() {
     final current = selectedLanguage.value;
+    final query = searchQuery.value.toLowerCase();
     final filtered = _allEntries
         .where(
           (entry) => _normalizeCode(entry.targetLanguage) == current,
         )
+        .where((entry) {
+          if (query.isEmpty) return true;
+          return entry.originalText.toLowerCase().contains(query) ||
+              entry.translatedText.toLowerCase().contains(query);
+        })
         .toList()
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
@@ -107,6 +122,20 @@ class TranslationManagementController {
     );
     await _cacheStorage!.saveItem(updatedEntry);
     await TranslationManager.instance.reloadCache();
+  }
+
+  Future<bool> saveEditedTranslation(
+    TranslationCacheEntry entry,
+    String newText,
+  ) async {
+    final trimmed = newText.trim();
+    if (trimmed.isEmpty) {
+      lastError.value = tl('Translation cannot be empty');
+      return false;
+    }
+    await updateTranslation(entry, trimmed);
+    lastError.value = null;
+    return true;
   }
 
   String languageLabel(String code) {
@@ -144,7 +173,97 @@ class TranslationManagementController {
   void dispose() {
     isLoading.dispose();
     selectedLanguage.dispose();
+    searchQuery.dispose();
     translations.dispose();
+    lastError.dispose();
     _subscription?.cancel();
+  }
+}
+
+class TranslationManagementControllerScope extends StatefulWidget {
+  final Widget child;
+  const TranslationManagementControllerScope({super.key, required this.child});
+
+  @override
+  State<TranslationManagementControllerScope> createState() =>
+      _TranslationManagementControllerScopeState();
+}
+
+class _TranslationManagementControllerScopeState
+    extends State<TranslationManagementControllerScope> {
+  late final TranslationManagementController _controller;
+  late Future<void> _initFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TranslationManagementController();
+    _initFuture = _controller.initialize();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TranslationManagementControllerProvider(
+      controller: _controller,
+      initializationFuture: _initFuture,
+      child: widget.child,
+      onReinitialize: () {
+        setState(() {
+          _initFuture = _controller.initialize();
+        });
+      },
+    );
+  }
+}
+
+class TranslationManagementControllerProvider extends InheritedWidget {
+  final TranslationManagementController controller;
+  final Future<void> initializationFuture;
+  final VoidCallback onReinitialize;
+
+  const TranslationManagementControllerProvider({
+    super.key,
+    required this.controller,
+    required this.initializationFuture,
+    required this.onReinitialize,
+    required super.child,
+  });
+
+  static TranslationManagementController of(BuildContext context) {
+    final provider = context
+        .dependOnInheritedWidgetOfExactType<
+            TranslationManagementControllerProvider>();
+    assert(provider != null, 'TranslationManagementControllerProvider not found');
+    return provider!.controller;
+  }
+
+  static Future<void> initializationFutureOf(BuildContext context) {
+    final provider = context
+        .dependOnInheritedWidgetOfExactType<
+            TranslationManagementControllerProvider>();
+    assert(provider != null, 'TranslationManagementControllerProvider not found');
+    return provider!.initializationFuture;
+  }
+
+  static void reinitialize(BuildContext context) {
+    final provider = context
+        .dependOnInheritedWidgetOfExactType<
+            TranslationManagementControllerProvider>();
+    assert(provider != null, 'TranslationManagementControllerProvider not found');
+    provider!.onReinitialize();
+  }
+
+  @override
+  bool updateShouldNotify(
+    covariant TranslationManagementControllerProvider oldWidget,
+  ) {
+    return controller != oldWidget.controller ||
+        initializationFuture != oldWidget.initializationFuture;
   }
 }

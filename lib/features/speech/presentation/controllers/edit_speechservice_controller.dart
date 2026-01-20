@@ -53,13 +53,61 @@ class EditSpeechServiceController {
     'es-ES',
   ];
 
-  EditSpeechServiceController() {
-    _initialize();
-  }
+  EditSpeechServiceController();
 
-  Future<void> _initialize() async {
+  Future<void> initialize(SpeechService? service) async {
     await _loadProviders();
-    selectedLanguage.value = _getSystemLocale();
+
+    if (service != null) {
+      _editingServiceId = service.id;
+      nameController.text = service.name;
+
+      // Restore TTS Settings
+      selectedType.value = service.tts.type;
+
+      if (service.tts.type == ServiceType.provider) {
+        selectedProviderId.value = service.tts.provider;
+        // Wait for models to load if needed?
+        // Logic suggests we load models when provider is set.
+        if (service.tts.provider != null) {
+          await _loadModels(service.tts.provider!, true);
+        }
+      }
+
+      if (service.tts.modelId != null) {
+        modelNameController.text = service.tts.modelId!;
+      }
+
+      if (service.tts.voiceId != null) {
+        // Simple heuristic: if it's not a standard voice, it might be custom
+        // But better to check against value.
+        // For simplicity, we just set the value.
+        // If it's custom, user will see it in text field if they toggle custom.
+        selectedVoiceId.value = service.tts.voiceId;
+        customVoiceController.text = service.tts.voiceId!;
+      }
+
+      final settings = service.tts.settings;
+      selectedLanguage.value = settings['language'] as String?;
+      speechRate.value = (settings['speechRate'] as num?)?.toDouble() ?? 1.0;
+      volume.value = (settings['volume'] as num?)?.toDouble() ?? 1.0;
+      pitch.value = (settings['pitch'] as num?)?.toDouble() ?? 1.0;
+
+      // Restore STT Settings
+      sttSelectedType.value = service.stt.type;
+      if (service.stt.type == ServiceType.provider) {
+        sttSelectedProviderId.value = service.stt.provider;
+        if (service.stt.provider != null) {
+          await _loadModels(service.stt.provider!, false);
+        }
+      }
+
+      if (service.stt.modelId != null) {
+        sttModelNameController.text = service.stt.modelId!;
+      }
+    } else {
+      selectedLanguage.value = _getSystemLocale();
+    }
 
     // Listen to text changes
     nameController.addListener(_debouncedSave);

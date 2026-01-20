@@ -27,7 +27,7 @@ Map<String, dynamic> _$SpeechServiceToJson(SpeechService instance) =>
 TextToSpeech _$TextToSpeechFromJson(Map<String, dynamic> json) => TextToSpeech(
       type: $enumDecode(_$ServiceTypeEnumMap, json['type']),
       provider: json['provider'] as String?,
-      modelId: json['model_name'] as String?,
+      modelId: json['model_id'] as String?,
       voiceId: json['voice_id'] as String?,
       settings: json['settings'] as Map<String, dynamic>? ?? const {},
     );
@@ -36,7 +36,7 @@ Map<String, dynamic> _$TextToSpeechToJson(TextToSpeech instance) =>
     <String, dynamic>{
       'type': _$ServiceTypeEnumMap[instance.type]!,
       'provider': instance.provider,
-      'model_name': instance.modelId,
+      'model_id': instance.modelId,
       'voice_id': instance.voiceId,
       'settings': instance.settings,
     };
@@ -49,7 +49,7 @@ const _$ServiceTypeEnumMap = {
 SpeechToText _$SpeechToTextFromJson(Map<String, dynamic> json) => SpeechToText(
       type: $enumDecode(_$ServiceTypeEnumMap, json['type']),
       provider: json['provider'] as String?,
-      modelId: json['model_name'] as String?,
+      modelId: json['model_id'] as String?,
       settings: json['settings'] as Map<String, dynamic>? ?? const {},
     );
 
@@ -57,6 +57,6 @@ Map<String, dynamic> _$SpeechToTextToJson(SpeechToText instance) =>
     <String, dynamic>{
       'type': _$ServiceTypeEnumMap[instance.type]!,
       'provider': instance.provider,
-      'model_name': instance.modelId,
+      'model_id': instance.modelId,
       'settings': instance.settings,
     };

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
 import 'package:multigateway/features/mcp/presentation/controllers/edit_mcpserver_controller.dart';
+import 'package:multigateway/features/mcp/presentation/widgets/mcp_config_tab.dart';
 import 'package:multigateway/features/mcp/presentation/widgets/mcp_controller_provider.dart';
-import 'package:multigateway/features/mcp/presentation/widgets/mcp_tabs/mcp_config_tab.dart';
-import 'package:multigateway/features/mcp/presentation/widgets/mcp_tabs/mcp_tools_tab.dart';
+import 'package:multigateway/features/mcp/presentation/widgets/mcp_tools_tab.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 /// Màn hình thêm/chỉnh sửa MCP server
@@ -45,8 +45,6 @@ class _EditMcpItemscreenState extends State<EditMcpItemscreen>
     return McpControllerProvider(
       controller: _controller,
       child: Watch((context) {
-        final isLoading = _controller.isLoading.value;
-
         return Scaffold(
           appBar: AppBar(
             title: Text(
@@ -55,20 +53,7 @@ class _EditMcpItemscreenState extends State<EditMcpItemscreen>
                   : tl('Edit MCP Server'),
             ),
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _controller.saveServer(context),
-            label: Text(tl('Save')),
-            icon: isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.save),
-          ),
+
           bottomNavigationBar: BottomAppBar(
             elevation: 0,
             child: TabBar(

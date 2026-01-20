@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/features/llm/presentation/widgets/view_profile_dialog.dart';
 import 'package:multigateway/features/profiles/presentation/controllers/edit_profile_controller.dart';
@@ -48,6 +49,11 @@ class _AddProfileScreenState extends State<AddProfileScreen>
       controller: _controller,
       child: Watch((context) {
         return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              widget.profile == null ? tl('Add Profile') : tl('Edit Profile'),
+            ),
+          ),
           floatingActionButton: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [

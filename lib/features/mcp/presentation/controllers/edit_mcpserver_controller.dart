@@ -46,12 +46,13 @@ class EditMcpItemController {
 
       final headersList = <HeaderPair>[];
       serverInfo.headers?.forEach((key, value) {
-        headersList.add(
-          HeaderPair(
-            TextEditingController(text: key),
-            TextEditingController(text: value),
-          ),
-        );
+        final keyController = TextEditingController(text: key);
+        final valueController = TextEditingController(text: value);
+
+        keyController.addListener(_debouncedSave);
+        valueController.addListener(_debouncedSave);
+
+        headersList.add(HeaderPair(keyController, valueController));
       });
       headers.value = headersList;
     } else {
@@ -70,6 +71,9 @@ class EditMcpItemController {
   void _setupAutoSave() {
     _autoSaveCleanup = effect(() {
       selectedTransport.value;
+      // We don't need to watch headers.value for inner text changes,
+      // as individual controllers now trigger save.
+      // But we still watch it for list length changes (add/remove).
       headers.value;
 
       _debouncedSave();
@@ -96,7 +100,13 @@ class EditMcpItemController {
 
   void addHeader() {
     final list = List<HeaderPair>.from(headers.value);
-    list.add(HeaderPair(TextEditingController(), TextEditingController()));
+    final keyController = TextEditingController();
+    final valueController = TextEditingController();
+
+    keyController.addListener(_debouncedSave);
+    valueController.addListener(_debouncedSave);
+
+    list.add(HeaderPair(keyController, valueController));
     headers.value = list;
   }
 

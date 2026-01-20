@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:multigateway/app/translate/tl.dart';
+import 'package:multigateway/core/speech/speech.dart';
 import 'package:multigateway/features/speech/presentation/controllers/edit_speechservice_controller.dart';
 import 'package:multigateway/features/speech/presentation/widgets/stt_configuration_section.dart';
 import 'package:multigateway/features/speech/presentation/widgets/tts_configuration_section.dart';
@@ -6,7 +8,9 @@ import 'package:signals/signals_flutter.dart';
 
 /// Màn hình chỉnh sửa speech service
 class EditSpeechServiceScreen extends StatefulWidget {
-  const EditSpeechServiceScreen({super.key});
+  final SpeechService? service;
+
+  const EditSpeechServiceScreen({super.key, this.service});
 
   @override
   State<EditSpeechServiceScreen> createState() =>
@@ -23,6 +27,7 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _controller = EditSpeechServiceController();
+    _controller.initialize(widget.service);
   }
 
   @override
@@ -35,6 +40,13 @@ class _EditSpeechServiceScreenState extends State<EditSpeechServiceScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.service == null
+              ? tl('Add Speech Service')
+              : tl('Edit Speech Service'),
+        ),
+      ),
       bottomNavigationBar: BottomAppBar(
         elevation: 0,
         child: TabBar(

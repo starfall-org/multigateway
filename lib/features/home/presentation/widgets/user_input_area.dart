@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/llm/models/llm_provider_models.dart';
+import 'package:multigateway/features/home/presentation/widgets/attachment_chips.dart';
 import 'package:multigateway/features/home/presentation/widgets/files_action_sheet.dart';
-import 'package:multigateway/features/home/presentation/widgets/input_widgets/attachment_chips.dart';
 import 'package:multigateway/shared/utils/theme_aware_image.dart';
 
 class UserInputArea extends StatefulWidget {

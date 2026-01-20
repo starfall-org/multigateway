@@ -7,20 +7,19 @@ part of 'conversation.dart';
 // **************************************************************************
 
 Conversation _$ConversationFromJson(Map<String, dynamic> json) => Conversation(
-  id: json['id'] as String,
-  title: json['title'] as String,
-  createdAt: DateTime.parse(json['created_at'] as String),
-  updatedAt: DateTime.parse(json['updated_at'] as String),
-  messages:
-      (json['messages'] as List<dynamic>?)
-          ?.map((e) => e as Map<String, dynamic>)
-          .toList() ??
-      const [],
-  tokenCount: (json['token_count'] as num?)?.toInt(),
-  providerId: json['provider_id'] as String,
-  modelId: json['model_name'] as String,
-  profileId: json['profile_id'] as String,
-);
+      id: json['id'] as String,
+      title: json['title'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+      messages: (json['messages'] as List<dynamic>?)
+              ?.map((e) => e as Map<String, dynamic>)
+              .toList() ??
+          const [],
+      tokenCount: (json['token_count'] as num?)?.toInt(),
+      providerId: json['provider_id'] as String,
+      modelId: json['model_id'] as String,
+      profileId: json['profile_id'] as String,
+    );
 
 Map<String, dynamic> _$ConversationToJson(Conversation instance) =>
     <String, dynamic>{
@@ -31,6 +30,6 @@ Map<String, dynamic> _$ConversationToJson(Conversation instance) =>
       'messages': instance.messages,
       'token_count': instance.tokenCount,
       'provider_id': instance.providerId,
-      'model_name': instance.modelId,
+      'model_id': instance.modelId,
       'profile_id': instance.profileId,
     };

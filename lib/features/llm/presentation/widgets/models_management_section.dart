@@ -5,6 +5,7 @@ import 'package:multigateway/features/llm/presentation/controllers/edit_provider
 import 'package:multigateway/features/llm/presentation/widgets/edit_model_sheet.dart';
 import 'package:multigateway/features/llm/presentation/widgets/fetch_models_sheet.dart';
 import 'package:multigateway/features/llm/presentation/widgets/model_card.dart';
+import 'package:multigateway/shared/widgets/bottom_sheet.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 /// Section quản lý models (LlmProviderModels)
@@ -112,36 +113,48 @@ class ModelsManagementSection extends StatelessWidget {
   void _showFetchModelsSheet(BuildContext context) {
     controller.fetchModels(context);
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
+    CustomBottomSheet.show(
+      context,
       useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-      builder: (context) => FetchModelsSheet(controller: controller),
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      padding: EdgeInsets.zero,
+      builder: (context, scrollController) => FetchModelsSheet(
+        controller: controller,
+        scrollController: scrollController,
+      ),
     );
   }
 
   void _showAddModelSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
+    CustomBottomSheet.show(
+      context,
       useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-      builder: (context) => EditModelSheet(controller: controller),
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      padding: EdgeInsets.zero,
+      builder: (context, scrollController) => EditModelSheet(
+        controller: controller,
+        scrollController: scrollController,
+      ),
     );
   }
 
   void _showEditModelSheet(BuildContext context, LlmModel model) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
+    CustomBottomSheet.show(
+      context,
       useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-      builder: (context) =>
-          EditModelSheet(controller: controller, modelToEdit: model),
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      padding: EdgeInsets.zero,
+      builder: (context, scrollController) => EditModelSheet(
+        controller: controller,
+        modelToEdit: model,
+        scrollController: scrollController,
+      ),
     );
   }
 }

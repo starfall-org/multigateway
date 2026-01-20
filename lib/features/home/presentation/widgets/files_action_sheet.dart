@@ -1,36 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:multigateway/shared/widgets/bottom_sheet.dart';
 
 class FilesActionSheet extends StatelessWidget {
   final VoidCallback onPickAttachments;
   final VoidCallback? onPickFromGallery;
+  final ScrollController scrollController;
 
   const FilesActionSheet({
     super.key,
     required this.onPickAttachments,
     this.onPickFromGallery,
+    required this.scrollController,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SafeArea(
-      top: false,
+    return SingleChildScrollView(
+      controller: scrollController,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle bar
-            Container(
-              width: 48,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            // Options
             Row(
               children: [
                 Expanded(
@@ -105,15 +97,16 @@ class FilesActionSheet extends StatelessWidget {
     required VoidCallback onPickAttachments,
     VoidCallback? onPickFromGallery,
   }) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => FilesActionSheet(
+    CustomBottomSheet.show(
+      context,
+      initialChildSize: 0.32,
+      minChildSize: 0.2,
+      maxChildSize: 0.5,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+      builder: (ctx, scrollController) => FilesActionSheet(
         onPickAttachments: onPickAttachments,
         onPickFromGallery: onPickFromGallery,
+        scrollController: scrollController,
       ),
     );
   }

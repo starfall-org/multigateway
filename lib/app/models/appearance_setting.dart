@@ -212,7 +212,7 @@ class AppearanceSetting {
       colors: ColorSettings.defaults(isDark: isDark),
       font: FontSettings.defaults(),
       superDarkMode: false,
-      dynamicColor: false,
+      dynamicColor: true,
       colorSchemePreset: ColorSchemePreset.blue,
       enableAnimation: true,
     );

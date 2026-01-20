@@ -6,6 +6,7 @@ import 'package:multigateway/features/settings/presentation/widgets/settings_car
 import 'package:multigateway/features/settings/presentation/widgets/settings_section_header.dart';
 import 'package:multigateway/features/settings/presentation/widgets/settings_tile.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
+import 'package:multigateway/shared/widgets/bottom_sheet.dart';
 import 'package:signals/signals_flutter.dart';
 
 class PreferencesPage extends StatefulWidget {
@@ -203,69 +204,51 @@ class _PreferencesPageState extends State<PreferencesPage> {
   }
 
   void _showLanguagePicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.only(top: 8, bottom: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
+    CustomBottomSheet.show(
+      context,
+      padding: const EdgeInsets.only(top: 8, bottom: 24),
+      initialChildSize: 0.55,
+      minChildSize: 0.35,
+      maxChildSize: 0.85,
+      builder: (context, scrollController) => Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              tl('Languages'),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                tl('Languages'),
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            const Divider(),
-            Flexible(
-              child: Watch((context) {
-                return ListView(
-                  shrinkWrap: true,
-                  children: _controller.supportedLanguages.map((language) {
-                    final isSelected =
-                        _controller.selectedLanguage.value == language['code'];
-                    return ListTile(
-                      leading: Text(
-                        language['flag'],
-                        style: const TextStyle(fontSize: 24),
-                      ),
-                      title: Text(language['name'] as String),
-                      trailing: isSelected
-                          ? Icon(
-                              Icons.check_circle,
-                              color: Theme.of(context).colorScheme.primary,
-                            )
-                          : null,
-                      onTap: () {
-                        Navigator.pop(context);
-                        _selectLanguage(language['code']);
-                      },
-                    );
-                  }).toList(),
-                );
-              }),
-            ),
-          ],
-        ),
+          ),
+          const Divider(),
+          Expanded(
+            child: Watch((context) {
+              return ListView(
+                controller: scrollController,
+                children: _controller.supportedLanguages.map((language) {
+                  final isSelected =
+                      _controller.selectedLanguage.value == language['code'];
+                  return ListTile(
+                    leading: Text(
+                      language['flag'],
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                    title: Text(language['name'] as String),
+                    trailing: isSelected
+                        ? Icon(
+                            Icons.check_circle,
+                            color: Theme.of(context).colorScheme.primary,
+                          )
+                        : null,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _selectLanguage(language['code']);
+                    },
+                  );
+                }).toList(),
+              );
+            }),
+          ),
+        ],
       ),
     );
   }
