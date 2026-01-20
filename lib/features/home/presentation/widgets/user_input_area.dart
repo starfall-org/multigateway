@@ -3,7 +3,7 @@ import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/llm/models/llm_provider_models.dart';
 import 'package:multigateway/features/home/presentation/widgets/attachment_chips.dart';
 import 'package:multigateway/features/home/presentation/widgets/files_action_sheet.dart';
-import 'package:multigateway/shared/utils/theme_aware_image.dart';
+import 'package:multigateway/shared/utils/icon_builder.dart';
 
 class UserInputArea extends StatefulWidget {
   final TextEditingController controller;
@@ -140,26 +140,25 @@ class _UserInputAreaState extends State<UserInputArea> {
                       onTap: showStop
                           ? (stopEnabled ? widget.onStopGeneration : null)
                           : canSend
-                              ? () {
-                                  widget.onSubmitted(widget.controller.text);
-                                  _unfocusTextField();
-                                }
-                              : null,
+                          ? () {
+                              widget.onSubmitted(widget.controller.text);
+                              _unfocusTextField();
+                            }
+                          : null,
                       child: Container(
                         margin: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           color: showStop
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .error
-                                  .withValues(alpha: 0.12)
+                              ? Theme.of(
+                                  context,
+                                ).colorScheme.error.withValues(alpha: 0.12)
                               : canSend
-                                  ? Theme.of(
-                                      context,
-                                    ).colorScheme.primary.withValues(alpha: 0.1)
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.surface.withValues(alpha: 0.5),
+                              ? Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.1)
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.surface.withValues(alpha: 0.5),
                           shape: BoxShape.circle,
                         ),
                         child: Padding(
@@ -169,10 +168,10 @@ class _UserInputAreaState extends State<UserInputArea> {
                             color: showStop
                                 ? Theme.of(context).colorScheme.error
                                 : canSend
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(
-                                        context,
-                                      ).iconTheme.color?.withValues(alpha: 0.5),
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(
+                                    context,
+                                  ).iconTheme.color?.withValues(alpha: 0.5),
                             size: 20,
                           ),
                         ),
@@ -287,15 +286,13 @@ class _ModelIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (model?.icon != null && model!.icon!.isNotEmpty) {
-      return ThemeAwareImage(
-        child: Image.asset(
-          model!.icon!,
-          width: 20,
-          height: 20,
-          errorBuilder: (context, error, stackTrace) =>
-              const Icon(Icons.token, size: 20),
-        ),
+    if (model != null) {
+      return SizedBox(
+        width: 20,
+        height: 20,
+        child: model!.icon != null
+            ? buildIcon(model!.icon!)
+            : buildIcon(model!.id),
       );
     }
     return const Icon(Icons.token, size: 20);

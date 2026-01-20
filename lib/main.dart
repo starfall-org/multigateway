@@ -1,18 +1,18 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:multigateway/app/app.dart';
 import 'package:multigateway/app/storage/appearance_storage.dart';
 import 'package:multigateway/app/storage/translation_cache_storage.dart';
-import 'package:multigateway/shared/utils/icon_builder.dart';
-import 'package:path_provider/path_provider.dart';
-
 // Import TypeAdapters
 import 'package:multigateway/core/chat/models/conversation_adapter.dart';
-import 'package:multigateway/core/profile/models/chat_profile_adapter.dart';
 import 'package:multigateway/core/llm/models/llm_provider_info_adapter.dart';
 import 'package:multigateway/core/mcp/models/mcp_adapter.dart';
+import 'package:multigateway/core/profile/models/chat_profile_adapter.dart';
+import 'package:multigateway/shared/utils/icon_builder.dart';
+import 'package:path_provider/path_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

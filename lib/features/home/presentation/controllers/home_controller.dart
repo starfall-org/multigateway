@@ -82,7 +82,30 @@ class ChatController {
 
   void openEndDrawer() => navigator.openEndDrawer();
 
+  Future<bool> _resolveStreamEnabled({
+    required ChatProfile profile,
+    required String providerName,
+  }) async {
+    if (!profile.config.enableStream) return false;
+    if (providerName.isEmpty) return false;
+    try {
+      final providerRepo = await LlmProviderInfoStorage.init();
+      final providers = await providerRepo.getItemsAsync();
+      LlmProviderInfo? providerInfo;
+      for (final p in providers) {
+        if (p.name == providerName) {
+          providerInfo = p;
+          break;
+        }
+      }
+      return providerInfo?.config.supportStream ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> handleSubmitted(String text, BuildContext context) async {
+    await session.ensureCurrentSessionAvailable();
     final currentSession = session.currentSession.value;
     final pendingFiles = attachment.pendingFiles.value;
 
@@ -106,16 +129,25 @@ class ChatController {
     final p =
         profile.selectedProfile.value ??
         ProviderResolutionService.createDefaultProfile();
+    var activeSession = currentSession;
+    if (activeSession.profileId != p.id) {
+      activeSession = activeSession.copyWith(profileId: p.id);
+      session.updateSession(activeSession);
+    }
 
     try {
+      final enableStream = await _resolveStreamEnabled(
+        profile: p,
+        providerName: resolved.providerName,
+      );
       await message.sendMessage(
         text: text,
         attachments: attachments,
-        currentSession: currentSession,
+        currentSession: activeSession,
         profile: p,
         providerName: resolved.providerName,
         modelName: resolved.modelName,
-        enableStream: p.config.enableStream,
+        enableStream: enableStream,
         onSessionUpdate: (s) {
           session.updateSession(s);
           session.saveCurrentSession();
@@ -147,12 +179,17 @@ class ChatController {
         profile.selectedProfile.value ??
         ProviderResolutionService.createDefaultProfile();
 
+    final enableStream = await _resolveStreamEnabled(
+      profile: p,
+      providerName: resolved.providerName,
+    );
+
     final errorMessage = await message.regenerateLast(
       currentSession: currentSession,
       profile: p,
       providerName: resolved.providerName,
       modelName: resolved.modelName,
-      enableStream: p.config.enableStream,
+      enableStream: enableStream,
       onSessionUpdate: (s) {
         session.updateSession(s);
         session.saveCurrentSession();

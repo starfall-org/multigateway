@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:multigateway/core/core.dart';
 import 'package:signals/signals.dart';
 
@@ -11,6 +13,8 @@ class ProfileController {
   final mcpTools = listSignal<McpToolsList>([]);
   final modelTools = listSignal<ModelTool>([]);
 
+  StreamSubscription<ChatProfile>? _selectedProfileSubscription;
+
   ProfileController({
     required this.chatProfileRepository,
     required this.mcpStorage,
@@ -19,6 +23,11 @@ class ProfileController {
   Future<void> loadSelectedProfile() async {
     final profile = await chatProfileRepository.getOrInitSelectedProfile();
     selectedProfile.value = profile;
+    _selectedProfileSubscription ??= chatProfileRepository
+        .selectedProfileStream
+        .listen((profile) {
+      selectedProfile.value = profile;
+    });
   }
 
   Future<void> updateProfile(ChatProfile profile) async {
@@ -51,6 +60,7 @@ class ProfileController {
   }
 
   void dispose() {
+    _selectedProfileSubscription?.cancel();
     selectedProfile.dispose();
     mcpItems.dispose();
     mcpTools.dispose();

@@ -17,6 +17,7 @@ class ChatMessagesDisplay extends StatefulWidget {
   final VoidCallback? onRegenerate;
   final void Function(StoredMessage message)? onRead;
   final void Function(StoredMessage message, int versionIndex)? onSwitchVersion;
+  final String? modelId;
 
   const ChatMessagesDisplay({
     super.key,
@@ -30,6 +31,7 @@ class ChatMessagesDisplay extends StatefulWidget {
     this.onRegenerate,
     this.onRead,
     this.onSwitchVersion,
+    this.modelId,
   });
 
   @override
@@ -126,6 +128,7 @@ class _ChatMessagesDisplayState extends State<ChatMessagesDisplay> {
                     onSwitchVersion: widget.onSwitchVersion != null
                         ? (idx) => widget.onSwitchVersion!(message, idx)
                         : null,
+                    modelId: widget.modelId,
                   );
           },
         ),

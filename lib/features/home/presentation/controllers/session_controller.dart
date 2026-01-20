@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:multigateway/core/chat/chat.dart';
 import 'package:signals/signals.dart';
 import 'package:uuid/uuid.dart';
@@ -9,12 +11,17 @@ class SessionController {
   final currentSession = signal<Conversation?>(null);
   final isLoading = signal<bool>(true);
   final continueLastConversation = signal<bool>(true);
+  StreamSubscription<void>? _storageChangesSub;
+  String? _persistedSessionId;
 
   SessionController({
     required this.conversationRepository,
     bool continueLastConversation = true,
   }) {
     this.continueLastConversation.value = continueLastConversation;
+    _storageChangesSub = conversationRepository.changes.listen((_) {
+      unawaited(_handleStorageChange());
+    });
   }
 
   Future<void> initChat() async {
@@ -25,6 +32,7 @@ class SessionController {
 
     if (continueLastConversation.value && nonEmptySessions.isNotEmpty) {
       currentSession.value = nonEmptySessions.first;
+      _persistedSessionId = nonEmptySessions.first.id;
       isLoading.value = false;
       return;
     }
@@ -45,6 +53,7 @@ class SessionController {
       profileId: '',
     );
     currentSession.value = session;
+    _persistedSessionId = null;
     isLoading.value = false;
   }
 
@@ -58,6 +67,7 @@ class SessionController {
     );
 
     currentSession.value = session;
+    _persistedSessionId = session.id;
     isLoading.value = false;
   }
 
@@ -68,6 +78,7 @@ class SessionController {
     // Chỉ lưu khi có ít nhất 1 tin nhắn
     if (session.messages.isNotEmpty) {
       await conversationRepository.saveItem(session);
+      _persistedSessionId = session.id;
     }
   }
 
@@ -87,6 +98,10 @@ class SessionController {
 
   void clearLoadingState() {
     isLoading.value = false;
+  }
+
+  Future<void> ensureCurrentSessionAvailable() async {
+    await _handleStorageChange();
   }
 
   String getTranscript({String? profileName}) {
@@ -110,5 +125,19 @@ class SessionController {
     currentSession.dispose();
     isLoading.dispose();
     continueLastConversation.dispose();
+    _storageChangesSub?.cancel();
+    _storageChangesSub = null;
+  }
+
+  Future<void> _handleStorageChange() async {
+    final session = currentSession.value;
+    if (session == null) return;
+    if (_persistedSessionId == null || _persistedSessionId != session.id) {
+      return;
+    }
+    final stored = conversationRepository.getItem(session.id);
+    if (stored == null) {
+      await createNewSession();
+    }
   }
 }

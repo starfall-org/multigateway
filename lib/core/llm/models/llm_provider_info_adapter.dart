@@ -64,7 +64,7 @@ class AuthorizationAdapter extends TypeAdapter<Authorization> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    
+
     return Authorization(
       method: fields[0] as AuthMethod,
       key: fields[1] as String?,
@@ -105,7 +105,7 @@ class ConfigurationAdapter extends TypeAdapter<Configuration> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    
+
     return Configuration(
       httpProxy: _decodeMap(fields[0] as String),
       socksProxy: _decodeMap(fields[1] as String),
@@ -144,7 +144,7 @@ class ConfigurationAdapter extends TypeAdapter<Configuration> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 
-  /// Encode Map<String, dynamic> to JSON string
+  // Encode Map<String, dynamic> to JSON string
   String _encodeMap(Map<String, dynamic> map) {
     try {
       return json.encode(map);
@@ -153,7 +153,7 @@ class ConfigurationAdapter extends TypeAdapter<Configuration> {
     }
   }
 
-  /// Decode JSON string back to Map<String, dynamic>
+  // Decode JSON string back to Map<String, dynamic>
   Map<String, dynamic> _decodeMap(String mapJson) {
     try {
       final decoded = json.decode(mapJson);
@@ -177,7 +177,7 @@ class LlmProviderInfoAdapter extends TypeAdapter<LlmProviderInfo> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    
+
     return LlmProviderInfo(
       id: fields[0] as String?,
       name: fields[1] as String?,

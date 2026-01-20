@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/chat/chat.dart';
+import 'package:multigateway/core/profile/profile.dart';
 
 /// Danh sách lịch sử conversations
 class HistoryList extends StatelessWidget {
   final List<Conversation> sessions;
+  final Map<String, ChatProfile> profilesById;
+  final ChatProfile? fallbackProfile;
   final Function(String) onSessionSelected;
   final Function(String) onDeleteSession;
   final Function(String, String) onRenameSession;
@@ -12,6 +15,8 @@ class HistoryList extends StatelessWidget {
   const HistoryList({
     super.key,
     required this.sessions,
+    required this.profilesById,
+    this.fallbackProfile,
     required this.onSessionSelected,
     required this.onDeleteSession,
     required this.onRenameSession,
@@ -49,14 +54,19 @@ class HistoryList extends StatelessWidget {
             ),
           )
         else
-          ...sessions.map(
-            (session) => _HistoryItem(
+          ...sessions.map((session) {
+            final profileName =
+                profilesById[session.profileId]?.name ??
+                fallbackProfile?.name ??
+                tl('Standard Gateway');
+            return _HistoryItem(
               session: session,
+              profileName: profileName,
               onTap: () => onSessionSelected(session.id),
               onDelete: () => onDeleteSession(session.id),
               onRename: (newTitle) => onRenameSession(session.id, newTitle),
-            ),
-          ),
+            );
+          }),
       ],
     );
   }
@@ -65,12 +75,14 @@ class HistoryList extends StatelessWidget {
 /// Item trong history list
 class _HistoryItem extends StatefulWidget {
   final Conversation session;
+  final String profileName;
   final VoidCallback onTap;
   final VoidCallback onDelete;
   final Function(String) onRename;
 
   const _HistoryItem({
     required this.session,
+    required this.profileName,
     required this.onTap,
     required this.onDelete,
     required this.onRename,
@@ -81,13 +93,15 @@ class _HistoryItem extends StatefulWidget {
 }
 
 class _HistoryItemState extends State<_HistoryItem> {
-
   void _showContextMenu(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final RenderBox overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox;
     final RenderBox button = context.findRenderObject() as RenderBox;
-    final Offset position = button.localToGlobal(Offset.zero, ancestor: overlay);
+    final Offset position = button.localToGlobal(
+      Offset.zero,
+      ancestor: overlay,
+    );
 
     showMenu(
       context: context,
@@ -137,8 +151,9 @@ class _HistoryItemState extends State<_HistoryItem> {
   }
 
   void _showRenameDialog(BuildContext context) {
-    final TextEditingController controller =
-        TextEditingController(text: widget.session.title);
+    final TextEditingController controller = TextEditingController(
+      text: widget.session.title,
+    );
 
     showDialog(
       context: context,
@@ -149,9 +164,7 @@ class _HistoryItemState extends State<_HistoryItem> {
           autofocus: true,
           decoration: InputDecoration(
             hintText: tl('Enter new name'),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
           onSubmitted: (value) {
             if (value.trim().isNotEmpty) {
@@ -192,10 +205,10 @@ class _HistoryItemState extends State<_HistoryItem> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            Icon(
-              Icons.history,
-              size: 20,
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            _ProfileAvatar(
+              name: widget.profileName,
+              colorScheme: colorScheme,
+              size: 30,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -251,5 +264,51 @@ class _HistoryItemState extends State<_HistoryItem> {
     } else {
       return tl('${dateTime.day}/${dateTime.month}/${dateTime.year}');
     }
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  final String name;
+  final ColorScheme colorScheme;
+  final double size;
+
+  const _ProfileAvatar({
+    required this.name,
+    required this.colorScheme,
+    required this.size,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = name
+        .split(' ')
+        .map((word) => word.isNotEmpty ? word[0] : '')
+        .take(2)
+        .join()
+        .toUpperCase();
+    final display = initials.isNotEmpty ? initials : '?';
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [colorScheme.tertiary, colorScheme.primary],
+        ),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          display,
+          style: TextStyle(
+            color: colorScheme.onPrimary,
+            fontSize: size * 0.45,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
   }
 }

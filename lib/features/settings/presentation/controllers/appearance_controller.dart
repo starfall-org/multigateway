@@ -31,7 +31,7 @@ class AppearanceController {
       settings.value = AppearanceSetting.defaults(themeMode: ThemeMode.system);
       isInitialized.value = true;
       if (kDebugMode) {
-        print('AppearanceController initialization error: $e');
+        debugPrint('AppearanceController initialization error: $e');
       }
     }
   }

@@ -126,7 +126,7 @@ class MessageStreamService {
       await MessageHelper.handleError(
         e,
         stackTrace,
-        context: context,
+        context: context?.mounted == true ? context : null,
         debugMessage: 'Error in handleStreamResponse',
       );
       rethrow;

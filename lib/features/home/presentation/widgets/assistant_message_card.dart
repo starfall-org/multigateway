@@ -7,6 +7,7 @@ import 'package:multigateway/features/home/presentation/widgets/animated_markdow
 import 'package:multigateway/features/home/presentation/widgets/message_version_switcher.dart';
 import 'package:multigateway/features/home/presentation/widgets/reasoning_dropdown.dart';
 import 'package:multigateway/features/home/services/message_helper.dart';
+import 'package:multigateway/shared/utils/icon_builder.dart';
 import 'package:multigateway/shared/utils/theme_aware_image.dart';
 
 /// Widget hiển thị tin nhắn của trợ lý AI
@@ -18,6 +19,7 @@ class AssistantMessageCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onRegenerate;
   final VoidCallback? onRead;
+  final String? modelId;
   final Function(int)? onSwitchVersion;
 
   const AssistantMessageCard({
@@ -30,6 +32,7 @@ class AssistantMessageCard extends StatelessWidget {
     this.onRegenerate,
     this.onRead,
     this.onSwitchVersion,
+    this.modelId,
   });
 
   @override
@@ -55,9 +58,14 @@ class AssistantMessageCard extends StatelessWidget {
                     AnimatedAvatarBorder(
                       isAnimating: isStreaming,
                       radius: 18,
-                      child: const CircleAvatar(
+                      child: CircleAvatar(
                         radius: 18,
-                        child: Icon(Icons.token, size: 18),
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer,
+                        child: modelId != null
+                            ? buildIcon(modelId!)
+                            : const Icon(Icons.token, size: 18),
                       ),
                     ),
                     if (onRead != null)

@@ -35,6 +35,7 @@ class ChatBody extends StatelessWidget {
                       messages: currentSession!.messages,
                       scrollController: ctrl.scrollController,
                       isGenerating: isGenerating,
+                      modelId: currentSession.modelId,
                       onCopy: (m) => ctrl.copyMessage(context, m),
                       onEdit: (m) => ctrl.openEditMessageDialog(context, m),
                       onDelete: (m) => ctrl.deleteMessage(m),
@@ -68,11 +69,11 @@ class ChatBody extends StatelessWidget {
   void _openModelPicker(BuildContext context, ctrl) {
     ModelPickerSheet.show(
       context,
-      providers: ctrl.model.providers.value,
-      providerCollapsed: ctrl.model.providerCollapsed.value,
-      providerModels: ctrl.model.providerModels.value,
-      selectedProviderName: ctrl.model.selectedProviderName.value,
-      selectedModelName: ctrl.model.selectedModelName.value,
+      providers: ctrl.model.providers,
+      providerCollapsed: ctrl.model.providerCollapsed,
+      providerModels: ctrl.model.providerModels,
+      selectedProviderName: ctrl.model.selectedProviderName,
+      selectedModelName: ctrl.model.selectedModelName,
       onToggleProvider: (providerName, collapsed) {
         ctrl.setProviderCollapsed(providerName, collapsed);
       },
