@@ -47,6 +47,7 @@ class MessageController {
     }
 
     onSessionUpdate(session);
+    onScrollToBottom();
 
     final modelInput = ChatLogicUtils.formatFilesForPrompt(text, attachments);
 
@@ -236,10 +237,7 @@ class MessageController {
     final session = MessageHelper.addVersionToMessageInSession(
       currentSession,
       original.id,
-      dai.ChatMessage.model(
-        newContent,
-        metadata: {'files': newAttachments},
-      ),
+      dai.ChatMessage.model(newContent, metadata: {'files': newAttachments}),
       files: newAttachments,
       reasoningContent: original.reasoningContent,
     );

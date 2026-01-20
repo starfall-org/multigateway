@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -10,9 +11,8 @@ import 'package:path_provider/path_provider.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive (lazy initialization for storage will use this)
-  final supportDir = await getApplicationSupportDirectory();
-  await Hive.initFlutter(supportDir.path);
+  // Initialize Hive with persistent directory and migration
+  await _initHiveWithMigration();
 
   // Load settings
   final appearanceStorage = await AppearanceStorage.instance;
@@ -39,4 +39,42 @@ Future<void> main() async {
   );
 
   runApp(MultiGatewayApp(appearanceStorage: appearanceStorage));
+}
+
+/// Initialize Hive with migration from old support directory to new documents directory
+Future<void> _initHiveWithMigration() async {
+  // Get directories
+  final docsDir = await getApplicationDocumentsDirectory();
+  final supportDir = await getApplicationSupportDirectory();
+
+  final newHivePath = '${docsDir.path}/hive';
+  final oldHivePath = supportDir.path;
+
+  // Check if we need to migrate from old path
+  final oldHiveDir = Directory(oldHivePath);
+  final newHiveDir = Directory(newHivePath);
+
+  if (oldHiveDir.existsSync() && !newHiveDir.existsSync()) {
+    try {
+      // Create new directory
+      await newHiveDir.create(recursive: true);
+
+      // Copy all .hive files from old to new location
+      await for (final entity in oldHiveDir.list()) {
+        if (entity is File && entity.path.endsWith('.hive')) {
+          final fileName = entity.path.split(Platform.pathSeparator).last;
+          final newFile = File('${newHiveDir.path}/$fileName');
+          await entity.copy(newFile.path);
+        }
+      }
+
+      // Clean up old directory after successful migration
+      await oldHiveDir.delete(recursive: true).catchError((e) => oldHiveDir);
+    } catch (e) {
+      // If migration fails, continue with new path anyway
+    }
+  }
+
+  // Initialize Hive with the new persistent path
+  await Hive.initFlutter(newHivePath);
 }

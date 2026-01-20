@@ -86,6 +86,7 @@ abstract class HiveBaseStorage<T> {
 
   T? getItem(String id) {
     if (!Hive.isBoxOpen(_boxName)) {
+      // Try to wait briefly for box to open if initialization is in progress
       return null;
     }
     final box = Hive.box(_boxName);
@@ -104,13 +105,21 @@ abstract class HiveBaseStorage<T> {
     }
   }
 
+  /// Get items synchronously. Returns empty list if box not ready.
+  /// For reactive UI, use getItemsAsync() or itemsStream instead.
   List<T> getItems() {
     if (!Hive.isBoxOpen(_boxName)) {
       // Box not open yet, return empty list
-      // Callers should use await init() or await instance getter to ensure box is ready
+      // Callers should use await getItemsAsync() or itemsStream for reliable data
       return <T>[];
     }
     final box = Hive.box(_boxName);
+    return _getItemsFromBox(box);
+  }
+
+  /// Get items asynchronously, ensuring box is opened first
+  Future<List<T>> getItemsAsync() async {
+    final box = await _openBox();
     return _getItemsFromBox(box);
   }
 

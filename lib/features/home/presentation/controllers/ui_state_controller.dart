@@ -115,7 +115,7 @@ class UiStateController {
   }
 
   Future<void> refreshProviders() async {
-    providers.value = pInfStorage.getItems();
+    providers.value = await pInfStorage.getItemsAsync();
     final newProviderModels = <String, List<LlmModel>>{};
     final newCollapsed = Map<String, bool>.from(providerCollapsed.value);
 
@@ -165,7 +165,7 @@ class UiStateController {
   }
 
   Future<void> loadMcpClients() async {
-    mcpItems.value = mcpStorage.getItems().toList();
+    mcpItems.value = await mcpStorage.getItemsAsync();
   }
 
   Future<List<String>> snapshotEnabledToolNames(ChatProfile profile) async {

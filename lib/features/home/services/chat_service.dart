@@ -151,7 +151,7 @@ class ChatService {
   }) async* {
     final providerRepo = await LlmProviderInfoStorage.init();
 
-    final providers = providerRepo.getItems();
+    final providers = await providerRepo.getItemsAsync();
     if (providers.isEmpty) {
       throw Exception(
         'No provider configuration found. Please add a provider in Settings.',
@@ -281,7 +281,7 @@ class ChatService {
   }) async {
     final providerRepo = await LlmProviderInfoStorage.init();
 
-    final providers = providerRepo.getItems();
+    final providers = await providerRepo.getItemsAsync();
     if (providers.isEmpty) {
       throw Exception(
         'No provider configuration found. Please add a provider in Settings.',

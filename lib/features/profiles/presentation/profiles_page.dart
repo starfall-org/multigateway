@@ -16,39 +16,36 @@ class ChatProfilesScreen extends StatefulWidget {
 
 class _ChatProfilesScreenState extends State<ChatProfilesScreen> {
   List<ChatProfile> _profiles = [];
-  bool _isLoading = true;
   bool _isGridView = true;
-  late ChatProfileStorage _repository;
+  ChatProfileStorage? _repository;
+  Stream<List<ChatProfile>>? _profilesStream;
   String? _selectedProfileId;
 
   @override
   void initState() {
     super.initState();
-    _loadProfiles();
+    _initStorage();
   }
 
-  Future<void> _loadProfiles() async {
+  Future<void> _initStorage() async {
     _repository = await ChatProfileStorage.init();
-    if (!mounted) return;
-    setState(() {
-      _profiles = _repository.getItems();
-      _selectedProfileId = _repository.getSelectedProfileId();
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _profilesStream = _repository!.itemsStream;
+        _selectedProfileId = _repository!.getSelectedProfileId();
+      });
+    }
   }
 
   Future<void> _deleteProfile(String id) async {
-    await _repository.deleteItem(id);
-    _loadProfiles();
+    await _repository?.deleteItem(id);
   }
 
   Future<void> _setAsDefault(ChatProfile profile) async {
-    await _repository.setSelectedProfileId(profile.id);
-    if (!mounted) return;
-    setState(() {
-      _selectedProfileId = profile.id;
-    });
-    context.showSuccessSnackBar(tl('${profile.name} set as default profile'));
+    await _repository?.setSelectedProfileId(profile.id);
+    if (mounted) {
+      context.showSuccessSnackBar(tl('${profile.name} set as default profile'));
+    }
   }
 
   @override
@@ -90,15 +87,12 @@ class _ChatProfilesScreenState extends State<ChatProfilesScreen> {
         actions: [
           AddAction(
             onPressed: () async {
-              final result = await Navigator.push(
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const AddProfileScreen(),
                 ),
               );
-              if (result == true) {
-                _loadProfiles();
-              }
             },
           ),
           ViewToggleAction(
@@ -114,27 +108,42 @@ class _ChatProfilesScreenState extends State<ChatProfilesScreen> {
       body: SafeArea(
         top: false,
         bottom: true,
-        child: _isLoading
+        child: _profilesStream == null
             ? const Center(child: CircularProgressIndicator())
-            : _profiles.isEmpty
-            ? EmptyState(
-                message: 'No AI Profiles found',
-                actionLabel: 'Add AI Profile',
-                onAction: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AddProfileScreen(),
-                    ),
-                  );
-                  if (result == true) {
-                    _loadProfiles();
+            : StreamBuilder<List<ChatProfile>>(
+                stream: _profilesStream,
+                initialData: _profiles,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      snapshot.data == null) {
+                    return const Center(child: CircularProgressIndicator());
                   }
+
+                  final profiles = snapshot.data ?? [];
+                  _profiles = profiles;
+                  // Update selected ID whenever stream emits
+                  _selectedProfileId = _repository?.getSelectedProfileId();
+
+                  if (profiles.isEmpty) {
+                    return EmptyState(
+                      message: 'No AI Profiles found',
+                      actionLabel: 'Add AI Profile',
+                      onAction: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AddProfileScreen(),
+                          ),
+                        );
+                      },
+                    );
+                  }
+
+                  return _isGridView
+                      ? _buildGridView(colorScheme)
+                      : _buildListView(colorScheme);
                 },
-              )
-            : _isGridView
-            ? _buildGridView(colorScheme)
-            : _buildListView(colorScheme),
+              ),
       ),
     );
   }
@@ -364,19 +373,16 @@ class _ChatProfilesScreenState extends State<ChatProfilesScreen> {
       final ChatProfile item = _profiles.removeAt(oldIndex);
       _profiles.insert(newIndex, item);
     });
-    _repository.saveOrder(_profiles.map((e) => e.id).toList());
+    _repository?.saveOrder(_profiles.map((e) => e.id).toList());
   }
 
   void _editProfile(ChatProfile profile) async {
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AddProfileScreen(profile: profile),
       ),
     );
-    if (result == true) {
-      _loadProfiles();
-    }
   }
 
   Future<void> _confirmDelete(ChatProfile profile) async {

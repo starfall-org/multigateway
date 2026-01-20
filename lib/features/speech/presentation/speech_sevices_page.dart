@@ -4,7 +4,6 @@ import 'package:multigateway/core/speech/speech.dart';
 import 'package:multigateway/features/speech/presentation/ui/edit_speech_service_screen.dart';
 import 'package:multigateway/features/speech/presentation/widgets/service_list_tile.dart';
 import 'package:multigateway/shared/widgets/app_snackbar.dart';
-import 'package:signals/signals_flutter.dart';
 
 /// Màn hình quản lý speech services
 class SpeechServicesPage extends StatefulWidget {
@@ -15,48 +14,40 @@ class SpeechServicesPage extends StatefulWidget {
 }
 
 class _SpeechServicesPageState extends State<SpeechServicesPage> {
-  final profiles = signal<List<SpeechService>>([]);
-  final isLoading = signal<bool>(true);
-  late SpeechServiceStorage _repository;
+  SpeechServiceStorage? _repository;
+  Stream<List<SpeechService>>? _serviceStream;
+  List<SpeechService> _services = [];
 
   @override
   void initState() {
     super.initState();
-    _loadServices();
+    _initStorage();
   }
 
-  @override
-  void dispose() {
-    profiles.dispose();
-    isLoading.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadServices() async {
+  Future<void> _initStorage() async {
     _repository = await SpeechServiceStorage.init();
-    // Wait for box to be ready
-    await Future.delayed(const Duration(milliseconds: 100));
-    profiles.value = _repository.getItems();
-    isLoading.value = false;
+    if (mounted) {
+      setState(() {
+        _serviceStream = _repository!.itemsStream;
+        _services = _repository!.getItems();
+      });
+    }
   }
 
   Future<void> _deleteService(String id, String name) async {
-    await _repository.deleteItem(id);
-    _loadServices();
+    await _repository?.deleteItem(id);
     if (mounted) {
       context.showSuccessSnackBar(tl('$name deleted'));
     }
   }
 
   void _onReorder(int oldIndex, int newIndex) {
-    final currentProfiles = List<SpeechService>.from(profiles.value);
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
-    final SpeechService item = currentProfiles.removeAt(oldIndex);
-    currentProfiles.insert(newIndex, item);
-    profiles.value = currentProfiles;
-    _repository.saveOrder(currentProfiles.map((e) => e.id).toList());
+    final SpeechService item = _services.removeAt(oldIndex);
+    _services.insert(newIndex, item);
+    _repository?.saveOrder(_services.map((e) => e.id).toList());
   }
 
   @override
@@ -99,15 +90,12 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () async {
-              final result = await Navigator.push(
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const EditSpeechServiceScreen(),
                 ),
               );
-              if (result == true) {
-                _loadServices();
-              }
             },
           ),
         ],
@@ -115,31 +103,44 @@ class _SpeechServicesPageState extends State<SpeechServicesPage> {
       body: SafeArea(
         top: false,
         bottom: true,
-        child: Watch((context) {
-          if (isLoading.value) {
-            return const Center(child: CircularProgressIndicator());
-          }
+        child: _serviceStream == null
+            ? const Center(child: CircularProgressIndicator())
+            : StreamBuilder<List<SpeechService>>(
+                stream: _serviceStream,
+                initialData: _services,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      snapshot.data == null) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-          if (profiles.value.isEmpty) {
-            return Center(child: Text(tl('No TTS profiles configured')));
-          }
+                  final data = snapshot.data ?? [];
+                  _services = data;
 
-          return ReorderableListView.builder(
-            itemCount: profiles.value.length,
-            onReorder: _onReorder,
-            itemBuilder: (context, index) {
-              final profile = profiles.value[index];
-              return ServiceListTile(
-                key: ValueKey(profile.id),
-                service: profile,
-                onTap: () {
-                  // Edit functionality could be added here
+                  if (data.isEmpty) {
+                    return Center(
+                      child: Text(tl('No TTS profiles configured')),
+                    );
+                  }
+
+                  return ReorderableListView.builder(
+                    itemCount: data.length,
+                    onReorder: _onReorder,
+                    itemBuilder: (context, index) {
+                      final profile = data[index];
+                      return ServiceListTile(
+                        key: ValueKey(profile.id),
+                        service: profile,
+                        onTap: () {
+                          // Edit functionality could be added here
+                        },
+                        onDismissed: () =>
+                            _deleteService(profile.id, profile.name),
+                      );
+                    },
+                  );
                 },
-                onDismissed: () => _deleteService(profile.id, profile.name),
-              );
-            },
-          );
-        }),
+              ),
       ),
     );
   }

@@ -22,26 +22,18 @@ class AiProvidersPage extends StatefulWidget {
 
 class _AiProvidersPageState extends State<AiProvidersPage> {
   List<LlmProviderInfo> _providers = [];
-  bool _isLoading = true;
   bool _isGridView = false;
-  late LlmProviderInfoStorage _repository;
+  LlmProviderInfoStorage? _repository;
+  Stream<List<LlmProviderInfo>>? _providersStream;
 
   @override
   void initState() {
     super.initState();
-    _loadProviders();
+    _initStorage();
   }
 
-  Future<void> _loadProviders() async {
-    // Only prevent if already loading (not the initial state)
-    if (_isLoading && _providers.isNotEmpty) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _initStorage() async {
     try {
-      // Add timeout to prevent infinite loading
       _repository = await LlmProviderInfoStorage.init().timeout(
         const Duration(seconds: 10),
         onTimeout: () {
@@ -51,23 +43,16 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
           );
         },
       );
-
-      final providers = _repository.getItems();
-
       if (mounted) {
         setState(() {
-          _providers = providers;
-          _isLoading = false;
+          _providersStream = _repository!.itemsStream;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
         context.showErrorSnackBar(
           tl('Error loading providers: $e'),
-          onAction: () => _loadProviders(),
+          onAction: () => _initStorage(),
           actionLabel: tl('Retry'),
         );
       }
@@ -76,8 +61,7 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
 
   Future<void> _deleteProvider(String id) async {
     try {
-      await _repository.deleteItem(id);
-      await _loadProviders();
+      await _repository?.deleteItem(id);
       if (mounted) {
         context.showSuccessSnackBar(tl('Provider has been deleted'));
       }
@@ -146,56 +130,64 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
       body: SafeArea(
         top: false,
         bottom: true,
-        child: _isLoading
-            ? Center(child: CircularProgressIndicator())
-            : _providers.isEmpty
-            ? EmptyState(
-                message: tl('No providers found'),
-                actionLabel: tl('Add Provider'),
-                onAction: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AddProviderScreen(),
-                    ),
-                  );
-                  if (result == true) {
-                    _loadProviders();
+        child: _providersStream == null
+            ? const Center(child: CircularProgressIndicator())
+            : StreamBuilder<List<LlmProviderInfo>>(
+                stream: _providersStream,
+                initialData: _providers,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      snapshot.data == null) {
+                    return const Center(child: CircularProgressIndicator());
                   }
-                },
-              )
-            : _isGridView
-            ? ReorderableBuilder(
-                onReorder: _onReorderGrid,
-                builder: (children) => GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  children: children,
-                ),
-                children: _providers.map((provider) {
-                  return ProviderCard(
-                    key: ValueKey(provider.id),
-                    provider: provider,
-                    layout: ItemCardLayout.grid,
-                    onTap: () => _navigateToEdit(provider),
-                    onEdit: () => _navigateToEdit(provider),
-                    onDelete: () => _confirmDelete(provider),
-                  );
-                }).toList(),
-              )
-            : ReorderableListView.builder(
-                itemCount: _providers.length,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                onReorder: _onReorder,
-                itemBuilder: (context, index) {
-                  final provider = _providers[index];
-                  return ProviderTile(
-                    key: ValueKey(provider.id),
-                    provider: provider,
-                    onTap: () => _navigateToEdit(provider),
-                    onEdit: () => _navigateToEdit(provider),
-                    onDelete: () => _confirmDelete(provider),
+
+                  final providers = snapshot.data ?? [];
+                  _providers = providers; // Keep local ref for reordering logic
+
+                  if (providers.isEmpty) {
+                    return EmptyState(
+                      message: tl('No providers found'),
+                      actionLabel: tl('Add Provider'),
+                      onAction: () => _navigateToEdit(null),
+                    );
+                  }
+
+                  if (_isGridView) {
+                    return ReorderableBuilder(
+                      onReorder: _onReorderGrid,
+                      builder: (children) => GridView.count(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        children: children,
+                      ),
+                      children: providers.map((provider) {
+                        return ProviderCard(
+                          key: ValueKey(provider.id),
+                          provider: provider,
+                          layout: ItemCardLayout.grid,
+                          onTap: () => _navigateToEdit(provider),
+                          onEdit: () => _navigateToEdit(provider),
+                          onDelete: () => _confirmDelete(provider),
+                        );
+                      }).toList(),
+                    );
+                  }
+
+                  return ReorderableListView.builder(
+                    itemCount: providers.length,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    onReorder: _onReorder,
+                    itemBuilder: (context, index) {
+                      final provider = providers[index];
+                      return ProviderTile(
+                        key: ValueKey(provider.id),
+                        provider: provider,
+                        onTap: () => _navigateToEdit(provider),
+                        onEdit: () => _navigateToEdit(provider),
+                        onDelete: () => _confirmDelete(provider),
+                      );
+                    },
                   );
                 },
               ),
@@ -204,34 +196,29 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
   }
 
   void _onReorder(int oldIndex, int newIndex) {
-    setState(() {
-      if (oldIndex < newIndex) {
-        newIndex -= 1;
-      }
-      final LlmProviderInfo item = _providers.removeAt(oldIndex);
-      _providers.insert(newIndex, item);
-    });
-    _repository.saveOrder(_providers.map((e) => e.id).toList());
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final LlmProviderInfo item = _providers.removeAt(oldIndex);
+    _providers.insert(newIndex, item);
+    // Optimistic update handled by local list mod, then save calls stream update
+    _repository?.saveOrder(_providers.map((e) => e.id).toList());
   }
 
   void _onReorderGrid(ReorderedListFunction reorderedList) {
     final newOrder = reorderedList(_providers);
-    setState(() {
-      _providers = newOrder.cast<LlmProviderInfo>();
-    });
-    _repository.saveOrder(_providers.map((e) => e.id).toList());
+    _providers = newOrder.cast<LlmProviderInfo>();
+    _repository?.saveOrder(_providers.map((e) => e.id).toList());
   }
 
   Future<void> _navigateToEdit(LlmProviderInfo? provider) async {
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AddProviderScreen(providerInfo: provider),
       ),
     );
-    if (result == true) {
-      _loadProviders();
-    }
+    // No need to reload manually, stream will update
   }
 
   Future<void> _confirmDelete(LlmProviderInfo provider) async {

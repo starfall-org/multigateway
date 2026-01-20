@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/llm/models/llm_provider_models.dart';
 import 'package:multigateway/features/home/presentation/widgets/files_action_sheet.dart';
@@ -51,25 +50,28 @@ class _UserInputAreaState extends State<UserInputArea> {
     super.initState();
     _focusNode = FocusNode();
     _focusNode.addListener(_onFocusChanged);
+    // Listen to controller changes to update button state
+    widget.controller.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
     _focusNode.removeListener(_onFocusChanged);
     _focusNode.dispose();
+    widget.controller.removeListener(_onTextChanged);
     super.dispose();
   }
 
   void _onFocusChanged() {
-    setState(() {});
+    if (mounted) setState(() {});
+  }
+
+  void _onTextChanged() {
+    if (mounted) setState(() {});
   }
 
   void _unfocusTextField() {
-    if (_focusNode.hasFocus) {
-      _focusNode.unfocus();
-      // Ẩn bàn phím ảo bằng cách sử dụng SystemChannels
-      SystemChannels.textInput.invokeMethod('TextInput.hide');
-    }
+    FocusScope.of(context).unfocus();
   }
 
   @override
@@ -109,6 +111,7 @@ class _UserInputAreaState extends State<UserInputArea> {
                   }
                 },
                 child: TextField(
+                  textCapitalization: TextCapitalization.sentences,
                   enabled: !widget.isGenerating,
                   controller: widget.controller,
                   focusNode: _focusNode,

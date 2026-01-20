@@ -47,7 +47,19 @@ class ChatProfileStorage extends HiveBaseStorage<ChatProfile> {
   List<ChatProfile> getItems() {
     final items = super.getItems();
     if (items.isEmpty) {
+      // Don't create default profile synchronously
+      // Let the caller use getItemsAsync() instead
+      return [];
+    }
+    return items;
+  }
+
+  @override
+  Future<List<ChatProfile>> getItemsAsync() async {
+    final items = await super.getItemsAsync();
+    if (items.isEmpty) {
       final defaultProfile = _createDefaultProfile();
+      await saveItem(defaultProfile);
       return [defaultProfile];
     }
     return items;

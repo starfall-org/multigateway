@@ -50,6 +50,8 @@ class MessageStreamService {
     }
 
     onSessionUpdate(session);
+    onScrollToBottom();
+
 
     try {
       // Force the very first chunk to render immediately
@@ -58,14 +60,11 @@ class MessageStreamService {
       String? reasoning;
 
       await for (final chunk in stream) {
-        // Text content from new messages
-        if (chunk.messages.isNotEmpty) {
-          for (final msg in chunk.messages) {
-            // Only accumulate model responses
-            if (msg.role == dai.ChatMessageRole.model) {
-              acc += msg.text;
-            }
-          }
+        // Streaming chunks return content via output property, not messages
+        // Messages are typically only populated at the end or contain tool calls
+        final output = chunk.output.toString();
+        if (output.isNotEmpty) {
+          acc += output;
         }
 
         if (chunk.thinking != null && chunk.thinking!.isNotEmpty) {
@@ -174,6 +173,8 @@ class MessageStreamService {
       }
 
       onSessionUpdate(session);
+      onScrollToBottom();
+
     } catch (e, stackTrace) {
       await MessageHelper.handleError(
         e,

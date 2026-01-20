@@ -24,7 +24,7 @@ class ProviderResolutionService {
     bool persistSelection = false,
   }) async {
     final providerRepo = await LlmProviderInfoStorage.init();
-    final providersList = providerRepo.getItems();
+    final providersList = await providerRepo.getItemsAsync();
 
     if (persistSelection &&
         currentSession != null &&
@@ -59,7 +59,7 @@ class ProviderResolutionService {
     if (providerName.isEmpty || modelName.isEmpty) return false;
     
     final providerRepo = await LlmProviderInfoStorage.init();
-    final providers = providerRepo.getItems();
+    final providers = await providerRepo.getItemsAsync();
     
     return providers.any((p) => p.name == providerName);
   }
@@ -67,6 +67,6 @@ class ProviderResolutionService {
   /// Lấy danh sách provider available
   static Future<List<LlmProviderInfo>> getAvailableProviders() async {
     final providerRepo = await LlmProviderInfoStorage.init();
-    return providerRepo.getItems();
+    return await providerRepo.getItemsAsync();
   }
 }
