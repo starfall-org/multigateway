@@ -76,6 +76,22 @@ class PreferencesStorage extends SharedPreferencesBase<PreferencesSetting> {
     );
   }
 
+  Future<void> setProvidersViewMode(bool isGrid) async {
+    await updatePreferences(
+      currentPreferences.copyWith(showProvidersAsGrid: isGrid),
+    );
+  }
+
+  Future<void> setProfilesViewMode(bool isGrid) async {
+    await updatePreferences(
+      currentPreferences.copyWith(showProfilesAsGrid: isGrid),
+    );
+  }
+
+  Future<void> setMcpViewMode(bool isGrid) async {
+    await updatePreferences(currentPreferences.copyWith(showMcpAsGrid: isGrid));
+  }
+
   Future<void> resetToDefaults() async {
     await updatePreferences(PreferencesSetting.defaults());
   }
@@ -97,7 +113,7 @@ class PreferencesStorage extends SharedPreferencesBase<PreferencesSetting> {
         ),
       ),
     );
-    
+
     // Reload translation cache khi thay đổi ngôn ngữ
     await TranslationManager.instance.reloadCache();
   }
@@ -110,7 +126,7 @@ class PreferencesStorage extends SharedPreferencesBase<PreferencesSetting> {
         ),
       ),
     );
-    
+
     // Reload translation cache khi thay đổi chế độ auto detect
     await TranslationManager.instance.reloadCache();
   }

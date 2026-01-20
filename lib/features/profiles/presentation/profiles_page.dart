@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_reorderable_grid_view/widgets/reorderable_builder.dart';
+import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/profile/profile.dart';
 import 'package:multigateway/features/profiles/presentation/ui/edit_profile_screen.dart';
@@ -30,9 +32,11 @@ class _ChatProfilesScreenState extends State<ChatProfilesScreen> {
   Future<void> _initStorage() async {
     _repository = await ChatProfileStorage.init();
     if (mounted) {
+      final prefs = await PreferencesStorage.instance;
       setState(() {
         _profilesStream = _repository!.itemsStream;
         _selectedProfileId = _repository!.getSelectedProfileId();
+        _isGridView = prefs.currentPreferences.showProfilesAsGrid;
       });
     }
   }
@@ -97,10 +101,12 @@ class _ChatProfilesScreenState extends State<ChatProfilesScreen> {
           ),
           ViewToggleAction(
             isGrid: _isGridView,
-            onChanged: (val) {
+            onChanged: (val) async {
               setState(() {
                 _isGridView = val;
               });
+              final prefs = await PreferencesStorage.instance;
+              await prefs.setProfilesViewMode(val);
             },
           ),
         ],
@@ -149,20 +155,21 @@ class _ChatProfilesScreenState extends State<ChatProfilesScreen> {
   }
 
   Widget _buildGridView(ColorScheme colorScheme) {
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+    return ReorderableBuilder(
+      onReorder: _onReorderGrid,
+      builder: (children) => GridView.count(
+        padding: const EdgeInsets.all(16),
         crossAxisCount: 2,
         childAspectRatio: 0.85,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
+        children: children,
       ),
-      itemCount: _profiles.length,
-      itemBuilder: (context, index) {
-        final profile = _profiles[index];
+      children: _profiles.map((profile) {
         final isDefault = profile.id == _selectedProfileId;
 
         return ItemCard(
+          key: ValueKey(profile.id),
           title: profile.name,
           subtitle: profile.config.systemPrompt,
           icon: Stack(
@@ -197,7 +204,7 @@ class _ChatProfilesScreenState extends State<ChatProfilesScreen> {
           onTap: () => _editProfile(profile),
           menuItems: _buildMenuItems(profile, isDefault),
         );
-      },
+      }).toList(),
     );
   }
 
@@ -270,17 +277,10 @@ class _ChatProfilesScreenState extends State<ChatProfilesScreen> {
                 ),
             ],
           ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) => _handleMenuAction(value, profile),
-                itemBuilder: (context) =>
-                    _buildPopupMenuItems(profile, isDefault),
-              ),
-              const Icon(Icons.drag_handle),
-            ],
+          trailing: PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) => _handleMenuAction(value, profile),
+            itemBuilder: (context) => _buildPopupMenuItems(profile, isDefault),
           ),
           onTap: () => _editProfile(profile),
         );
@@ -366,13 +366,17 @@ class _ChatProfilesScreenState extends State<ChatProfilesScreen> {
   }
 
   void _onReorder(int oldIndex, int newIndex) {
-    setState(() {
-      if (oldIndex < newIndex) {
-        newIndex -= 1;
-      }
-      final ChatProfile item = _profiles.removeAt(oldIndex);
-      _profiles.insert(newIndex, item);
-    });
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final ChatProfile item = _profiles.removeAt(oldIndex);
+    _profiles.insert(newIndex, item);
+    _repository?.saveOrder(_profiles.map((e) => e.id).toList());
+  }
+
+  void _onReorderGrid(ReorderedListFunction reorderedList) {
+    final newOrder = reorderedList(_profiles);
+    _profiles = newOrder.cast<ChatProfile>();
     _repository?.saveOrder(_profiles.map((e) => e.id).toList());
   }
 

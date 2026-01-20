@@ -14,6 +14,9 @@ class PreferencesSetting {
   final bool hasInitializedIcons;
   final LanguageSetting languageSetting;
   final bool continueLastConversation;
+  final bool showProvidersAsGrid;
+  final bool showProfilesAsGrid;
+  final bool showMcpAsGrid;
 
   const PreferencesSetting({
     required this.persistChatSelection,
@@ -24,6 +27,9 @@ class PreferencesSetting {
     this.debugMode = false,
     this.hasInitializedIcons = false,
     this.continueLastConversation = true,
+    this.showProvidersAsGrid = false,
+    this.showProfilesAsGrid = true,
+    this.showMcpAsGrid = false,
   });
 
   factory PreferencesSetting.defaults() {
@@ -36,6 +42,9 @@ class PreferencesSetting {
       debugMode: false,
       hasInitializedIcons: false,
       continueLastConversation: true,
+      showProvidersAsGrid: false,
+      showProfilesAsGrid: true,
+      showMcpAsGrid: false,
     );
   }
 
@@ -48,6 +57,9 @@ class PreferencesSetting {
     bool? debugMode,
     bool? hasInitializedIcons,
     bool? continueLastConversation,
+    bool? showProvidersAsGrid,
+    bool? showProfilesAsGrid,
+    bool? showMcpAsGrid,
   }) {
     return PreferencesSetting(
       persistChatSelection: persistChatSelection ?? this.persistChatSelection,
@@ -59,6 +71,9 @@ class PreferencesSetting {
       hasInitializedIcons: hasInitializedIcons ?? this.hasInitializedIcons,
       continueLastConversation:
           continueLastConversation ?? this.continueLastConversation,
+      showProvidersAsGrid: showProvidersAsGrid ?? this.showProvidersAsGrid,
+      showProfilesAsGrid: showProfilesAsGrid ?? this.showProfilesAsGrid,
+      showMcpAsGrid: showMcpAsGrid ?? this.showMcpAsGrid,
     );
   }
 

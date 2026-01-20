@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:multigateway/core/core.dart';
+import 'package:multigateway/shared/utils/model_tools.dart';
 import 'package:signals/signals_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -26,6 +27,9 @@ class EditProfileController {
   final thinkingLevel = signal<ThinkingLevel>(ThinkingLevel.auto);
   final availableMcpItems = signal<List<McpInfo>>([]);
   final selectedMcpItemIds = signal<List<String>>([]);
+  final activeModelTools = signal<List<ModelTool>>([]);
+  final availableProviders = signal<List<LlmProviderInfo>>([]);
+  final availableModels = signal<Map<String, List<LlmModel>>>({});
   EffectCleanup? _autoSaveCleanup;
   String? _editingProfileId;
 
@@ -59,6 +63,7 @@ class EditProfileController {
       }
 
       selectedMcpItemIds.value = List.from(profile.activeMcpName);
+      activeModelTools.value = List.from(profile.activeModelTools);
       _editingProfileId = profile.id;
     }
 
@@ -69,6 +74,7 @@ class EditProfileController {
     avatarController.addListener(_debouncedSave);
 
     _loadMcpClients();
+    _loadProvidersAndModels();
   }
 
   void _setupAutoSave() {
@@ -87,6 +93,7 @@ class EditProfileController {
       customThinkingTokensValue.value;
       thinkingLevel.value;
       selectedMcpItemIds.value;
+      activeModelTools.value;
 
       _debouncedSave();
     });
@@ -99,6 +106,26 @@ class EditProfileController {
   Future<void> _loadMcpClients() async {
     final mcpRepo = await McpInfoStorage.init();
     availableMcpItems.value = mcpRepo.getItems().cast<McpInfo>();
+  }
+
+  Future<void> _loadProvidersAndModels() async {
+    final providerRepo = await LlmProviderInfoStorage.init();
+    final modelsRepo = await LlmProviderModelsStorage.init();
+
+    final providers = await providerRepo.getItemsAsync();
+    availableProviders.value = providers;
+
+    final modelsMap = <String, List<LlmModel>>{};
+    final modelEntries = await modelsRepo.getItemsAsync();
+    for (final entry in modelEntries) {
+      modelsMap[entry.id] = entry.models.whereType<LlmModel>().toList();
+    }
+
+    for (final provider in providers) {
+      modelsMap.putIfAbsent(provider.id, () => <LlmModel>[]);
+    }
+
+    availableModels.value = modelsMap;
   }
 
   Future<void> saveAgent([
@@ -130,6 +157,7 @@ class EditProfileController {
       activeMcp: selectedMcpItemIds.value
           .map((id) => ActiveMcp(id: id, activeToolNames: []))
           .toList(),
+      activeModelTools: activeModelTools.value,
     );
 
     if (existingProfile != null) {
@@ -147,6 +175,50 @@ class EditProfileController {
       currentList.add(serverId);
     }
     selectedMcpItemIds.value = currentList;
+  }
+
+  bool isModelToolEnabled({
+    required String providerId,
+    required String modelId,
+    required String toolName,
+  }) {
+    return activeModelTools.value.any(
+      (tool) =>
+          tool.providerId == providerId &&
+          tool.modelId == modelId &&
+          toolNameMatches(tool.toolName, toolName),
+    );
+  }
+
+  void toggleModelTool({
+    required String providerId,
+    required String modelId,
+    required String toolName,
+    required bool enabled,
+  }) {
+    final current = List<ModelTool>.from(activeModelTools.value);
+    final index = current.indexWhere(
+      (tool) =>
+          tool.providerId == providerId &&
+          tool.modelId == modelId &&
+          toolNameMatches(tool.toolName, toolName),
+    );
+
+    if (enabled) {
+      if (index == -1) {
+        current.add(
+          ModelTool(
+            providerId: providerId,
+            modelId: modelId,
+            toolName: toolName,
+          ),
+        );
+      }
+    } else if (index != -1) {
+      current.removeAt(index);
+    }
+
+    activeModelTools.value = current;
   }
 
   void toggleStream(bool value) {
@@ -225,6 +297,9 @@ class EditProfileController {
     thinkingLevel.dispose();
     availableMcpItems.dispose();
     selectedMcpItemIds.dispose();
+    activeModelTools.dispose();
+    availableProviders.dispose();
+    availableModels.dispose();
   }
 
   void pickImage(BuildContext context) async {

@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_reorderable_grid_view/widgets/reorderable_builder.dart';
+import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/core.dart';
 import 'package:multigateway/features/mcp/presentation/ui/edit_mcpserver_screen.dart';
@@ -41,8 +43,10 @@ class _McpItemsPageState extends State<McpItemsPage> {
         },
       );
       if (mounted) {
+        final prefs = await PreferencesStorage.instance;
         setState(() {
           _serversStream = _repository!.itemsStream;
+          _isGridView = prefs.currentPreferences.showMcpAsGrid;
         });
       }
     } catch (e) {
@@ -135,10 +139,12 @@ class _McpItemsPageState extends State<McpItemsPage> {
           IconButton(
             icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
             tooltip: _isGridView ? tl('List view') : tl('Grid view'),
-            onPressed: () {
+            onPressed: () async {
               setState(() {
                 _isGridView = !_isGridView;
               });
+              final prefs = await PreferencesStorage.instance;
+              await prefs.setMcpViewMode(_isGridView);
             },
           ),
         ],
@@ -173,26 +179,26 @@ class _McpItemsPageState extends State<McpItemsPage> {
                   }
 
                   if (_isGridView) {
-                    return GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 1.5,
-                          ),
-                      itemCount: servers.length,
-                      itemBuilder: (context, index) {
-                        final server = servers[index];
+                    return ReorderableBuilder(
+                      onReorder: _onReorderGrid,
+                      builder: (children) => GridView.count(
+                        padding: const EdgeInsets.all(16),
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 1.5,
+                        children: children,
+                      ),
+                      children: servers.map((server) {
                         return McpItemCard(
+                          key: ValueKey(server.id),
                           server: server,
                           subtitle: _getServerSubtitle(server),
                           onTap: () => _navigateToEdit(server),
                           onEdit: () => _navigateToEdit(server),
                           onDelete: () => _confirmDelete(server),
                         );
-                      },
+                      }).toList(),
                     );
                   }
 
@@ -224,6 +230,12 @@ class _McpItemsPageState extends State<McpItemsPage> {
     }
     final McpInfo item = _servers.removeAt(oldIndex);
     _servers.insert(newIndex, item);
+    _repository?.saveOrder(_servers.map((e) => e.id).toList());
+  }
+
+  void _onReorderGrid(ReorderedListFunction reorderedList) {
+    final newOrder = reorderedList(_servers);
+    _servers = newOrder.cast<McpInfo>();
     _repository?.saveOrder(_servers.map((e) => e.id).toList());
   }
 

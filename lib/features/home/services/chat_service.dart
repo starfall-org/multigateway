@@ -4,6 +4,7 @@ import 'package:dartantic_ai/dartantic_ai.dart';
 import 'package:dartantic_ai/dartantic_ai.dart' as dai;
 
 import 'package:multigateway/core/core.dart';
+import 'package:multigateway/shared/utils/model_tools.dart';
 
 class ChatService {
   static Uri? _parseUri(String? value) {
@@ -53,17 +54,20 @@ class ChatService {
   }
 
   static OpenAIResponsesChatModelOptions _buildOpenAIResponsesOptions(
-    LlmChatConfig config,
-  ) {
+    LlmChatConfig config, {
+    Set<OpenAIServerSideTool>? serverSideTools,
+  }) {
     return OpenAIResponsesChatModelOptions(
       topP: config.topP,
       maxOutputTokens: config.maxTokens,
+      serverSideTools: serverSideTools,
     );
   }
 
   static AnthropicChatOptions _buildAnthropicOptions(
     LlmChatConfig config, {
     required bool enableThinking,
+    Set<AnthropicServerSideTool>? serverSideTools,
   }) {
     return AnthropicChatOptions(
       temperature: config.temperature,
@@ -71,18 +75,21 @@ class ChatService {
       topK: config.topK?.round(),
       maxTokens: config.maxTokens,
       thinkingBudgetTokens: enableThinking ? config.customThinkingTokens : null,
+      serverSideTools: serverSideTools,
     );
   }
 
   static GoogleChatModelOptions _buildGoogleOptions(
     LlmChatConfig config, {
     required bool enableThinking,
+    Set<GoogleServerSideTool>? serverSideTools,
   }) {
     return GoogleChatModelOptions(
       topP: config.topP,
       topK: config.topK?.round(),
       maxOutputTokens: config.maxTokens,
       thinkingBudgetTokens: enableThinking ? config.customThinkingTokens : null,
+      serverSideTools: serverSideTools,
     );
   }
 
@@ -140,6 +147,62 @@ class ChatService {
     return tools;
   }
 
+  static List<ModelTool> _filterActiveModelTools({
+    required ChatProfile profile,
+    required String providerId,
+    required String modelId,
+  }) {
+    return profile.activeModelTools
+        .where(
+          (tool) => tool.providerId == providerId && tool.modelId == modelId,
+        )
+        .toList();
+  }
+
+  static Set<OpenAIServerSideTool> _mapOpenAiServerSideTools(
+    List<ModelTool> tools,
+  ) {
+    final result = <OpenAIServerSideTool>{};
+    for (final tool in tools) {
+      for (final candidate in OpenAIServerSideTool.values) {
+        if (toolNameMatches(tool.toolName, candidate.name) ||
+            toolNameMatches(tool.toolName, candidate.apiName)) {
+          result.add(candidate);
+        }
+      }
+    }
+    return result;
+  }
+
+  static Set<GoogleServerSideTool> _mapGoogleServerSideTools(
+    List<ModelTool> tools,
+  ) {
+    final result = <GoogleServerSideTool>{};
+    for (final tool in tools) {
+      for (final candidate in GoogleServerSideTool.values) {
+        if (toolNameMatches(tool.toolName, candidate.name)) {
+          result.add(candidate);
+        }
+      }
+    }
+    return result;
+  }
+
+  static Set<AnthropicServerSideTool> _mapAnthropicServerSideTools(
+    List<ModelTool> tools,
+  ) {
+    final result = <AnthropicServerSideTool>{};
+    for (final tool in tools) {
+      for (final candidate in AnthropicServerSideTool.values) {
+        if (toolNameMatches(tool.toolName, candidate.name) ||
+            toolNameMatches(tool.toolName, candidate.apiName)) {
+          result.add(candidate);
+        }
+      }
+    }
+    return result;
+  }
+
   static Stream<ChatResult> generateStream({
     required String userText,
     required List<dai.ChatMessage> history,
@@ -184,6 +247,11 @@ class ChatService {
       providerInfo.type,
       useResponsesApi: useResponsesApi,
     );
+    final activeModelTools = _filterActiveModelTools(
+      profile: profile,
+      providerId: providerInfo.id,
+      modelId: modelName,
+    );
 
     Provider provider;
 
@@ -194,12 +262,18 @@ class ChatService {
           baseUrl: baseUrl,
           headers: headers,
         );
+        final serverSideTools = _mapGoogleServerSideTools(activeModelTools);
         chatModel = provider.createChatModel(
           name: modelName,
           tools: tools,
           temperature: config.temperature,
           enableThinking: enableThinking,
-          options: _buildGoogleOptions(config, enableThinking: enableThinking),
+          options: _buildGoogleOptions(
+            config,
+            enableThinking: enableThinking,
+            serverSideTools:
+                serverSideTools.isNotEmpty ? serverSideTools : null,
+          ),
         );
         break;
       case ProviderType.openai:
@@ -209,12 +283,17 @@ class ChatService {
             baseUrl: baseUrl,
             headers: headers,
           );
+          final serverSideTools = _mapOpenAiServerSideTools(activeModelTools);
           chatModel = provider.createChatModel(
             name: modelName,
             tools: tools,
             temperature: config.temperature,
             enableThinking: enableThinking,
-            options: _buildOpenAIResponsesOptions(config),
+            options: _buildOpenAIResponsesOptions(
+              config,
+              serverSideTools:
+                  serverSideTools.isNotEmpty ? serverSideTools : null,
+            ),
           );
         } else {
           provider = OpenAIProvider(
@@ -235,6 +314,8 @@ class ChatService {
           apiKey: providerInfo.auth.key,
           headers: headers,
         );
+        final serverSideTools =
+            _mapAnthropicServerSideTools(activeModelTools);
         chatModel = provider.createChatModel(
           name: modelName,
           tools: tools,
@@ -243,6 +324,8 @@ class ChatService {
           options: _buildAnthropicOptions(
             config,
             enableThinking: enableThinking,
+            serverSideTools:
+                serverSideTools.isNotEmpty ? serverSideTools : null,
           ),
         );
         break;
@@ -313,6 +396,11 @@ class ChatService {
       providerInfo.type,
       useResponsesApi: useResponsesApi,
     );
+    final activeModelTools = _filterActiveModelTools(
+      profile: profile,
+      providerId: providerInfo.id,
+      modelId: modelName,
+    );
 
     dai.Provider provider;
     dai.ChatModel chatModel;
@@ -324,12 +412,18 @@ class ChatService {
           baseUrl: baseUrl,
           headers: headers,
         );
+        final serverSideTools = _mapGoogleServerSideTools(activeModelTools);
         chatModel = provider.createChatModel(
           name: modelName,
           tools: tools,
           temperature: config.temperature,
           enableThinking: enableThinking,
-          options: _buildGoogleOptions(config, enableThinking: enableThinking),
+          options: _buildGoogleOptions(
+            config,
+            enableThinking: enableThinking,
+            serverSideTools:
+                serverSideTools.isNotEmpty ? serverSideTools : null,
+          ),
         );
         break;
       case ProviderType.openai:
@@ -339,12 +433,17 @@ class ChatService {
             baseUrl: baseUrl,
             headers: headers,
           );
+          final serverSideTools = _mapOpenAiServerSideTools(activeModelTools);
           chatModel = provider.createChatModel(
             name: modelName,
             tools: tools,
             temperature: config.temperature,
             enableThinking: enableThinking,
-            options: _buildOpenAIResponsesOptions(config),
+            options: _buildOpenAIResponsesOptions(
+              config,
+              serverSideTools:
+                  serverSideTools.isNotEmpty ? serverSideTools : null,
+            ),
           );
         } else {
           provider = OpenAIProvider(
@@ -365,6 +464,8 @@ class ChatService {
           apiKey: providerInfo.auth.value,
           headers: headers,
         );
+        final serverSideTools =
+            _mapAnthropicServerSideTools(activeModelTools);
         chatModel = provider.createChatModel(
           name: modelName,
           tools: tools,
@@ -373,6 +474,8 @@ class ChatService {
           options: _buildAnthropicOptions(
             config,
             enableThinking: enableThinking,
+            serverSideTools:
+                serverSideTools.isNotEmpty ? serverSideTools : null,
           ),
         );
         break;

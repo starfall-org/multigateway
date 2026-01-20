@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_reorderable_grid_view/widgets/reorderable_builder.dart';
+import 'package:multigateway/app/storage/preferences_storage.dart';
 import 'package:multigateway/app/translate/tl.dart';
 import 'package:multigateway/core/llm/models/llm_provider_info.dart';
 import 'package:multigateway/core/llm/storage/llm_provider_info_storage.dart';
@@ -44,8 +45,10 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
         },
       );
       if (mounted) {
+        final prefs = await PreferencesStorage.instance;
         setState(() {
           _providersStream = _repository!.itemsStream;
+          _isGridView = prefs.currentPreferences.showProvidersAsGrid;
         });
       }
     } catch (e) {
@@ -119,10 +122,12 @@ class _AiProvidersPageState extends State<AiProvidersPage> {
           IconButton(
             icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
             tooltip: _isGridView ? tl('List View') : tl('Grid View'),
-            onPressed: () {
+            onPressed: () async {
               setState(() {
                 _isGridView = !_isGridView;
               });
+              final prefs = await PreferencesStorage.instance;
+              await prefs.setProvidersViewMode(_isGridView);
             },
           ),
         ],

@@ -29,7 +29,8 @@ TextToSpeech _$TextToSpeechFromJson(Map<String, dynamic> json) => TextToSpeech(
       provider: json['provider'] as String?,
       modelId: json['model_id'] as String?,
       voiceId: json['voice_id'] as String?,
-      settings: json['settings'] as Map<String, dynamic>? ?? const {},
+      settings: json['settings'] as Map<String, dynamic>? ??
+          const <String, dynamic>{},
     );
 
 Map<String, dynamic> _$TextToSpeechToJson(TextToSpeech instance) =>
@@ -50,7 +51,8 @@ SpeechToText _$SpeechToTextFromJson(Map<String, dynamic> json) => SpeechToText(
       type: $enumDecode(_$ServiceTypeEnumMap, json['type']),
       provider: json['provider'] as String?,
       modelId: json['model_id'] as String?,
-      settings: json['settings'] as Map<String, dynamic>? ?? const {},
+      settings: json['settings'] as Map<String, dynamic>? ??
+          const <String, dynamic>{},
     );
 
 Map<String, dynamic> _$SpeechToTextToJson(SpeechToText instance) =>

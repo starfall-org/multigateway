@@ -19,6 +19,9 @@ PreferencesSetting _$PreferencesSettingFromJson(Map<String, dynamic> json) =>
       hasInitializedIcons: json['has_initialized_icons'] as bool? ?? false,
       continueLastConversation:
           json['continue_last_conversation'] as bool? ?? true,
+      showProvidersAsGrid: json['show_providers_as_grid'] as bool? ?? false,
+      showProfilesAsGrid: json['show_profiles_as_grid'] as bool? ?? true,
+      showMcpAsGrid: json['show_mcp_as_grid'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$PreferencesSettingToJson(PreferencesSetting instance) =>
@@ -31,6 +34,9 @@ Map<String, dynamic> _$PreferencesSettingToJson(PreferencesSetting instance) =>
       'has_initialized_icons': instance.hasInitializedIcons,
       'language_setting': instance.languageSetting.toJson(),
       'continue_last_conversation': instance.continueLastConversation,
+      'show_providers_as_grid': instance.showProvidersAsGrid,
+      'show_profiles_as_grid': instance.showProfilesAsGrid,
+      'show_mcp_as_grid': instance.showMcpAsGrid,
     };
 
 VibrationSettings _$VibrationSettingsFromJson(Map<String, dynamic> json) =>

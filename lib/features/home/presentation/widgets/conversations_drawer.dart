@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:multigateway/core/chat/chat.dart';
 import 'package:multigateway/core/profile/profile.dart';
+import 'package:multigateway/features/home/presentation/widgets/active_profile_section.dart';
 import 'package:multigateway/features/home/presentation/widgets/drawer_footer.dart';
 import 'package:multigateway/features/home/presentation/widgets/drawer_header.dart'
     as drawer_widgets;
@@ -110,6 +111,10 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
       backgroundColor: colorScheme.surface,
       child: Column(
         children: [
+          ActiveProfileSection(
+            selectedProfile: widget.selectedProfile,
+            onAgentChanged: widget.onAgentChanged,
+          ),
           drawer_widgets.DrawerHeader(
             searchController: _searchController,
             onNewChat: widget.onNewChat,
@@ -129,10 +134,7 @@ class _ConversationsDrawerState extends State<ConversationsDrawer> {
               ],
             ),
           ),
-          DrawerFooter(
-            selectedProfile: widget.selectedProfile,
-            onAgentChanged: widget.onAgentChanged,
-          ),
+          const DrawerFooter(),
         ],
       ),
     );
