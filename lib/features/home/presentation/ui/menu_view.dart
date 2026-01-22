@@ -21,7 +21,7 @@ class MenuView extends StatelessWidget {
     return AppSidebar(
       position: SidebarPosition.right,
       width: screenWidth,
-      backgroundColor: colorScheme.surface,
+      backgroundColor: colorScheme.background,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
@@ -32,7 +32,7 @@ class MenuView extends StatelessWidget {
                 height: 60,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: colorScheme.surface,
+                  color: colorScheme.background,
                   border: Border(
                     bottom: BorderSide(
                       color: colorScheme.outline.withValues(alpha: 0.1),

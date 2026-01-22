@@ -140,6 +140,7 @@ class _ChatPageState extends State<ChatPage>
 
         return Scaffold(
           key: _scaffoldKey,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: ChatAppBar(
             onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
             onOpenEndDrawer: () => _scaffoldKey.currentState?.openEndDrawer(),

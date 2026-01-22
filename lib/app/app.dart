@@ -280,6 +280,11 @@ class MultiGatewayApp extends StatelessWidget {
             ColorScheme scheme,
             Color mainBg,
           ) {
+            // AMOLED: Nếu đang ở Dark Mode và nền chính được thiết lập là đen tuyệt đối (#000000),
+            // ta cũng dùng đen cho vùng phụ để đảm bảo tính nhất quán của màn hình AMOLED.
+            if (br == Brightness.dark && mainBg.value == 0xFF000000) {
+              return Colors.black;
+            }
             return scheme.secondaryContainer;
           }
 

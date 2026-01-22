@@ -1,3 +1,9 @@
+# 🛑 PROJECT DISCONTINUED INDEFINITELY
+
+> **Warning: This project is no longer maintained and has been suspended indefinitely.**
+
+---
+
 # MultiGateway
 
 MultiGateway is a versatile LLM client application that provides a unified interface for interacting with multiple LLM providers, offering seamless integration across various AI services.
