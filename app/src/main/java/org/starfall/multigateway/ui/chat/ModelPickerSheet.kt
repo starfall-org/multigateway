@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.starfall.multigateway.data.model.ModelConfiguration
@@ -61,62 +62,66 @@ fun ModelPickerSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight(0.85f)
+                .imePadding()
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Select Model",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                )
+                item(key = "model-picker-controls") {
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Select Model",
+                                modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                            )
 
-                TextButton(onClick = { showCustomInput = !showCustomInput }) {
-                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(if (showCustomInput) "Hide Custom" else "Custom Model")
-                }
-            }
-
-            if (showCustomInput) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = customModelInput,
-                        onValueChange = { customModelInput = it },
-                        placeholder = { Text("e.g. smollm2:135m") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Button(
-                        onClick = {
-                            if (customModelInput.isNotBlank()) {
-                                val provId = selectedProviderId.ifBlank { providers.firstOrNull()?.id ?: "ollama" }
-                                onSelectModel(provId, customModelInput.trim())
-                                onDismiss()
+                            TextButton(onClick = { showCustomInput = !showCustomInput }) {
+                                Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (showCustomInput) "Hide Custom" else "Custom Model")
                             }
                         }
-                    ) {
-                        Text("Apply")
+
+                        if (showCustomInput) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = customModelInput,
+                                    onValueChange = { customModelInput = it },
+                                    placeholder = { Text("e.g. smollm2:135m") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Button(
+                                    onClick = {
+                                        if (customModelInput.isNotBlank()) {
+                                            val provId = selectedProviderId.ifBlank { providers.firstOrNull()?.id ?: "ollama" }
+                                            onSelectModel(provId, customModelInput.trim())
+                                            onDismiss()
+                                        }
+                                    }
+                                ) {
+                                    Text("Apply")
+                                }
+                            }
+                        }
                     }
                 }
-            }
-
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 480.dp)
-            ) {
                 items(providers) { provider ->
                     val models = ((dynamicModelsMap[provider.id]
                         ?: dynamicModelsMap[provider.type.name.lowercase()]
@@ -133,6 +138,9 @@ fun ModelPickerSheet(
                         ) {
                             Text(
                                 text = provider.name.uppercase(),
+                                modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.sp
@@ -178,6 +186,9 @@ fun ModelPickerSheet(
                                             Spacer(modifier = Modifier.width(12.dp))
                                             Text(
                                                 text = modelName,
+                                                modifier = Modifier.weight(1f),
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
                                                 style = MaterialTheme.typography.bodyMedium.copy(
                                                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                                                 ),

@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.starfall.multigateway.data.model.ModelConfiguration
@@ -50,7 +51,7 @@ fun UserInputArea(
     val canSend = !isGenerating && textState.isNotBlank()
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().navigationBarsPadding().imePadding(),
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 2.dp
@@ -98,7 +99,7 @@ fun UserInputArea(
                     // Embedded action button (Stop or Send)
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .background(
                                 when {
@@ -154,7 +155,7 @@ fun UserInputArea(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = { showFilesSheet = true },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
@@ -165,7 +166,7 @@ fun UserInputArea(
 
                     IconButton(
                         onClick = { showQuickActions = true },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Extension,
@@ -181,10 +182,13 @@ fun UserInputArea(
                     shape = RoundedCornerShape(12.dp),
                     border = borderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                    modifier = Modifier.height(34.dp)
+                    modifier = Modifier.weight(1f).padding(start = 8.dp).heightIn(min = 48.dp)
                 ) {
                     Text(
                         text = selectedModelName,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
                         color = MaterialTheme.colorScheme.onSurface
                     )

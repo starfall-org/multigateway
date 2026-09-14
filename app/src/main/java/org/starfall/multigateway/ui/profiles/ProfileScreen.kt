@@ -1,5 +1,7 @@
 package org.starfall.multigateway.ui.profiles
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -93,7 +95,7 @@ fun ProfileScreen(
         ) {
             if (isGridView) {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Adaptive(minSize = 180.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -275,9 +277,11 @@ fun ProfileListCard(
             Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = profile.name,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -307,7 +311,7 @@ fun ProfileListCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
                     Icon(
                         imageVector = Icons.Outlined.Edit,
                         contentDescription = "Edit",
@@ -315,7 +319,7 @@ fun ProfileListCard(
                         modifier = Modifier.size(18.dp)
                     )
                 }
-                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
                     Icon(
                         imageVector = Icons.Outlined.Delete,
                         contentDescription = "Delete",
@@ -376,10 +380,10 @@ fun ProfileGridCard(
                 }
 
                 Row {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Outlined.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp))
                     }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                    IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                     }
                 }
@@ -434,7 +438,7 @@ fun AddOrEditProfileDialog(
         title = { Text(if (profile == null) "New Profile" else "Edit Profile") },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedTextField(
@@ -459,6 +463,7 @@ fun AddOrEditProfileDialog(
         },
         confirmButton = {
             Button(
+                enabled = name.isNotBlank(),
                 onClick = {
                     if (name.isNotBlank()) {
                         val newProfile = ChatProfile(

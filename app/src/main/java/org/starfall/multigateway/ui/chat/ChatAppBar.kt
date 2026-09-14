@@ -68,7 +68,7 @@ fun ChatAppBar(
             Box(
                 modifier = Modifier
                     .padding(end = 12.dp)
-                    .size(36.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer)
                     .clickable(onClick = onOpenEndDrawer),

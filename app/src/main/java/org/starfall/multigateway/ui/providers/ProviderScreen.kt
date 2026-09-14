@@ -1,5 +1,7 @@
 package org.starfall.multigateway.ui.providers
 
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import android.widget.Toast
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -115,7 +117,7 @@ fun ProviderScreen(
                 }
             } else if (isGridView) {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 160.dp),
+                    columns = GridCells.Adaptive(minSize = 180.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
@@ -236,9 +238,11 @@ fun ProviderListCard(
             Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = provider.name,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -323,10 +327,10 @@ fun ProviderGridCard(
                 }
 
                 Row {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Outlined.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp))
                     }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                    IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                     }
                 }
@@ -384,9 +388,9 @@ fun AddOrEditProviderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isNew) "Add Provider" else "Configure ${initialProvider.name}") },
+        title = { Text(if (isNew) "Add Provider" else "Configure Provider") },
         text = {
-            Column(modifier = Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // Provider Type Dropdown
                 ExposedDropdownMenuBox(
                     expanded = typeExpanded,
@@ -456,14 +460,17 @@ fun AddOrEditProviderDialog(
                 HorizontalDivider()
                 Text("Request config", style = MaterialTheme.typography.titleSmall)
                 OutlinedTextField(maxTokens, { maxTokens = it }, label = { Text("Maximum output tokens") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    supportingText = { if (maxTokens.toIntOrNull()?.let { it > 0 } != true) Text("Enter a positive whole number.") },
                     singleLine = true, isError = maxTokens.toIntOrNull()?.let { it > 0 } != true,
                     modifier = Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically) {
-                    Text("Stream responses")
+                    Text("Stream responses", modifier = Modifier.weight(1f).padding(end = 12.dp))
                     Switch(checked = supportStream, onCheckedChange = { supportStream = it })
                 }
                 OutlinedTextField(headersText, { headersText = it }, label = { Text("Request headers (JSON)") },
+                    supportingText = { if (!headersValid) Text("Use a JSON object with valid header names and text values.") },
                     isError = !headersValid, minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth())
 
                 OutlinedButton(

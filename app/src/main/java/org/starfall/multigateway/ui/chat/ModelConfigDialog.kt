@@ -1,6 +1,13 @@
 package org.starfall.multigateway.ui.chat
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -29,33 +36,46 @@ fun ModelConfigDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(modelId) },
+        title = { Text(modelId, maxLines = 2, overflow = TextOverflow.Ellipsis) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(provider.name, style = MaterialTheme.typography.labelLarge)
                 Text("Stream responses", style = MaterialTheme.typography.titleSmall)
-                listOf<Boolean?>(null, true, false).forEach { option ->
-                    TextButton(onClick = { supportStream = option }, modifier = Modifier.fillMaxWidth()) {
-                        RadioButton(selected = supportStream == option, onClick = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(when (option) {
-                            null -> "Use provider setting (${if (provider.config.supportStream) "On" else "Off"})"
-                            true -> "On"
-                            false -> "Off"
-                        }, modifier = Modifier.weight(1f))
+                Column(Modifier.fillMaxWidth().selectableGroup()) {
+                    listOf<Boolean?>(null, true, false).forEach { option ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                                .selectable(selected = supportStream == option, role = Role.RadioButton,
+                                    onClick = { supportStream = option }).padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = supportStream == option, onClick = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(when (option) {
+                                null -> "Use provider setting (${if (provider.config.supportStream) "On" else "Off"})"
+                                true -> "On"
+                                false -> "Off"
+                            }, modifier = Modifier.weight(1f))
+                        }
                     }
                 }
                 HorizontalDivider()
                 Text("Leave blank to use API defaults. These settings apply only to this model on this provider.")
                 OutlinedTextField(temperature, { temperature = it }, label = { Text("Temperature (0–$tempMax)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    supportingText = { if (!tempValid) Text("Enter a number from 0 to $tempMax, or leave blank.") },
                     isError = !tempValid, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(topP, { topP = it }, label = { Text("Top-p (0–1)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    supportingText = { if (!topPValid) Text("Enter a number from 0 to 1, or leave blank.") },
                     isError = !topPValid, singleLine = true, modifier = Modifier.fillMaxWidth())
                 if (supportsTopK) {
                     OutlinedTextField(topK, { topK = it }, label = { Text("Top-k (positive integer)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        supportingText = { if (!topKValid) Text("Enter a positive whole number, or leave blank.") },
                         isError = !topKValid, singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
-                TextButton(onClick = { temperature = ""; topP = ""; topK = "" }) { Text("Use API defaults") }
+                TextButton(onClick = { temperature = ""; topP = ""; topK = "" }) { Text("Reset sampling to API defaults") }
             }
         },
         confirmButton = {
