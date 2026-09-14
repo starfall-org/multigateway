@@ -150,6 +150,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         onSaveProvider = { viewModel.saveProvider(it) },
                         onDeleteProvider = { viewModel.deleteProvider(it) },
                         onTestConnection = { prov -> viewModel.testConnection(prov) },
+                        onFetchModels = { provider -> viewModel.fetchProviderModels(provider) },
                         onBack = { currentScreen = Screen.CHAT }
                     )
                 }

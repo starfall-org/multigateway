@@ -1,5 +1,8 @@
 package org.starfall.multigateway.ui.providers
 
+import androidx.activity.compose.BackHandler
+import kotlinx.coroutines.CancellationException
+import org.starfall.multigateway.data.model.ModelConfiguration
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import android.widget.Toast
@@ -46,12 +49,40 @@ fun ProviderScreen(
     onSaveProvider: (LlmProviderInfo) -> Unit,
     onDeleteProvider: (String) -> Unit,
     onTestConnection: (suspend (LlmProviderInfo) -> Result<String>)? = null,
+    onFetchModels: (suspend (LlmProviderInfo) -> List<String>)? = null,
     onBack: () -> Unit
 ) {
     var isGridView by remember { mutableStateOf(false) }
     var editingProvider by remember { mutableStateOf<LlmProviderInfo?>(null) }
     var isCreatingNew by remember { mutableStateOf(false) }
     var deletingProviderId by remember { mutableStateOf<String?>(null) }
+
+    if (editingProvider != null || isCreatingNew) {
+        val targetProvider = editingProvider ?: remember { LlmProviderInfo(
+            id = "custom_${System.currentTimeMillis()}",
+            name = "Ollama",
+            type = ProviderType.OLLAMA,
+            baseUrl = "https://ollama.com/api",
+            auth = Authorization(method = AuthMethod.OTHER, key = "", value = "")
+        ) }
+
+        ProviderEditScreen(
+            initialProvider = targetProvider,
+            isNew = isCreatingNew,
+            onTestConnection = onTestConnection,
+            onFetchModels = onFetchModels,
+            onDismiss = {
+                editingProvider = null
+                isCreatingNew = false
+            },
+            onSave = { saved ->
+                onSaveProvider(saved)
+                editingProvider = null
+                isCreatingNew = false
+            }
+        )
+        return
+    }
 
     Scaffold(
         topBar = {
@@ -145,32 +176,6 @@ fun ProviderScreen(
                 }
             }
         }
-    }
-
-    // Add or Edit Dialog
-    if (editingProvider != null || isCreatingNew) {
-        val targetProvider = editingProvider ?: LlmProviderInfo(
-            id = "custom_${System.currentTimeMillis()}",
-            name = "Ollama",
-            type = ProviderType.OLLAMA,
-            baseUrl = "https://ollama.com/api",
-            auth = Authorization(method = AuthMethod.OTHER, key = "", value = "")
-        )
-
-        AddOrEditProviderDialog(
-            initialProvider = targetProvider,
-            isNew = isCreatingNew,
-            onTestConnection = onTestConnection,
-            onDismiss = {
-                editingProvider = null
-                isCreatingNew = false
-            },
-            onSave = { saved ->
-                onSaveProvider(saved)
-                editingProvider = null
-                isCreatingNew = false
-            }
-        )
     }
 
     // Delete confirmation
@@ -356,10 +361,11 @@ fun ProviderGridCard(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddOrEditProviderDialog(
+fun ProviderEditScreen(
     initialProvider: LlmProviderInfo,
     isNew: Boolean,
     onTestConnection: (suspend (LlmProviderInfo) -> Result<String>)? = null,
+    onFetchModels: (suspend (LlmProviderInfo) -> List<String>)? = null,
     onDismiss: () -> Unit,
     onSave: (LlmProviderInfo) -> Unit
 ) {
@@ -376,6 +382,15 @@ fun AddOrEditProviderDialog(
     var maxTokens by remember { mutableStateOf(initialProvider.config.maxTokens.toString()) }
     var supportStream by remember { mutableStateOf(initialProvider.config.supportStream) }
     var headersText by remember { mutableStateOf(Json.encodeToString(initialProvider.config.headers)) }
+    var selectedTab by remember { mutableStateOf(0) }
+    var modelConfigs by remember {
+        mutableStateOf(initialProvider.config.modelIds?.associateWith {
+            initialProvider.config.modelConfigs[it] ?: ModelConfiguration()
+        } ?: initialProvider.config.modelConfigs)
+    }
+    var configuringModel by remember { mutableStateOf<String?>(null) }
+    var showModelCatalog by remember { mutableStateOf(false) }
+    BackHandler(onBack = onDismiss)
     val parsedHeaders = runCatching { Json.decodeFromString<Map<String, String>>(headersText) }.getOrNull()
     val headersValid = parsedHeaders != null && parsedHeaders.all { (key, value) ->
         key.isNotBlank() && key.none { it <= ' ' || it == ':' || it.code >= 127 } && value.none { it == '\r' || it == '\n' }
@@ -383,182 +398,357 @@ fun AddOrEditProviderDialog(
     val requestValid = maxTokens.toIntOrNull()?.let { it > 0 } == true && headersValid
     fun requestConfig() = initialProvider.config.copy(
         maxTokens = maxTokens.toIntOrNull() ?: initialProvider.config.maxTokens,
-        supportStream = supportStream, headers = parsedHeaders ?: initialProvider.config.headers
+        supportStream = supportStream, headers = parsedHeaders ?: initialProvider.config.headers,
+        modelConfigs = modelConfigs, modelIds = modelConfigs.keys.toList()
     )
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (isNew) "Add Provider" else "Configure Provider") },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Provider Type Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = typeExpanded,
-                    onExpandedChange = { typeExpanded = !typeExpanded }
-                ) {
-                    OutlinedTextField(
-                        value = type.displayName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Provider Type") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = typeExpanded,
-                        onDismissRequest = { typeExpanded = false }
-                    ) {
-                        ProviderType.values().forEach { t ->
-                            DropdownMenuItem(
-                                text = { Text(t.displayName) },
-                                onClick = {
-                                    type = t
-                                    typeExpanded = false
-                                    if (t == ProviderType.OLLAMA && (baseUrl.contains("api.openai.com") || baseUrl.isBlank())) {
-                                        baseUrl = "https://ollama.com/api"
-                                    }
-                                }
-                            )
-                        }
+    val editingModelId = configuringModel
+    if (editingModelId != null) {
+        key(editingModelId) {
+            ModelEditScreen(
+                provider = initialProvider.copy(type = type, config = requestConfig()),
+                initialModelId = editingModelId,
+                existingModelIds = modelConfigs.keys,
+                onSave = { newId, config ->
+                    modelConfigs = modelConfigs.entries.associate { (id, value) ->
+                        if (id == editingModelId) newId to config else id to value
                     }
+                    configuringModel = null
+                },
+                onBack = { configuringModel = null }
+            )
+        }
+        return
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize().imePadding(),
+        floatingActionButton = {
+            if (selectedTab == 1) {
+                FloatingActionButton(onClick = { showModelCatalog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "Add models")
                 }
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Provider Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = baseUrl,
-                    onValueChange = { baseUrl = it },
-                    label = { Text("Base API Endpoint / URL") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                if (type == ProviderType.OLLAMA) {
-                    SuggestionChip(
-                        onClick = { baseUrl = "https://ollama.com/api" },
-                        label = { Text("Default: https://ollama.com/api", fontSize = 11.sp) },
-                        icon = { Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.size(14.dp)) }
-                    )
+            }
+        },
+        topBar = {
+            TopAppBar(
+                title = { Text(if (isNew) "Add LLM Provider" else "LLM Provider Edit") },
+                navigationIcon = {
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    TextButton(
+                        enabled = requestValid && baseUrl.isNotBlank(),
+                        onClick = {
+                            onSave(initialProvider.copy(
+                                name = name.trim().ifEmpty { type.displayName },
+                                type = type,
+                                baseUrl = baseUrl.trim(),
+                                auth = initialProvider.auth.copy(key = apiKey.trim(), value = apiKey.trim()),
+                                config = requestConfig()
+                            ))
+                        }
+                    ) { Text("Save") }
                 }
-
-                OutlinedTextField(
-                    value = apiKey,
-                    onValueChange = { apiKey = it },
-                    label = { Text(if (type == ProviderType.OLLAMA) "API Key / Token (Optional)" else "API Key") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                HorizontalDivider()
-                Text("Request config", style = MaterialTheme.typography.titleSmall)
-                OutlinedTextField(maxTokens, { maxTokens = it }, label = { Text("Maximum output tokens") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    supportingText = { if (maxTokens.toIntOrNull()?.let { it > 0 } != true) Text("Enter a positive whole number.") },
-                    singleLine = true, isError = maxTokens.toIntOrNull()?.let { it > 0 } != true,
-                    modifier = Modifier.fillMaxWidth())
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Text("Stream responses", modifier = Modifier.weight(1f).padding(end = 12.dp))
-                    Switch(checked = supportStream, onCheckedChange = { supportStream = it })
+            )
+        }
+    ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            TabRow(selectedTabIndex = selectedTab) {
+                listOf("Settings", "Models").forEachIndexed { index, label ->
+                    Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(label) })
                 }
-                OutlinedTextField(headersText, { headersText = it }, label = { Text("Request headers (JSON)") },
-                    supportingText = { if (!headersValid) Text("Use a JSON object with valid header names and text values.") },
-                    isError = !headersValid, minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth())
-
-                OutlinedButton(
-                    onClick = {
-                        isTestingConnection = true
-                        testResult = null
-                        val testTarget = initialProvider.copy(
-                            name = name.trim().ifEmpty { "Provider" },
-                            type = type,
-                            baseUrl = baseUrl.trim(),
-                            auth = initialProvider.auth.copy(key = apiKey.trim(), value = apiKey.trim()),
-                            config = requestConfig()
+            }
+            if (selectedTab == 0) {
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Provider Type Dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = typeExpanded,
+                        onExpandedChange = { typeExpanded = !typeExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = type.displayName,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Provider Type") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
-                        coroutineScope.launch {
-                            val res = onTestConnection?.invoke(testTarget) ?: Result.success("Endpoint reachable")
-                            isTestingConnection = false
-                            if (res.isSuccess) {
-                                testIsSuccess = true
-                                testResult = res.getOrNull() ?: "Connected successfully!"
-                            } else {
-                                testIsSuccess = false
-                                testResult = res.exceptionOrNull()?.localizedMessage ?: "Connection failed"
+
+                        ExposedDropdownMenu(
+                            expanded = typeExpanded,
+                            onDismissRequest = { typeExpanded = false }
+                        ) {
+                            ProviderType.values().forEach { t ->
+                                DropdownMenuItem(
+                                    text = { Text(t.displayName) },
+                                    onClick = {
+                                        type = t
+                                        typeExpanded = false
+                                        if (t == ProviderType.OLLAMA && (baseUrl.contains("api.openai.com") || baseUrl.isBlank())) {
+                                            baseUrl = "https://ollama.com/api"
+                                        }
+                                    }
+                                )
                             }
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isTestingConnection && baseUrl.isNotBlank() && requestValid
-                ) {
-                    if (isTestingConnection) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Testing...")
-                    } else {
-                        Icon(Icons.Outlined.NetworkCheck, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Test Connection")
                     }
-                }
 
-                // Test result banner
-                if (testResult != null) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (testIsSuccess) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Provider Name") },
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = baseUrl,
+                        onValueChange = { baseUrl = it },
+                        label = { Text("Base API Endpoint / URL") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (type == ProviderType.OLLAMA) {
+                        SuggestionChip(
+                            onClick = { baseUrl = "https://ollama.com/api" },
+                            label = { Text("Default: https://ollama.com/api", fontSize = 11.sp) },
+                            icon = { Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.size(14.dp)) }
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = apiKey,
+                        onValueChange = { apiKey = it },
+                        label = { Text(if (type == ProviderType.OLLAMA) "API Key / Token (Optional)" else "API Key") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    HorizontalDivider()
+                    Text("Request config", style = MaterialTheme.typography.titleSmall)
+                    OutlinedTextField(maxTokens, { maxTokens = it }, label = { Text("Maximum output tokens") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        supportingText = { if (maxTokens.toIntOrNull()?.let { it > 0 } != true) Text("Enter a positive whole number.") },
+                        singleLine = true, isError = maxTokens.toIntOrNull()?.let { it > 0 } != true,
+                        modifier = Modifier.fillMaxWidth())
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text("Stream responses", modifier = Modifier.weight(1f).padding(end = 12.dp))
+                        Switch(checked = supportStream, onCheckedChange = { supportStream = it })
+                    }
+                    OutlinedTextField(headersText, { headersText = it }, label = { Text("Request headers (JSON)") },
+                        supportingText = { if (!headersValid) Text("Use a JSON object with valid header names and text values.") },
+                        isError = !headersValid, minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth())
+
+                    OutlinedButton(
+                        onClick = {
+                            isTestingConnection = true
+                            testResult = null
+                            val testTarget = initialProvider.copy(
+                                name = name.trim().ifEmpty { "Provider" },
+                                type = type,
+                                baseUrl = baseUrl.trim(),
+                                auth = initialProvider.auth.copy(key = apiKey.trim(), value = apiKey.trim()),
+                                config = requestConfig()
+                            )
+                            coroutineScope.launch {
+                                val res = onTestConnection?.invoke(testTarget) ?: Result.success("Endpoint reachable")
+                                isTestingConnection = false
+                                if (res.isSuccess) {
+                                    testIsSuccess = true
+                                    testResult = res.getOrNull() ?: "Connected successfully!"
+                                } else {
+                                    testIsSuccess = false
+                                    testResult = res.exceptionOrNull()?.localizedMessage ?: "Connection failed"
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isTestingConnection && baseUrl.isNotBlank() && requestValid
                     ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = if (testIsSuccess) Icons.Default.CheckCircle else Icons.Default.Error,
-                                contentDescription = null,
-                                tint = if (testIsSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(18.dp)
-                            )
+                        if (isTestingConnection) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = testResult ?: "",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (testIsSuccess) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
-                            )
+                            Text("Testing...")
+                        } else {
+                            Icon(Icons.Outlined.NetworkCheck, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Test Connection")
+                        }
+                    }
+
+                    // Test result banner
+                    if (testResult != null) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (testIsSuccess) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (testIsSuccess) Icons.Default.CheckCircle else Icons.Default.Error,
+                                    contentDescription = null,
+                                    tint = if (testIsSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = testResult ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (testIsSuccess) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
                         }
                     }
                 }
-            }
-        },
-        confirmButton = {
-            Button(
-                enabled = requestValid && baseUrl.isNotBlank(),
-                onClick = {
-                    val updated = initialProvider.copy(
-                        name = name.trim().ifEmpty { type.displayName },
-                        type = type,
-                        baseUrl = baseUrl.trim(),
-                        auth = initialProvider.auth.copy(key = apiKey.trim(), value = apiKey.trim()),
-                            config = requestConfig()
-                    )
-                    onSave(updated)
+            } else {
+                val models = modelConfigs.keys.toList()
+                LazyColumn(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (models.isEmpty()) {
+                        item { Text("No models added. Tap + to browse available models.") }
+                    }
+                    items(models, key = { it }) { modelId ->
+                        ListItem(
+                            headlineContent = { Text(modelConfigs[modelId]?.displayName?.ifBlank { modelId } ?: modelId,
+                                overflow = TextOverflow.Ellipsis, maxLines = 2) },
+                            supportingContent = { Text("$modelId · ${modelConfigs[modelId]?.modelType?.displayName.orEmpty()}") },
+                            trailingContent = {
+                                IconButton(onClick = { configuringModel = modelId }) {
+                                    Icon(Icons.Outlined.Tune, contentDescription = "Configure $modelId")
+                                }
+                            },
+                            modifier = Modifier.clickable { configuringModel = modelId }
+                        )
+                    }
                 }
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
             }
         }
-    )
+    }
+    if (showModelCatalog) {
+        ProviderModelCatalogSheet(
+            provider = initialProvider.copy(
+                name = name, type = type, baseUrl = baseUrl.trim(),
+                auth = initialProvider.auth.copy(key = apiKey.trim(), value = apiKey.trim()),
+                config = requestConfig()
+            ),
+            selectedModels = modelConfigs.keys,
+            onFetchModels = onFetchModels,
+            onToggle = { id ->
+                modelConfigs = if (id in modelConfigs) modelConfigs - id else modelConfigs + (id to ModelConfiguration())
+            },
+            onSetSelection = { ids, selected ->
+                modelConfigs = if (selected) {
+                    modelConfigs + ids.associateWith { modelConfigs[it] ?: ModelConfiguration() }
+                } else {
+                    modelConfigs - ids.toSet()
+                }
+            },
+            onDismiss = { showModelCatalog = false }
+        )
+    }
+
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProviderModelCatalogSheet(
+    provider: LlmProviderInfo,
+    selectedModels: Set<String>,
+    onFetchModels: (suspend (LlmProviderInfo) -> List<String>)?,
+    onToggle: (String) -> Unit,
+    onSetSelection: (List<String>, Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var models by remember { mutableStateOf<List<String>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var loadError by remember { mutableStateOf<String?>(null) }
+    var refresh by remember { mutableStateOf(0) }
+    var query by remember { mutableStateOf("") }
+    LaunchedEffect(refresh) {
+        loading = true
+        loadError = null
+        try {
+            models = (onFetchModels ?: error("Model discovery is unavailable"))(provider).distinct()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            loadError = e.localizedMessage ?: "Unable to load models"
+        } finally {
+            loading = false
+        }
+    }
+    // The list and bulk action use exactly the same filtered IDs.
+    val visibleModels = (models + selectedModels).distinct().filter { it.contains(query, ignoreCase = true) }
+    val allVisibleSelected = visibleModels.isNotEmpty() && visibleModels.all { it in selectedModels }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).imePadding().padding(horizontal = 16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Available models", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = { refresh++ }, enabled = !loading) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = "Refresh models")
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(query, { query = it }, label = { Text("Search models") },
+                    singleLine = true, modifier = Modifier.weight(1f))
+                IconButton(
+                    onClick = { onSetSelection(visibleModels, !allVisibleSelected) },
+                    enabled = visibleModels.isNotEmpty()
+                ) {
+                    Icon(
+                        imageVector = if (allVisibleSelected) Icons.Outlined.Close else Icons.Outlined.SelectAll,
+                        contentDescription = if (allVisibleSelected) "Remove all visible models" else "Select all visible models",
+                        tint = when {
+                            visibleModels.isEmpty() -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            allVisibleSelected -> MaterialTheme.colorScheme.error
+                            else -> MaterialTheme.colorScheme.primary
+                        }
+                    )
+                }
+            }
+            if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+            loadError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = { refresh++ }, enabled = !loading) { Text("Retry") }
+            }
+            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 24.dp)) {
+                if (visibleModels.isEmpty() && !loading && loadError == null) {
+                    item { Text(if (query.isBlank()) "No models returned." else "No matching models.", modifier = Modifier.padding(16.dp)) }
+                }
+                items(visibleModels, key = { it }) { id ->
+                    val added = id in selectedModels
+                    ListItem(
+                        headlineContent = { Text(id, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                        supportingContent = { Text(if (added) "Added" else "Not added") },
+                        trailingContent = {
+                            IconButton(onClick = { onToggle(id) }) {
+                                Icon(if (added) Icons.Outlined.Close else Icons.Default.Add,
+                                    contentDescription = if (added) "Remove $id" else "Add $id",
+                                    tint = if (added) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
 }

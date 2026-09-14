@@ -3,7 +3,6 @@ package org.starfall.multigateway.ui.chat
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -11,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.Extension
@@ -22,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +46,7 @@ fun UserInputArea(
 
     var showModelPicker by remember { mutableStateOf(false) }
     var showQuickActions by remember { mutableStateOf(false) }
+    var showAddMenu by remember { mutableStateOf(false) }
     var showFilesSheet by remember { mutableStateOf(false) }
 
     val canSend = !isGenerating && textState.isNotBlank()
@@ -59,7 +60,7 @@ fun UserInputArea(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 4.dp)
+                .padding(start = 12.dp, top = 4.dp, end = 12.dp, bottom = 4.dp)
         ) {
             // Text Input Box with embedded Suffix Button
             Surface(
@@ -70,30 +71,32 @@ fun UserInputArea(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                        .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextField(
+                    BasicTextField(
                         value = textState,
                         onValueChange = { textState = it },
-                        placeholder = {
-                            Text(
-                                text = "Type something...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                        },
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            disabledContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurface
                         ),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                         modifier = Modifier
                             .weight(1f)
-                            .padding(end = 4.dp),
-                        maxLines = 4
+                            .padding(start = 8.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                        maxLines = 4,
+                        decorationBox = { innerTextField ->
+                            Box {
+                                if (textState.isEmpty()) {
+                                    Text(
+                                        text = "Type something...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        }
                     )
 
                     // Embedded action button (Stop or Send)
@@ -143,50 +146,59 @@ fun UserInputArea(
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
             // Bottom Buttons Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left side: Add file + Quick Actions
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Attachments and tools share the add menu.
+                Box {
                     IconButton(
-                        onClick = { showFilesSheet = true },
+                        onClick = { showAddMenu = true },
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Attach files",
+                            contentDescription = "Attachments and tools",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-
-                    IconButton(
-                        onClick = { showQuickActions = true },
-                        modifier = Modifier.size(48.dp)
+                    DropdownMenu(
+                        expanded = showAddMenu,
+                        onDismissRequest = { showAddMenu = false }
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Extension,
-                            contentDescription = "Quick Actions",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        DropdownMenuItem(
+                            text = { Text("Attach files") },
+                            leadingIcon = { Icon(Icons.Outlined.InsertDriveFile, contentDescription = null) },
+                            onClick = {
+                                showAddMenu = false
+                                showFilesSheet = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("MCP & tools") },
+                            leadingIcon = { Icon(Icons.Outlined.Extension, contentDescription = null) },
+                            onClick = {
+                                showAddMenu = false
+                                showQuickActions = true
+                            }
                         )
                     }
                 }
 
-                // Right side: Outlined Model selector button
+                // Compact model selector, bounded by the space left beside the add button.
                 OutlinedButton(
                     onClick = { showModelPicker = true },
-                    shape = RoundedCornerShape(12.dp),
-                    border = borderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                    modifier = Modifier.weight(1f).padding(start = 8.dp).heightIn(min = 48.dp)
+                    shape = RoundedCornerShape(50),
+                    border = borderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    modifier = Modifier.weight(1f, fill = false).widthIn(max = 220.dp).padding(start = 8.dp)
                 ) {
                     Text(
-                        text = selectedModelName,
-                        modifier = Modifier.weight(1f),
+                        text = providers.find { it.id == selectedProviderId }?.config?.modelConfigs
+                            ?.get(selectedModelName)?.displayName?.ifBlank { selectedModelName } ?: selectedModelName,
+                        modifier = Modifier.weight(1f, fill = false),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),

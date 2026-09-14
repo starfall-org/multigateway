@@ -34,7 +34,9 @@ data class ProviderConfiguration(
     val customListModelsUrl: String? = null,
     val maxTokens: Int = 4000,
     // Model IDs are scoped to this provider, including custom gateway models.
-    val modelConfigs: Map<String, ModelConfiguration> = emptyMap()
+    val modelConfigs: Map<String, ModelConfiguration> = emptyMap(),
+    // null preserves legacy discovery; an empty list explicitly selects no models.
+    val modelIds: List<String>? = null
 )
 
 @Serializable
@@ -75,12 +77,28 @@ data class LlmProviderModels(
 )
 
 @Serializable
+enum class ModelType(val displayName: String) {
+    TEXT_GENERATION("Text generation"),
+    IMAGE_GENERATION("Image generation"),
+    VIDEO_GENERATION("Video generation"),
+    EMBEDDING("Embedding"),
+    RERANKING("Reranking"),
+    SPEECH_TO_TEXT("Speech to text"),
+    TEXT_TO_SPEECH("Text to speech")
+}
+
+@Serializable
 data class ModelConfiguration(
     val temperature: Double? = null,
     @SerialName("top_p") val topP: Double? = null,
     @SerialName("top_k") val topK: Int? = null,
     // null inherits the provider setting; false is an explicit override.
-    val supportStream: Boolean? = null
+    val supportStream: Boolean? = null,
+    val displayName: String = "",
+    val modelType: ModelType = ModelType.TEXT_GENERATION,
+    val supportsVision: Boolean = false,
+    val supportsThinking: Boolean = false,
+    val supportsToolCalls: Boolean = false
 )
 
 fun LlmProviderInfo.streamEnabledFor(modelId: String): Boolean =

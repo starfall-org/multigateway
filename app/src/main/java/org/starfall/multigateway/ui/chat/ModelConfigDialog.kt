@@ -80,8 +80,8 @@ fun ModelConfigDialog(
         },
         confirmButton = {
             TextButton(enabled = tempValid && topPValid && topKValid, onClick = {
-                onSave(ModelConfiguration(temperature.toDoubleOrNull(), topP.toDoubleOrNull(),
-                    if (supportsTopK) topK.toIntOrNull() else null, supportStream = supportStream))
+                onSave(config.copy(temperature = temperature.toDoubleOrNull(), topP = topP.toDoubleOrNull(),
+                    topK = if (supportsTopK) topK.toIntOrNull() else null, supportStream = supportStream))
                 onDismiss()
             }) { Text("Save") }
         },

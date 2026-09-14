@@ -33,21 +33,14 @@ fun ModelPickerSheet(
     onFetchOllamaModels: (suspend (String) -> List<String>)? = null,
     onDismiss: () -> Unit
 ) {
-    val dynamicModelsMap = remember {
-        mutableStateMapOf(
-            "openai" to listOf("gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "gpt-4-turbo"),
-            "google" to listOf("gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash-exp"),
-            "anthropic" to listOf("claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"),
-            "ollama" to listOf("llama3.2:latest", "smollm2:135m", "llava:latest", "llava:7b", "pentest_test:1.0", "probe-nonexistent:latest")
-        )
-    }
+    val dynamicModelsMap = remember { mutableStateMapOf<String, List<String>>() }
 
     var configuringModel by remember { mutableStateOf<Pair<String, String>?>(null) }
     var customModelInput by remember { mutableStateOf("") }
     var showCustomInput by remember { mutableStateOf(false) }
 
     LaunchedEffect(providers) {
-        providers.filter { it.type == ProviderType.OLLAMA }.forEach { ollamaProv ->
+        providers.filter { it.type == ProviderType.OLLAMA && it.config.modelIds == null }.forEach { ollamaProv ->
             val remoteModels = onFetchOllamaModels?.invoke(ollamaProv.baseUrl) ?: emptyList()
             if (remoteModels.isNotEmpty()) {
                 dynamicModelsMap[ollamaProv.id] = remoteModels
@@ -123,9 +116,8 @@ fun ModelPickerSheet(
                     }
                 }
                 items(providers) { provider ->
-                    val models = ((dynamicModelsMap[provider.id]
-                        ?: dynamicModelsMap[provider.type.name.lowercase()]
-                        ?: emptyList()) + provider.config.modelConfigs.keys +
+                    val models = provider.config.modelIds ?: ((dynamicModelsMap[provider.id]
+                        ?: defaultProviderModels(provider.type)) + provider.config.modelConfigs.keys +
                         if (provider.id == selectedProviderId && selectedModelId.isNotBlank()) listOf(selectedModelId) else emptyList()).distinct()
 
                     Column(modifier = Modifier.fillMaxWidth()) {
@@ -185,7 +177,7 @@ fun ModelPickerSheet(
                                             )
                                             Spacer(modifier = Modifier.width(12.dp))
                                             Text(
-                                                text = modelName,
+                                                text = provider.config.modelConfigs[modelName]?.displayName?.ifBlank { modelName } ?: modelName,
                                                 modifier = Modifier.weight(1f),
                                                 maxLines = 2,
                                                 overflow = TextOverflow.Ellipsis,
@@ -234,4 +226,11 @@ fun ModelPickerSheet(
         }
     }
 
+}
+
+internal fun defaultProviderModels(type: ProviderType): List<String> = when (type) {
+    ProviderType.OPENAI -> listOf("gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "gpt-4-turbo")
+    ProviderType.GOOGLE -> listOf("gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash-exp")
+    ProviderType.ANTHROPIC -> listOf("claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229")
+    ProviderType.OLLAMA -> emptyList()
 }

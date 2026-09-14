@@ -90,6 +90,60 @@ class LlmService {
         }
     }
 
+    suspend fun fetchProviderModels(provider: LlmProviderInfo): List<String> {
+        var base = provider.baseUrl.trim().trimEnd('/')
+        for (suffix in listOf("/chat/completions", "/responses", "/messages", "/models", "/chat", "/tags", "/generate")) {
+            base = base.removeSuffix(suffix)
+        }
+        val endpoint = provider.config.customListModelsUrl?.takeIf { it.isNotBlank() } ?: when (provider.type) {
+            ProviderType.OLLAMA -> base.removeSuffix("/api").removeSuffix("/v1") + "/v1/models"
+            ProviderType.ANTHROPIC -> base.removeSuffix("/v1") + "/v1/models"
+            ProviderType.GOOGLE -> if (Regex("/v1(?:beta|alpha)?$").containsMatchIn(base)) "$base/models" else "$base/v1beta/models"
+            ProviderType.OPENAI -> "$base/models"
+        }
+        val models = linkedSetOf<String>()
+        var cursor: String? = null
+        val seenCursors = mutableSetOf<String>()
+        do {
+            val response = httpClient.get(endpoint) {
+                val auth = provider.auth
+                when (auth.method) {
+                    AuthMethod.CUSTOM_HEADER -> auth.key?.takeIf { it.isNotBlank() }?.let { header(it, auth.value.orEmpty()) }
+                    AuthMethod.QUERY_PARAM -> parameter(auth.key ?: "key", auth.value.orEmpty())
+                    else -> (auth.key?.takeIf { it.isNotBlank() } ?: auth.value)?.takeIf { it.isNotBlank() }?.let { token ->
+                        when (provider.type) {
+                            ProviderType.ANTHROPIC -> header("x-api-key", token)
+                            ProviderType.GOOGLE -> header("x-goog-api-key", token)
+                            else -> bearerAuth(token)
+                        }
+                    }
+                }
+                if (provider.type == ProviderType.ANTHROPIC) header("anthropic-version", "2023-06-01")
+                provider.config.headers.forEach { (name, value) -> headers.remove(name); header(name, value) }
+                cursor?.let { parameter(if (provider.type == ProviderType.GOOGLE) "pageToken" else "after_id", it) }
+            }
+            check(response.status.isSuccess()) { "Unable to load models: HTTP ${response.status.value}" }
+            val body = json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val entries = (body["data"] ?: body["models"]) as? JsonArray
+                ?: error("The models endpoint returned an unsupported response.")
+            entries.forEach { entry ->
+                val item = entry as? JsonObject ?: return@forEach
+                val id = (item["id"] ?: item["name"])?.jsonPrimitive?.contentOrNull
+                id?.takeIf { it.isNotBlank() }?.let {
+                    models += if (provider.type == ProviderType.GOOGLE) it.removePrefix("models/") else it
+                }
+            }
+            cursor = when {
+                provider.type == ProviderType.GOOGLE -> body["nextPageToken"]?.jsonPrimitive?.contentOrNull
+                provider.type == ProviderType.ANTHROPIC && body["has_more"]?.jsonPrimitive?.booleanOrNull == true ->
+                    body["last_id"]?.jsonPrimitive?.contentOrNull
+                else -> null
+            }?.takeIf { it.isNotBlank() }
+            check(cursor == null || seenCursors.add(cursor!!)) { "The models endpoint repeated a page." }
+        } while (cursor != null)
+        return models.toList()
+    }
+
     suspend fun fetchOllamaModels(baseUrl: String): List<String> {
         return try {
             val tagsUrl = resolveOllamaTagsUrl(baseUrl)

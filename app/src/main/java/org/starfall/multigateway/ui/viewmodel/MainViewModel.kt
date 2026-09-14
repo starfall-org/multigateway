@@ -242,6 +242,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectModel(providerId: String, modelId: String) {
         viewModelScope.launch {
+            val provider = llmRepo.getProviderById(providerId)
+            if (provider?.config?.modelIds != null && modelId !in provider.config.modelIds) {
+                llmRepo.saveProvider(provider.copy(config = provider.config.copy(
+                    modelIds = provider.config.modelIds + modelId,
+                    modelConfigs = provider.config.modelConfigs + (modelId to ModelConfiguration())
+                )))
+            }
             prefsRepo.setSelectedModel(providerId, modelId)
         }
     }
@@ -370,6 +377,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun saveProvider(provider: LlmProviderInfo) {
         viewModelScope.launch {
             llmRepo.saveProvider(provider)
+            val prefs = appPreferences.value
+            val modelIds = provider.config.modelIds
+            if (prefs.selectedProviderId == provider.id && modelIds != null && prefs.selectedModelId !in modelIds) {
+                prefsRepo.setSelectedModel(provider.id, modelIds.firstOrNull().orEmpty())
+            }
         }
     }
 
@@ -382,6 +394,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun testConnection(provider: LlmProviderInfo): Result<String> {
         return llmService.testConnection(provider)
     }
+
+    suspend fun fetchProviderModels(provider: LlmProviderInfo): List<String> =
+        llmService.fetchProviderModels(provider)
 
     suspend fun fetchOllamaModels(baseUrl: String): List<String> {
         return llmService.fetchOllamaModels(baseUrl)
