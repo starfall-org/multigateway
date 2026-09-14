@@ -1,5 +1,7 @@
 package org.starfall.multigateway.ui.chat
 
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,28 +24,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.starfall.multigateway.data.model.ModelConfiguration
 import org.starfall.multigateway.data.model.LlmProviderInfo
 
 @Composable
 fun UserInputArea(
     isGenerating: Boolean,
-    onSendMessage: (String, List<String>) -> Unit,
+    onSendMessage: (String, List<String>) -> Boolean,
     onStopGenerating: () -> Unit,
     selectedModelName: String,
     providers: List<LlmProviderInfo>,
     selectedProviderId: String,
     onSelectModel: (providerId: String, modelId: String) -> Unit,
+    onSaveModelConfig: (String, String, ModelConfiguration) -> Unit,
     onFetchOllamaModels: (suspend (String) -> List<String>)? = null,
     modifier: Modifier = Modifier
 ) {
     var textState by remember { mutableStateOf("") }
-    val attachedFiles = remember { mutableStateListOf<String>() }
+    val context = LocalContext.current
 
     var showModelPicker by remember { mutableStateOf(false) }
     var showQuickActions by remember { mutableStateOf(false) }
     var showFilesSheet by remember { mutableStateOf(false) }
 
-    val canSend = !isGenerating && (textState.isNotBlank() || attachedFiles.isNotEmpty())
+    val canSend = !isGenerating && textState.isNotBlank()
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -56,52 +60,6 @@ fun UserInputArea(
                 .fillMaxWidth()
                 .padding(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 4.dp)
         ) {
-            // Attached files chips
-            if (attachedFiles.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    attachedFiles.forEachIndexed { index, fileName ->
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHighest
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(start = 8.dp, top = 4.dp, end = 4.dp, bottom = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Outlined.InsertDriveFile,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = fileName.substringAfterLast('/'),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                IconButton(
-                                    onClick = { attachedFiles.removeAt(index) },
-                                    modifier = Modifier.size(20.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = "Remove",
-                                        modifier = Modifier.size(12.dp),
-                                        tint = MaterialTheme.colorScheme.outline
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             // Text Input Box with embedded Suffix Button
             Surface(
                 shape = RoundedCornerShape(24.dp),
@@ -155,9 +113,11 @@ fun UserInputArea(
                                     if (isGenerating) {
                                         onStopGenerating()
                                     } else if (canSend) {
-                                        onSendMessage(textState, attachedFiles.toList())
-                                        textState = ""
-                                        attachedFiles.clear()
+                                        if (onSendMessage(textState, emptyList())) {
+                                            textState = ""
+                                        } else {
+                                            Toast.makeText(context, "Select an available provider and model, or wait for the current response.", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
                                 }
                             ),
@@ -246,6 +206,7 @@ fun UserInputArea(
             selectedProviderId = selectedProviderId,
             selectedModelId = selectedModelName,
             onSelectModel = onSelectModel,
+            onSaveModelConfig = onSaveModelConfig,
             onFetchOllamaModels = onFetchOllamaModels,
             onDismiss = { showModelPicker = false }
         )
@@ -258,17 +219,11 @@ fun UserInputArea(
     }
 
     if (showFilesSheet) {
-        FilesActionSheet(
-            onPickImage = {
-                attachedFiles.add("photo_sample_${System.currentTimeMillis() % 1000}.jpg")
-            },
-            onPickDocument = {
-                attachedFiles.add("document_${System.currentTimeMillis() % 1000}.pdf")
-            },
-            onTakePhoto = {
-                attachedFiles.add("camera_capture_${System.currentTimeMillis() % 1000}.jpg")
-            },
-            onDismiss = { showFilesSheet = false }
+        AlertDialog(
+            onDismissRequest = { showFilesSheet = false },
+            title = { Text("Attachments unavailable") },
+            text = { Text("Sending images and documents is not supported yet. Please paste text into your message.") },
+            confirmButton = { TextButton(onClick = { showFilesSheet = false }) { Text("OK") } }
         )
     }
 }

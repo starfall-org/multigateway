@@ -40,6 +40,8 @@ fun MainScreen(viewModel: MainViewModel) {
     val conversations: List<Conversation> by viewModel.conversations.collectAsStateWithLifecycle()
     val currentConv: Conversation? by viewModel.currentConversation.collectAsStateWithLifecycle()
     val isGenerating: Boolean by viewModel.isGenerating.collectAsStateWithLifecycle()
+    val generatingConversationId by viewModel.generatingConversationId.collectAsStateWithLifecycle()
+    val chatError by viewModel.chatError.collectAsStateWithLifecycle()
     val appPrefs: AppPreferences by viewModel.appPreferences.collectAsStateWithLifecycle()
     val profiles: List<ChatProfile> by viewModel.profiles.collectAsStateWithLifecycle()
     val providers: List<LlmProviderInfo> by viewModel.providers.collectAsStateWithLifecycle()
@@ -89,6 +91,8 @@ fun MainScreen(viewModel: MainViewModel) {
                         conversation = currentConv,
                         selectedProfile = activeProfile,
                         isGenerating = isGenerating,
+                        generatingConversationId = generatingConversationId,
+                        chatError = chatError,
                         providers = providers,
                         selectedProviderId = appPrefs.selectedProviderId,
                         selectedModelName = appPrefs.selectedModelId.ifBlank { "gpt-4o" },
@@ -104,8 +108,8 @@ fun MainScreen(viewModel: MainViewModel) {
                         onOpenEndDrawer = {
                             showEndMenuSheet = true
                         },
-                        onRegenerate = {
-                            viewModel.regenerateLastMessage()
+                        onRegenerate = { id ->
+                            viewModel.regenerateMessage(id)
                         },
                         onEditMessage = { id, content ->
                             viewModel.editMessage(id, content)
@@ -116,6 +120,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         onSwitchVersion = { id, idx ->
                             viewModel.switchMessageVersion(id, idx)
                         },
+                        onSaveModelConfig = viewModel::saveModelConfiguration,
                         onSelectModel = { provId, modelId ->
                             viewModel.selectModel(provId, modelId)
                         },

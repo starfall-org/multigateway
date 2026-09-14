@@ -51,6 +51,14 @@ android {
         jvmTarget = "17"
     }
 
+    packaging {
+        resources {
+            excludes += "META-INF/INDEX.LIST"
+            merges += setOf("META-INF/DEPENDENCIES", "META-INF/LICENSE", "META-INF/LICENSE.txt",
+                "META-INF/NOTICE", "META-INF/NOTICE.txt")
+        }
+    }
+
     buildFeatures {
         compose = true
     }
@@ -83,6 +91,12 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Official JVM SDKs, callable from Kotlin. Ollama keeps its native HTTP adapter.
+    implementation("com.openai:openai-java:4.63.1")
+    implementation("com.anthropic:anthropic-java:2.62.0")
+    implementation("com.google.genai:google-genai:1.71.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 
     // Ktor
     val ktorVersion = "2.3.12"

@@ -97,23 +97,11 @@ class ProfileRepository(private val db: AppDatabase) {
         } catch (e: Exception) {
             LlmChatConfig()
         }
-        val activeMcp: List<ActiveMcp> = try {
-            json.decodeFromString(entity.activeMcpJson)
-        } catch (e: Exception) {
-            emptyList()
-        }
-        val activeModelTools: List<ModelTool> = try {
-            json.decodeFromString(entity.activeModelToolsJson)
-        } catch (e: Exception) {
-            emptyList()
-        }
         return ChatProfile(
             id = entity.id,
             name = entity.name,
             icon = entity.icon,
-            config = config,
-            activeMcp = activeMcp,
-            activeModelTools = activeModelTools
+            config = config
         )
     }
 
@@ -123,8 +111,8 @@ class ProfileRepository(private val db: AppDatabase) {
             name = profile.name,
             icon = profile.icon,
             configJson = json.encodeToString(profile.config),
-            activeMcpJson = json.encodeToString(profile.activeMcp),
-            activeModelToolsJson = json.encodeToString(profile.activeModelTools)
+            activeMcpJson = "[]",
+            activeModelToolsJson = "[]"
         )
     }
 }

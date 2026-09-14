@@ -31,7 +31,10 @@ data class ProviderConfiguration(
     val supportStream: Boolean = true,
     val headers: Map<String, String> = emptyMap(),
     val responsesApi: Boolean = false,
-    val customListModelsUrl: String? = null
+    val customListModelsUrl: String? = null,
+    val maxTokens: Int = 4000,
+    // Model IDs are scoped to this provider, including custom gateway models.
+    val modelConfigs: Map<String, ModelConfiguration> = emptyMap()
 )
 
 @Serializable
@@ -70,3 +73,15 @@ data class LlmProviderModels(
     val id: String,
     val models: List<LlmModel> = emptyList()
 )
+
+@Serializable
+data class ModelConfiguration(
+    val temperature: Double? = null,
+    @SerialName("top_p") val topP: Double? = null,
+    @SerialName("top_k") val topK: Int? = null,
+    // null inherits the provider setting; false is an explicit override.
+    val supportStream: Boolean? = null
+)
+
+fun LlmProviderInfo.streamEnabledFor(modelId: String): Boolean =
+    config.modelConfigs[modelId]?.supportStream ?: config.supportStream

@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.starfall.multigateway.data.model.ModelConfiguration
 import org.starfall.multigateway.data.model.LlmProviderInfo
 import org.starfall.multigateway.data.model.ProviderType
 
@@ -26,6 +28,7 @@ fun ModelPickerSheet(
     selectedProviderId: String,
     selectedModelId: String,
     onSelectModel: (providerId: String, modelId: String) -> Unit,
+    onSaveModelConfig: (String, String, ModelConfiguration) -> Unit,
     onFetchOllamaModels: (suspend (String) -> List<String>)? = null,
     onDismiss: () -> Unit
 ) {
@@ -38,6 +41,7 @@ fun ModelPickerSheet(
         )
     }
 
+    var configuringModel by remember { mutableStateOf<Pair<String, String>?>(null) }
     var customModelInput by remember { mutableStateOf("") }
     var showCustomInput by remember { mutableStateOf(false) }
 
@@ -114,9 +118,10 @@ fun ModelPickerSheet(
                     .heightIn(max = 480.dp)
             ) {
                 items(providers) { provider ->
-                    val models = dynamicModelsMap[provider.id]
+                    val models = ((dynamicModelsMap[provider.id]
                         ?: dynamicModelsMap[provider.type.name.lowercase()]
-                        ?: listOf("default-model")
+                        ?: emptyList()) + provider.config.modelConfigs.keys +
+                        if (provider.id == selectedProviderId && selectedModelId.isNotBlank()) listOf(selectedModelId) else emptyList()).distinct()
 
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
@@ -180,6 +185,9 @@ fun ModelPickerSheet(
                                             )
                                         }
 
+                                        IconButton(onClick = { configuringModel = provider.id to modelName }) {
+                                            Icon(Icons.Outlined.Tune, contentDescription = "Configure $modelName")
+                                        }
                                         if (isSelected) {
                                             Icon(
                                                 imageVector = Icons.Default.Check,
@@ -205,4 +213,14 @@ fun ModelPickerSheet(
             }
         }
     }
+    configuringModel?.let { (providerId, modelId) ->
+        providers.find { it.id == providerId }?.let { provider ->
+            key(providerId, modelId) {
+                ModelConfigDialog(provider, modelId,
+                    onSave = { onSaveModelConfig(providerId, modelId, it) },
+                    onDismiss = { configuringModel = null })
+            }
+        }
+    }
+
 }

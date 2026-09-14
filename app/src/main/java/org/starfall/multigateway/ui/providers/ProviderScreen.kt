@@ -1,6 +1,10 @@
 package org.starfall.multigateway.ui.providers
 
 import android.widget.Toast
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -365,12 +369,24 @@ fun AddOrEditProviderDialog(
     var testResult by remember { mutableStateOf<String?>(null) }
     var testIsSuccess by remember { mutableStateOf(false) }
     var typeExpanded by remember { mutableStateOf(false) }
+    var maxTokens by remember { mutableStateOf(initialProvider.config.maxTokens.toString()) }
+    var supportStream by remember { mutableStateOf(initialProvider.config.supportStream) }
+    var headersText by remember { mutableStateOf(Json.encodeToString(initialProvider.config.headers)) }
+    val parsedHeaders = runCatching { Json.decodeFromString<Map<String, String>>(headersText) }.getOrNull()
+    val headersValid = parsedHeaders != null && parsedHeaders.all { (key, value) ->
+        key.isNotBlank() && key.none { it <= ' ' || it == ':' || it.code >= 127 } && value.none { it == '\r' || it == '\n' }
+    }
+    val requestValid = maxTokens.toIntOrNull()?.let { it > 0 } == true && headersValid
+    fun requestConfig() = initialProvider.config.copy(
+        maxTokens = maxTokens.toIntOrNull() ?: initialProvider.config.maxTokens,
+        supportStream = supportStream, headers = parsedHeaders ?: initialProvider.config.headers
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (isNew) "Add Provider" else "Configure ${initialProvider.name}") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(modifier = Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // Provider Type Dropdown
                 ExposedDropdownMenuBox(
                     expanded = typeExpanded,
@@ -437,6 +453,19 @@ fun AddOrEditProviderDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                HorizontalDivider()
+                Text("Request config", style = MaterialTheme.typography.titleSmall)
+                OutlinedTextField(maxTokens, { maxTokens = it }, label = { Text("Maximum output tokens") },
+                    singleLine = true, isError = maxTokens.toIntOrNull()?.let { it > 0 } != true,
+                    modifier = Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text("Stream responses")
+                    Switch(checked = supportStream, onCheckedChange = { supportStream = it })
+                }
+                OutlinedTextField(headersText, { headersText = it }, label = { Text("Request headers (JSON)") },
+                    isError = !headersValid, minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth())
+
                 OutlinedButton(
                     onClick = {
                         isTestingConnection = true
@@ -445,7 +474,8 @@ fun AddOrEditProviderDialog(
                             name = name.trim().ifEmpty { "Provider" },
                             type = type,
                             baseUrl = baseUrl.trim(),
-                            auth = initialProvider.auth.copy(key = apiKey.trim(), value = apiKey.trim())
+                            auth = initialProvider.auth.copy(key = apiKey.trim(), value = apiKey.trim()),
+                            config = requestConfig()
                         )
                         coroutineScope.launch {
                             val res = onTestConnection?.invoke(testTarget) ?: Result.success("Endpoint reachable")
@@ -460,7 +490,7 @@ fun AddOrEditProviderDialog(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isTestingConnection && baseUrl.isNotBlank()
+                    enabled = !isTestingConnection && baseUrl.isNotBlank() && requestValid
                 ) {
                     if (isTestingConnection) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -503,12 +533,14 @@ fun AddOrEditProviderDialog(
         },
         confirmButton = {
             Button(
+                enabled = requestValid && baseUrl.isNotBlank(),
                 onClick = {
                     val updated = initialProvider.copy(
                         name = name.trim().ifEmpty { type.displayName },
                         type = type,
                         baseUrl = baseUrl.trim(),
-                        auth = initialProvider.auth.copy(key = apiKey.trim(), value = apiKey.trim())
+                        auth = initialProvider.auth.copy(key = apiKey.trim(), value = apiKey.trim()),
+                            config = requestConfig()
                     )
                     onSave(updated)
                 }

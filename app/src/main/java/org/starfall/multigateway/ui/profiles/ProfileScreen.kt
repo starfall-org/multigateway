@@ -157,7 +157,7 @@ fun ProfileScreen(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "Use default system parameters without profile override",
+                                        text = "Use the default system prompt",
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                         color = MaterialTheme.colorScheme.outline
                                     )
@@ -303,11 +303,7 @@ fun ProfileListCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = "Temp: ${profile.config.temperature ?: 0.7} • Top-P: ${profile.config.topP ?: 0.95}",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f)
-                )
+
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -432,8 +428,6 @@ fun AddOrEditProfileDialog(
 ) {
     var name by remember { mutableStateOf(profile?.name ?: "") }
     var systemPrompt by remember { mutableStateOf(profile?.config?.systemPrompt ?: "") }
-    var temperature by remember { mutableFloatStateOf(profile?.config?.temperature?.toFloat() ?: 0.7f) }
-    var topP by remember { mutableFloatStateOf(profile?.config?.topP?.toFloat() ?: 0.95f) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -460,25 +454,7 @@ fun AddOrEditProfileDialog(
                     maxLines = 4
                 )
 
-                Text(
-                    text = "Temperature: ${String.format("%.2f", temperature)}",
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Slider(
-                    value = temperature,
-                    onValueChange = { temperature = it },
-                    valueRange = 0.0f..2.0f
-                )
 
-                Text(
-                    text = "Top-P: ${String.format("%.2f", topP)}",
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Slider(
-                    value = topP,
-                    onValueChange = { topP = it },
-                    valueRange = 0.0f..1.0f
-                )
             }
         },
         confirmButton = {
@@ -489,9 +465,7 @@ fun AddOrEditProfileDialog(
                             id = profile?.id ?: UUID.randomUUID().toString(),
                             name = name.trim(),
                             config = LlmChatConfig(
-                                systemPrompt = systemPrompt.trim(),
-                                temperature = temperature.toDouble(),
-                                topP = topP.toDouble()
+                                systemPrompt = systemPrompt.trim()
                             )
                         )
                         onSave(newProfile)
