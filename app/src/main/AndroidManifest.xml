@@ -12,6 +12,13 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.MultiGateway">
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.tool-files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/tool_file_paths" />
+        </provider>
         <activity
             android:name=".MainActivity"
             android:windowSoftInputMode="adjustResize"

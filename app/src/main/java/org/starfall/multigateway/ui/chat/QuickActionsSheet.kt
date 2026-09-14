@@ -1,126 +1,35 @@
 package org.starfall.multigateway.ui.chat
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Extension
-import androidx.compose.material.icons.outlined.Public
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.starfall.multigateway.data.model.*
+import org.starfall.multigateway.ui.tools.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuickActionsSheet(
-    onDismiss: () -> Unit
-) {
-    var webSearchEnabled by remember { mutableStateOf(false) }
-    var codeExecutionEnabled by remember { mutableStateOf(false) }
-    var mcpToolsEnabled by remember { mutableStateOf(true) }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
-        ) {
-            Text(
-                text = "Quick Actions & Tools",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            QuickActionToggleRow(
-                icon = Icons.Outlined.Public,
-                title = "Web Search",
-                subtitle = "Browse real-time internet information",
-                checked = webSearchEnabled,
-                onCheckedChange = { webSearchEnabled = it }
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-            )
-
-            QuickActionToggleRow(
-                icon = Icons.Outlined.Code,
-                title = "Code Interpreter",
-                subtitle = "Execute Python / JS algorithms in sandbox",
-                checked = codeExecutionEnabled,
-                onCheckedChange = { codeExecutionEnabled = it }
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-            )
-
-            QuickActionToggleRow(
-                icon = Icons.Outlined.Extension,
-                title = "MCP Server Tools",
-                subtitle = "Enable Model Context Protocol extensions",
-                checked = mcpToolsEnabled,
-                onCheckedChange = { mcpToolsEnabled = it }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-private fun QuickActionToggleRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-            modifier = Modifier.size(40.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
+fun QuickActionsSheet(onDismiss: () -> Unit) {
+    val controls=LocalToolControls.current
+    ModalBottomSheet(onDismissRequest=onDismiss) {
+        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.7f),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            item { Text("Tools",style=MaterialTheme.typography.titleLarge) }
+            item { Text("System tools",style=MaterialTheme.typography.titleMedium) }
+            items(listOf("generate_image","generate_video")) { name ->
+                val cfg=controls.settings.system[name] ?: SystemToolConfig()
+                ToolSwitch(if(name=="generate_image") "Create image" else "Create video",cfg.enabled) { controls.setSystem(name,cfg.copy(enabled=it)) }
+                if(cfg.modelId.isBlank()) Text("Choose a model in System tools.",style=MaterialTheme.typography.bodySmall)
+            }
+            item { HorizontalDivider(); Text("MCP servers",style=MaterialTheme.typography.titleMedium) }
+            if(controls.profile==null) item { Text("Select a profile and enable its MCP permissions first.") }
+            items(controls.servers,key={it.id}) { server ->
+                val permitted=controls.profile?.config?.mcpAccess?.get(server.id)?.enabled==true
+                ToolSwitch(server.name,permitted && controls.settings.quickMcp[server.id]!=false,enabled=permitted) { controls.setMcp(server.id,it) }
+                if(!permitted) Text("Disabled by profile",style=MaterialTheme.typography.bodySmall)
             }
         }
-        Spacer(modifier = Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
-            )
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange
-        )
     }
 }

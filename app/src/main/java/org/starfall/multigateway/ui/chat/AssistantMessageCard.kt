@@ -117,6 +117,8 @@ fun AssistantMessageCard(
 
         Spacer(modifier = Modifier.height(6.dp))
 
+        ToolActivityCards(message.activeVersion.toolActivity)
+
         // Reasoning Dropdown if available
         if (!message.reasoningContent.isNullOrBlank()) {
             ReasoningDropdown(

@@ -32,6 +32,8 @@ fun MenuView(
     onNavigateToMcp: () -> Unit,
     onNavigateToSpeech: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToSystemTools: () -> Unit,
+    onNavigateToStorage: () -> Unit,
     onCloseMenu: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -127,6 +129,13 @@ fun MenuView(
                             onCloseMenu()
                         }
                     )
+                }
+
+                item {
+                    MenuItemTile(icon = Icons.Outlined.Build, title = "System tools", subtitle = "Image and video generation", onClick = { onNavigateToSystemTools(); onCloseMenu() })
+                }
+                item {
+                    MenuItemTile(icon = Icons.Outlined.Storage, title = "Storage", subtitle = "Tool files, images and videos", onClick = { onNavigateToStorage(); onCloseMenu() })
                 }
 
                 item {

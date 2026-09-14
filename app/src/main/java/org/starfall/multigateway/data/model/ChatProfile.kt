@@ -6,7 +6,8 @@ import kotlinx.serialization.Serializable
 // Keep the stored config/system_prompt shape so existing profiles retain their prompts.
 @Serializable
 data class LlmChatConfig(
-    @SerialName("system_prompt") val systemPrompt: String = ""
+    @SerialName("system_prompt") val systemPrompt: String = "",
+    val mcpAccess: Map<String, McpAccess> = emptyMap()
 )
 
 @Serializable

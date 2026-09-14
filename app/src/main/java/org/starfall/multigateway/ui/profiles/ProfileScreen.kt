@@ -1,5 +1,9 @@
 package org.starfall.multigateway.ui.profiles
 
+import org.starfall.multigateway.data.model.McpInfo
+import org.starfall.multigateway.data.model.McpAccess
+import org.starfall.multigateway.data.model.ToolDefinition
+import org.starfall.multigateway.ui.tools.ProfileMcpPermissions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
@@ -36,6 +40,8 @@ import java.util.UUID
 @Composable
 fun ProfileScreen(
     profiles: List<ChatProfile>,
+    mcpServers: List<McpInfo>,
+    discoverTools: suspend (McpInfo) -> List<ToolDefinition>,
     selectedProfileId: String?,
     onSelectProfile: (String?) -> Unit,
     onSaveProfile: (ChatProfile) -> Unit,
@@ -196,6 +202,8 @@ fun ProfileScreen(
     if (showDialog) {
         AddOrEditProfileDialog(
             profile = editingProfile,
+            mcpServers = mcpServers,
+            discoverTools = discoverTools,
             onDismiss = { showDialog = false },
             onSave = {
                 onSaveProfile(it)
@@ -427,10 +435,13 @@ fun ProfileGridCard(
 @Composable
 fun AddOrEditProfileDialog(
     profile: ChatProfile?,
+    mcpServers: List<McpInfo>,
+    discoverTools: suspend (McpInfo) -> List<ToolDefinition>,
     onDismiss: () -> Unit,
     onSave: (ChatProfile) -> Unit
 ) {
     var name by remember { mutableStateOf(profile?.name ?: "") }
+    var mcpAccess by remember { mutableStateOf(profile?.config?.mcpAccess ?: emptyMap<String, McpAccess>()) }
     var systemPrompt by remember { mutableStateOf(profile?.config?.systemPrompt ?: "") }
 
     AlertDialog(
@@ -457,8 +468,7 @@ fun AddOrEditProfileDialog(
                     minLines = 2,
                     maxLines = 4
                 )
-
-
+                ProfileMcpPermissions(mcpServers, mcpAccess, discoverTools) { mcpAccess = it }
             }
         },
         confirmButton = {
@@ -470,7 +480,7 @@ fun AddOrEditProfileDialog(
                             id = profile?.id ?: UUID.randomUUID().toString(),
                             name = name.trim(),
                             config = LlmChatConfig(
-                                systemPrompt = systemPrompt.trim()
+                                systemPrompt = systemPrompt.trim(), mcpAccess = mcpAccess
                             )
                         )
                         onSave(newProfile)

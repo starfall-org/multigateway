@@ -18,6 +18,7 @@ import org.starfall.multigateway.ui.providers.ProviderScreen
 import org.starfall.multigateway.ui.settings.SettingsScreen
 import org.starfall.multigateway.ui.speech.SpeechScreen
 import org.starfall.multigateway.ui.viewmodel.MainViewModel
+import org.starfall.multigateway.ui.tools.*
 
 enum class Screen {
     CHAT,
@@ -25,7 +26,9 @@ enum class Screen {
     PROVIDERS,
     MCP,
     SPEECH,
-    SETTINGS
+    SETTINGS,
+    SYSTEM_TOOLS,
+    STORAGE
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,8 +51,11 @@ fun MainScreen(viewModel: MainViewModel) {
     val mcpServers: List<McpInfo> by viewModel.mcpServers.collectAsStateWithLifecycle()
     val speechServices: List<SpeechService> by viewModel.speechServices.collectAsStateWithLifecycle()
 
+    val toolSettings by viewModel.toolSettings.collectAsStateWithLifecycle()
+
     val activeProfile: ChatProfile? = appPrefs.selectedProfileId?.let { id -> profiles.find { it.id == id } }
 
+    CompositionLocalProvider(LocalToolControls provides ToolControls(mcpServers, activeProfile, toolSettings, viewModel::setSystemTool, viewModel::setQuickMcp)) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -136,6 +142,8 @@ fun MainScreen(viewModel: MainViewModel) {
                 Screen.PROFILES -> {
                     ProfileScreen(
                         profiles = profiles,
+                        mcpServers = mcpServers,
+                        discoverTools = { viewModel.mcpService.discover(it) },
                         selectedProfileId = appPrefs.selectedProfileId,
                         onSelectProfile = { viewModel.selectProfile(it) },
                         onSaveProfile = { viewModel.saveProfile(it) },
@@ -176,6 +184,8 @@ fun MainScreen(viewModel: MainViewModel) {
                     )
                 }
 
+                Screen.SYSTEM_TOOLS -> SystemToolsScreen(providers, toolSettings, viewModel::setSystemTool) { currentScreen = Screen.CHAT }
+                Screen.STORAGE -> StorageScreen(viewModel.toolFiles) { currentScreen = Screen.CHAT }
                 Screen.SETTINGS -> {
                     SettingsScreen(
                         appPreferences = appPrefs,
@@ -245,6 +255,8 @@ fun MainScreen(viewModel: MainViewModel) {
                             currentScreen = Screen.SPEECH
                             showEndMenuSheet = false
                         },
+                        onNavigateToSystemTools = { currentScreen = Screen.SYSTEM_TOOLS; showEndMenuSheet = false },
+                        onNavigateToStorage = { currentScreen = Screen.STORAGE; showEndMenuSheet = false },
                         onNavigateToSettings = {
                             currentScreen = Screen.SETTINGS
                             showEndMenuSheet = false
@@ -257,5 +269,6 @@ fun MainScreen(viewModel: MainViewModel) {
                 }
             }
         }
+    }
     }
 }

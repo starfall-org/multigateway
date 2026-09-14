@@ -14,6 +14,7 @@ import org.starfall.multigateway.data.service.LlmService
 import org.starfall.multigateway.data.service.McpService
 import org.starfall.multigateway.data.service.TtsHelper
 import java.util.UUID
+import org.starfall.multigateway.data.tools.*
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -25,7 +26,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val speechRepo = SpeechRepository(db)
     val prefsRepo = AppPreferencesRepository(application)
     val llmService = LlmService()
-    val mcpService = McpService()
+    val toolFiles = ToolFiles(application)
+    private val toolHttp = ToolHttp(toolFiles)
+    val mcpService = McpService(toolHttp)
+    private val toolChat = ToolChat(toolHttp, mcpService, llmService)
+    private val toolStore = ToolSettingsStore(application)
+    val toolSettings = toolStore.settings.stateIn(viewModelScope, SharingStarted.Eagerly, ToolSettings())
+    fun setSystemTool(name: String, config: SystemToolConfig) { viewModelScope.launch { toolStore.update { it.copy(system = it.system + (name to config)) } } }
+    fun setQuickMcp(id: String, enabled: Boolean) { viewModelScope.launch { toolStore.update { it.copy(quickMcp = it.quickMcp + (id to enabled)) } } }
+    private fun toolEvents(provider: LlmProviderInfo, model: String, messages: List<StoredMessage>, profile: ChatProfile?, prompt: String) =
+        toolChat.generate(provider, model, messages, prompt, mcpServers.value, providers.value,
+            access = { profiles.value.find { it.id == profile?.id }?.config?.mcpAccess ?: emptyMap() },
+            settings = { toolSettings.value })
     val ttsHelper = TtsHelper(application)
 
     val conversations: StateFlow<List<Conversation>> = conversationRepo.allConversations
@@ -282,10 +294,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             updatedAt = now, providerId = provider.id, modelId = modelId, profileId = profile?.id
         )
         _currentConversation.value = conv
-        return generation.start(conv, assistant.id, flow { emitAll(llmService.generateStream(
-            provider = provider, modelName = modelId, messages = conv.messages.dropLast(1),
-            systemPrompt = profile?.config?.systemPrompt ?: prefs.defaultSystemPrompt
-        )) })
+        return generation.startEvents(conv, assistant.id, toolEvents(provider, modelId, conv.messages.dropLast(1), profile,
+            profile?.config?.systemPrompt ?: prefs.defaultSystemPrompt))
     }
 
     fun stopGeneration() { generation.stop() }
@@ -344,10 +354,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val conv = prepareRegeneration(current, messageId)?.copy(
             providerId = provider.id, modelId = model, profileId = profile?.id
         ) ?: return
-        generation.start(conv, messageId, flow { emitAll(llmService.generateStream(
-            provider = provider, modelName = model, messages = conv.messages.dropLast(1),
-            systemPrompt = profile?.config?.systemPrompt ?: prefs.defaultSystemPrompt
-        )) })
+        generation.startEvents(conv, messageId, toolEvents(provider, model, conv.messages.dropLast(1), profile,
+            profile?.config?.systemPrompt ?: prefs.defaultSystemPrompt))
     }
 
     fun saveProfile(profile: ChatProfile) {

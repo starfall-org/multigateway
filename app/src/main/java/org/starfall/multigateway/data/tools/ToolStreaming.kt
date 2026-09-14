@@ -1,0 +1,100 @@
+package org.starfall.multigateway.data.tools
+
+import kotlinx.coroutines.*
+import kotlinx.serialization.json.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.starfall.multigateway.data.model.*
+
+/** Accumulate only bounded tool arguments while delivering answer text incrementally. */
+internal suspend fun ToolHttp.modelResponse(url:String, body:JsonObject, provider:LlmProviderInfo, stream:Boolean, onText:suspend(String)->Unit):JsonObject {
+    if(!stream) return post(url,body,provider)
+    val google=provider.type==ProviderType.GOOGLE
+    val ollama=provider.type==ProviderType.OLLAMA
+    val anthropic=provider.type==ProviderType.ANTHROPIC
+    val target=if(google) url.replace(":generateContent",":streamGenerateContent")+"?alt=sse" else url
+    val payload=if(google) body else JsonObject(body+("stream" to JsonPrimitive(true)))
+    return withContext(Dispatchers.IO) {
+        execute(request(target,provider).post(payload.toString().toRequestBody("application/json".toMediaType())).build()).use { response ->
+            check(response.isSuccessful){"HTTP ${response.code}: ${response.message}"}
+            val text=StringBuilder()
+            val calls=linkedMapOf<Int,JsonObject>()
+            val arguments=mutableMapOf<Int,StringBuilder>()
+            val googleParts=mutableListOf<JsonElement>()
+            suspend fun consume(value:JsonObject) {
+                if(value["error"]!=null || value.text("type")=="error") error("Provider stream error: ${value["error"].toString().take(300)}")
+                suspend fun emitText(chunk:String){if(chunk.isNotEmpty()){text.append(chunk);check(text.length<=512000){"Answer exceeds size limit"};onText(chunk)}}
+                when {
+                    google -> {
+                        (value["candidates"] as? JsonArray).orEmpty().firstOrNull()?.jsonObject?.get("content")?.jsonObject?.get("parts")?.jsonArray.orEmpty().forEach { part ->
+                            val p=part.jsonObject
+                            if((p["thought"] as? JsonPrimitive)?.booleanOrNull!=true) emitText(p.text("text"))
+                            if(p["functionCall"]!=null) googleParts+=part
+                        }
+                    }
+                    anthropic -> {
+                        val index=(value["index"] as? JsonPrimitive)?.intOrNull ?: 0
+                        if(value.text("type")=="content_block_start") {
+                            val block=value["content_block"]!!.jsonObject
+                            if(block.text("type")=="tool_use") calls[index]=block
+                        }
+                        if(value.text("type")=="content_block_delta") {
+                            val delta=value["delta"]!!.jsonObject
+                            emitText(delta.text("text"))
+                            if(delta.text("type")=="input_json_delta") {val args=arguments.getOrPut(index){StringBuilder()};args.append(delta.text("partial_json"));check(args.length<=65536){"Tool arguments too large"}}
+                        }
+                    }
+                    else -> {
+                        val delta=if(ollama) value["message"] as? JsonObject else (value["choices"] as? JsonArray)?.firstOrNull()?.jsonObject?.get("delta") as? JsonObject
+                        if(delta!=null) {
+                            emitText(delta.text("content"))
+                            (delta["tool_calls"] as? JsonArray).orEmpty().forEachIndexed { pos,item ->
+                                val call=item.jsonObject
+                                val index=(call["index"] as? JsonPrimitive)?.intOrNull ?: pos
+                                val old=calls[index] ?: obj()
+                                val oldF=old["function"] as? JsonObject ?: obj()
+                                val f=call["function"] as? JsonObject ?: obj()
+                                val arg=f["arguments"]
+                                if(arg!=null) { val buf=arguments.getOrPut(index){StringBuilder()};buf.append(if(arg is JsonPrimitive) arg.content else arg.toString());check(buf.length<=65536){"Tool arguments too large"} }
+                                calls[index]=obj("id" to str(call.text("id").ifBlank{old.text("id")}),"type" to str("function"),
+                                    "function" to obj("name" to str(oldF.text("name")+f.text("name"))))
+                            }
+                        }
+                    }
+                }
+                check(calls.size<=16 && googleParts.size<=16){"Too many tool calls"}
+            }
+            val reader=response.body!!.charStream().buffered()
+            val event=StringBuilder()
+            while(true) {
+                currentCoroutineContext().ensureActive()
+                val line=StringBuilder()
+                var eof=false
+                while(true){val c=reader.read();if(c<0){eof=true;break};if(c==10)break;if(c!=13)line.append(c.toChar());check(line.length<=1024*1024){"Provider event too large"}}
+                if(ollama && line.isNotEmpty()) consume(Json.parseToJsonElement(line.toString()).jsonObject)
+                else if(!ollama) {
+                    if(line.startsWith("data:")) event.append(line.substring(5).trimStart()).append('\n')
+                    check(event.length<=1024*1024){"Provider event too large"}
+                    if((line.isEmpty()||eof) && event.isNotEmpty()) {
+                        val data=event.toString().trim();event.setLength(0)
+                        if(data=="[DONE]") break
+                        consume(Json.parseToJsonElement(data).jsonObject)
+                    }
+                }
+                if(eof)break
+            }
+            when {
+                google -> obj("candidates" to JsonArray(listOf(obj("content" to obj("parts" to JsonArray(listOf(obj("text" to str(text.toString())))+googleParts))))))
+                anthropic -> obj("content" to JsonArray(listOf(obj("type" to str("text"),"text" to str(text.toString())))+calls.map { (i,c) ->
+                    JsonObject(c+("input" to (arguments[i]?.takeIf{it.isNotEmpty()}?.let{Json.parseToJsonElement(it.toString())} ?: c["input"] ?: obj())))
+                }))
+                else -> {
+                    val message=obj("role" to str("assistant"),"content" to str(text.toString()),"tool_calls" to JsonArray(calls.map{(i,c)->
+                        JsonObject(c+("function" to JsonObject(c["function"]!!.jsonObject+("arguments" to str(arguments[i]?.toString()?:"{}")))))
+                    }))
+                    if(ollama) obj("message" to message) else obj("choices" to JsonArray(listOf(obj("message" to message))))
+                }
+            }
+        }
+    }
+}

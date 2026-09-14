@@ -20,7 +20,10 @@ internal class ChatGeneration(
         private set
     private var job: Job? = null
 
-    fun start(conversation: Conversation, messageId: String, chunks: Flow<String>): Boolean {
+    fun start(conversation: Conversation, messageId: String, chunks: Flow<String>): Boolean =
+        startEvents(conversation, messageId, chunks.map { GenerationEvent.Text(it) })
+
+    fun startEvents(conversation: Conversation, messageId: String, chunks: Flow<GenerationEvent>): Boolean {
         if (_busy.value) return false
         _busy.value = true
         _error.value = null
@@ -36,8 +39,20 @@ internal class ChatGeneration(
             try {
                 save(snapshot!!)
                 chunks.collect { chunk ->
-                    output += chunk
-                    update()
+                    when (chunk) {
+                        is GenerationEvent.Text -> { output += chunk.text; update() }
+                        is GenerationEvent.Tool -> {
+                            snapshot = snapshot!!.copy(messages = snapshot!!.messages.map { message ->
+                                if (message.id != messageId) message else message.copy(versions = message.versions.mapIndexed { index, version ->
+                                    if (index != message.activeVersionIndex) version else version.copy(
+                                        toolActivity = version.toolActivity.filterNot { it.id == chunk.activity.id } + chunk.activity
+                                    )
+                                })
+                            })
+                            publish(snapshot!!)
+                            save(snapshot!!)
+                        }
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -48,7 +63,17 @@ internal class ChatGeneration(
             } finally {
                 try {
                     // A stopped stream must retain its partial response before allowing another send.
-                    withContext(NonCancellable) { save(snapshot!!) }
+                    withContext(NonCancellable) {
+                        snapshot = snapshot!!.copy(messages = snapshot!!.messages.map { message ->
+                            if (message.id != messageId) message else message.copy(versions = message.versions.mapIndexed { index, version ->
+                                if (index != message.activeVersionIndex) version else version.copy(toolActivity = version.toolActivity.map {
+                                    if (it.status == "running") it.copy(status = "cancelled", summary = "Stopped") else it
+                                })
+                            })
+                        })
+                        publish(snapshot!!)
+                        save(snapshot!!)
+                    }
                 } catch (e: Exception) {
                     _error.value = "Could not save conversation: ${e.localizedMessage}"
                 } finally {
