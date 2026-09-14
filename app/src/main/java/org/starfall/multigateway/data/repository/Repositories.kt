@@ -48,7 +48,11 @@ class ConversationRepository(private val db: AppDatabase) {
             title = entity.title,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
-            messages = messages,
+            messages = messages.map { message -> message.copy(versions = message.versions.map { version ->
+                version.copy(toolActivity = version.toolActivity.map { activity ->
+                    if(activity.status == "running") activity.copy(status = "interrupted", summary = "The previous run did not finish.") else activity
+                })
+            }) },
             tokenCount = entity.tokenCount,
             providerId = entity.providerId,
             modelId = entity.modelId,

@@ -11,29 +11,29 @@ import java.util.UUID
 class ToolChat(private val http: ToolHttp, private val mcp: McpService, private val llm: LlmService) {
     fun generate(provider: LlmProviderInfo, model: String, messages: List<StoredMessage>, prompt: String,
                  servers: List<McpInfo>, providers: List<LlmProviderInfo>,
-                 access: () -> Map<String,McpAccess>, settings: () -> ToolSettings): Flow<GenerationEvent> = flow {
+                 access: () -> Map<String,McpAccess>, settings: () -> ToolSettings): Flow<GenerationEvent> = channelFlow {
         if(provider.config.modelConfigs[model]?.supportsToolCalls != true) {
-            emitAll(llm.generateStream(provider,model,messages,prompt).map { GenerationEvent.Text(it) }); return@flow
+            llm.generateStream(provider,model,messages,prompt).collect { send(GenerationEvent.Text(it)) }; return@channelFlow
         }
         val sessions = mutableMapOf<String,McpSession>()
         val tools = mutableListOf<ToolDefinition>()
         try {
             servers.filter { access()[it.id]?.enabled == true && settings().quickMcp[it.id] != false }.forEach { server ->
                 val activity = ToolActivity(UUID.randomUUID().toString(), "${server.name}: connect")
-                emit(GenerationEvent.Tool(activity))
+                send(GenerationEvent.Tool(activity))
                 try {
                     val session = mcp.session(server); sessions[server.id] = session
                     tools += session.tools().filter { toolAllowed(access()[server.id],settings().quickMcp[server.id],it.originalName) }
-                    emit(GenerationEvent.Tool(activity.copy(status="success",summary="Tools ready")))
-                } catch(e: CancellationException) { emit(GenerationEvent.Tool(activity.copy(status="cancelled"))); throw e }
-                catch(e: Exception) { emit(GenerationEvent.Tool(activity.copy(status="error",summary=e.message.orEmpty().take(500)))) }
+                    send(GenerationEvent.Tool(activity.copy(status="success",summary="Tools ready")))
+                } catch(e: CancellationException) { send(GenerationEvent.Tool(activity.copy(status="cancelled"))); throw e }
+                catch(e: Exception) { send(GenerationEvent.Tool(activity.copy(status="error",summary=e.message.orEmpty().take(500)))) }
             }
             listOf("generate_image","generate_video").forEach { name ->
                 if(settings().system[name]?.enabled == true) tools += ToolDefinition(name,
                     if(name == "generate_image") "Generate an image from a detailed prompt. The app displays the saved image." else "Generate a video from a detailed prompt. The app displays the saved video.",
                     obj("type" to str("object"),"properties" to obj("prompt" to obj("type" to str("string"))),"required" to JsonArray(listOf(str("prompt")))))
             }
-            if(tools.isEmpty()) { emitAll(llm.generateStream(provider,model,messages,prompt).map { GenerationEvent.Text(it) }); return@flow }
+            if(tools.isEmpty()) { llm.generateStream(provider,model,messages,prompt).collect { send(GenerationEvent.Text(it)) }; return@channelFlow }
             val history = mutableListOf<JsonObject>()
             if(provider.type != ProviderType.GOOGLE && prompt.isNotBlank()) history += obj("role" to str("system"),"content" to str(prompt))
             messages.forEach { message ->
@@ -43,11 +43,11 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
             repeat(12) {
                 currentCoroutineContext().ensureActive()
                 val allowed = tools.filter { t -> if(t.serverId == null) settings().system[t.name]?.enabled == true else toolAllowed(access()[t.serverId],settings().quickMcp[t.serverId],t.originalName) }
-                val turn = request(provider,model,history,allowed,prompt) { emit(GenerationEvent.Text(it)) }
+                val turn = request(provider,model,history,allowed,prompt) { send(GenerationEvent.Text(it)) }
                 val content = turn.text("content")
-                if(content.isNotBlank() && !provider.streamEnabledFor(model)) emit(GenerationEvent.Text(content))
+                if(content.isNotBlank() && !provider.streamEnabledFor(model)) send(GenerationEvent.Text(content))
                 val calls = turn["tool_calls"] as? JsonArray ?: JsonArray(emptyList())
-                if(calls.isEmpty()) return@flow
+                if(calls.isEmpty()) return@channelFlow
                 check(calls.size <= 16) { "Too many tool calls in a single response" }
                 history += turn
                 calls.forEach { value ->
@@ -56,7 +56,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                     val name = function.text("name")
                     val tool = allowed.find { it.name == name }
                     val activity = ToolActivity(UUID.randomUUID().toString(),tool?.let { t -> servers.find { it.id == t.serverId }?.let { "${it.name} / ${t.originalName}" } ?: t.originalName } ?: name)
-                    emit(GenerationEvent.Tool(activity))
+                    send(GenerationEvent.Tool(activity))
                     var result: JsonObject
                     try {
                         require(tool != null) { "Tool is not enabled" }
@@ -76,11 +76,11 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                         val isError = (result["isError"] as? JsonPrimitive)?.booleanOrNull == true
                         val brief = result.toString().take(12000)
                         val details = http.files!!.save(brief.byteInputStream(),"text/plain")
-                        emit(GenerationEvent.Tool(activity.copy(status=if(isError) "error" else "success",summary=brief.take(500),files=names + details)))
-                    } catch(e: CancellationException) { emit(GenerationEvent.Tool(activity.copy(status="cancelled",summary="Stopped"))); throw e }
+                        send(GenerationEvent.Tool(activity.copy(status=if(isError) "error" else "success",summary=brief.take(500),files=names + details)))
+                    } catch(e: CancellationException) { send(GenerationEvent.Tool(activity.copy(status="cancelled",summary="Stopped"))); throw e }
                     catch(e: Exception) {
                         result = obj("error" to str(e.message.orEmpty().take(500)))
-                        emit(GenerationEvent.Tool(activity.copy(status="error",summary=e.message.orEmpty().take(500))))
+                        send(GenerationEvent.Tool(activity.copy(status="error",summary=e.message.orEmpty().take(500))))
                     }
                     history += obj("role" to str("tool"),"tool_call_id" to str(call.text("id")),"name" to str(name),"content" to str(result.toString().take(12000)))
                 }
@@ -138,7 +138,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                 }
                 val response = http.modelResponse(base.removeSuffix("/v1")+"/v1/messages",buildJsonObject {
                     put("model",model); put("max_tokens",p.config.maxTokens); put("system",prompt); put("messages",JsonArray(native))
-                    put("tools",JsonArray(tools.map { obj("name" to str(it.name),"description" to str(it.description),"input_schema" to it.schema) }))
+                    if(tools.isNotEmpty()) put("tools",JsonArray(tools.map { obj("name" to str(it.name),"description" to str(it.description),"input_schema" to it.schema) }))
                     config.temperature?.let { put("temperature",it) }; config.topP?.let { put("top_p",it) }; config.topK?.let { put("top_k",it) }
                 },p,p.streamEnabledFor(model),onText)
                 val blocks=response["content"]!!.jsonArray
@@ -160,7 +160,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                 val root=if(Regex("/v1(?:beta|alpha)?$").containsMatchIn(base)) base else "$base/v1beta"
                 val response=http.modelResponse("$root/models/$model:generateContent",buildJsonObject {
                     put("contents",JsonArray(native)); put("systemInstruction",obj("parts" to JsonArray(listOf(obj("text" to str(prompt))))))
-                    put("tools",JsonArray(listOf(obj("functionDeclarations" to JsonArray(tools.map { obj("name" to str(it.name),"description" to str(it.description),"parameters" to it.schema) })))))
+                    if(tools.isNotEmpty()) put("tools",JsonArray(listOf(obj("functionDeclarations" to JsonArray(tools.map { obj("name" to str(it.name),"description" to str(it.description),"parameters" to it.schema) })))))
                     put("generationConfig",buildJsonObject { put("maxOutputTokens",p.config.maxTokens); config.temperature?.let { put("temperature",it) }; config.topP?.let { put("topP",it) }; config.topK?.let { put("topK",it) } })
                 },p,p.streamEnabledFor(model),onText)
                 val parts=response["candidates"]!!.jsonArray.first().jsonObject["content"]!!.jsonObject["parts"]!!.jsonArray

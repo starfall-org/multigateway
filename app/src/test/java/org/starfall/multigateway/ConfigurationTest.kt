@@ -16,11 +16,12 @@ class ConfigurationTest {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val messages = listOf(StoredMessage("u", ChatRole.USER, listOf(MessageVersion(content = "Hello"))))
 
-    @Test fun oldProfileKeepsOnlySystemPrompt() {
+    @Test fun oldProfileKeepsSystemPromptAndDefaultsMcpPermissions() {
         val profile = json.decodeFromString<ChatProfile>("""{"id":"p","name":"Old","config":{"system_prompt":"Keep me","temperature":0.9,"top_p":0.7,"max_tokens":123},"active_mcp":[]}""")
         assertEquals("Keep me", profile.config.systemPrompt)
         val saved = json.parseToJsonElement(json.encodeToString(profile)).jsonObject
-        assertEquals(setOf("system_prompt"), saved["config"]!!.jsonObject.keys)
+        assertEquals(setOf("system_prompt", "mcpAccess"), saved["config"]!!.jsonObject.keys)
+        assertTrue(profile.config.mcpAccess.isEmpty())
         assertFalse(saved.containsKey("active_mcp"))
     }
 

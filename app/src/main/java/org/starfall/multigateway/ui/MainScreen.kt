@@ -55,7 +55,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
     val activeProfile: ChatProfile? = appPrefs.selectedProfileId?.let { id -> profiles.find { it.id == id } }
 
-    CompositionLocalProvider(LocalToolControls provides ToolControls(mcpServers, activeProfile, toolSettings, viewModel::setSystemTool, viewModel::setQuickMcp)) {
+    CompositionLocalProvider(LocalToolControls provides ToolControls(mcpServers, activeProfile, toolSettings, providers.find { it.id == appPrefs.selectedProviderId }?.config?.modelConfigs?.get(appPrefs.selectedModelId)?.supportsToolCalls == true, viewModel::setSystemTool, viewModel::setQuickMcp)) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {

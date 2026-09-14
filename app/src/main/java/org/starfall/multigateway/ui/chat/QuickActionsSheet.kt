@@ -17,6 +17,7 @@ fun QuickActionsSheet(onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest=onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.7f),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             item { Text("Tools",style=MaterialTheme.typography.titleLarge) }
+            if(!controls.supportsTools) item { Text("The selected model has Tool calls disabled. Enable it in Edit Model to use these tools.", color=MaterialTheme.colorScheme.error) }
             item { Text("System tools",style=MaterialTheme.typography.titleMedium) }
             items(listOf("generate_image","generate_video")) { name ->
                 val cfg=controls.settings.system[name] ?: SystemToolConfig()

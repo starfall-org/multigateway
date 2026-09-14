@@ -29,6 +29,7 @@ class McpSession(private val info: McpInfo, private val http: ToolHttp) {
     private var sessionId: String? = null
     private var version: String? = null
     private var legacy = false
+    private var expired = false
     private var stream: Response? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val messages = Channel<JsonObject>(32)
@@ -39,6 +40,7 @@ class McpSession(private val info: McpInfo, private val http: ToolHttp) {
         version?.let { header("MCP-Protocol-Version", it) }
     }
     suspend fun initialize() {
+        expired = false
         if (info.protocol == McpProtocol.SSE) startLegacy()
         val result = rpc("initialize", obj(
             "protocolVersion" to str("2025-06-18"),
@@ -89,7 +91,10 @@ class McpSession(private val info: McpInfo, private val http: ToolHttp) {
         } while(cursor.isNotEmpty())
         return result
     }
-    suspend fun call(name: String, arguments: JsonObject): JsonObject = rpc("tools/call", obj("name" to str(name), "arguments" to arguments))
+    suspend fun call(name: String, arguments: JsonObject): JsonObject {
+        if(expired) initialize()
+        return rpc("tools/call", obj("name" to str(name), "arguments" to arguments))
+    }
     private suspend fun notify(method: String, params: JsonObject) {
         val body = obj("jsonrpc" to str("2.0"), "method" to str(method), "params" to params)
         http.execute(request(postEndpoint).post(body.toString().toRequestBody("application/json".toMediaType())).build()).use {
@@ -102,7 +107,8 @@ class McpSession(private val info: McpInfo, private val http: ToolHttp) {
         try {
             val answer = withContext(Dispatchers.IO) {
                 http.execute(request(postEndpoint).post(body.toString().toRequestBody("application/json".toMediaType())).build()).use { response ->
-                    check(response.isSuccessful) { "MCP HTTP ${response.code}. Reconnect before retrying." }
+                    if(response.code == 404 && sessionId != null) { sessionId = null; version = null; expired = true }
+                    check(response.isSuccessful) { "MCP HTTP ${response.code}. The next call will reconnect if the session expired." }
                     response.header("Mcp-Session-Id")?.let { sessionId = it }
                     if (legacy) {
                         var message = messages.receive()
