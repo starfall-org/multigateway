@@ -5,8 +5,7 @@ import kotlinx.serialization.Serializable
 
 enum class McpProtocol {
     @SerialName("streamable_http") STREAMABLE_HTTP,
-    @SerialName("sse") SSE,
-    @SerialName("stdio") STDIO
+    @SerialName("sse") SSE
 }
 
 @Serializable

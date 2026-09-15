@@ -45,7 +45,8 @@ class ToolRuntimeTest {
             assertTrue(output.length<66000)
             assertTrue(Json.parseToJsonElement(output).jsonObject.containsKey("text"))
             runCatching{store.sanitize(StringReader("{\"b64_json\":\"${"A".repeat(20000)}"))}
-            assertTrue(root.listFiles()!!.isEmpty())
+            assertTrue(root.listFiles()!!.none { it.name.endsWith(".part") })
+            assertEquals(1,store.list().size)
         } finally {root.deleteRecursively()}
     }
     @Test fun mcpUsesHandshakeSessionHeadersAndRealToolsCall() = runBlocking {

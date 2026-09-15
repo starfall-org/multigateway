@@ -110,7 +110,7 @@ class LlmService {
                 when (auth.method) {
                     AuthMethod.CUSTOM_HEADER -> auth.key?.takeIf { it.isNotBlank() }?.let { header(it, auth.value.orEmpty()) }
                     AuthMethod.QUERY_PARAM -> parameter(auth.key ?: "key", auth.value.orEmpty())
-                    else -> (auth.key?.takeIf { it.isNotBlank() } ?: auth.value)?.takeIf { it.isNotBlank() }?.let { token ->
+                    else -> auth.token.takeIf { it.isNotBlank() }?.let { token ->
                         when (provider.type) {
                             ProviderType.ANTHROPIC -> header("x-api-key", token)
                             ProviderType.GOOGLE -> header("x-goog-api-key", token)
@@ -254,7 +254,7 @@ class LlmService {
     }
 
     private fun HttpRequestBuilder.applyAuth(provider: LlmProviderInfo) {
-        val key = provider.auth.key ?: provider.auth.value
+        val key = provider.auth.token
         if (!key.isNullOrEmpty()) {
             when (provider.auth.method) {
                 AuthMethod.BEARER_TOKEN -> bearerAuth(key)

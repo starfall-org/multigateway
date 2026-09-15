@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.starfall.multigateway.data.local.db.AppDatabase
+import org.starfall.multigateway.data.local.db.SecretCipher
 import org.starfall.multigateway.data.local.db.entities.*
 import org.starfall.multigateway.data.model.*
 
@@ -167,13 +168,15 @@ class LlmRepository(private val db: AppDatabase) {
         } catch (e: Exception) {
             ProviderType.OPENAI
         }
+        val authJson = SecretCipher.decrypt(entity.authJson)
+        val configJson = SecretCipher.decrypt(entity.configJson)
         val auth: Authorization = try {
-            json.decodeFromString(entity.authJson)
+            json.decodeFromString(authJson)
         } catch (e: Exception) {
             Authorization()
         }
         val config: ProviderConfiguration = try {
-            json.decodeFromString(entity.configJson)
+            json.decodeFromString(configJson)
         } catch (e: Exception) {
             ProviderConfiguration()
         }
@@ -183,7 +186,7 @@ class LlmRepository(private val db: AppDatabase) {
             type = type,
             auth = auth,
             icon = entity.icon,
-            baseUrl = entity.baseUrl,
+            baseUrl = SecretCipher.decrypt(entity.baseUrl),
             config = config
         )
     }
@@ -193,9 +196,9 @@ class LlmRepository(private val db: AppDatabase) {
             id = provider.id,
             name = provider.name,
             type = provider.type.name,
-            baseUrl = provider.baseUrl,
-            authJson = json.encodeToString(provider.auth),
-            configJson = json.encodeToString(provider.config),
+            baseUrl = SecretCipher.encrypt(provider.baseUrl),
+            authJson = SecretCipher.encrypt(json.encodeToString(provider.auth)),
+            configJson = SecretCipher.encrypt(json.encodeToString(provider.config)),
             icon = provider.icon
         )
     }
@@ -222,12 +225,9 @@ class McpRepository(private val db: AppDatabase) {
     }
 
     private fun entityToModel(entity: McpServerEntity): McpInfo {
-        val protocol = try {
-            McpProtocol.valueOf(entity.protocol)
-        } catch (e: Exception) {
-            McpProtocol.SSE
-        }
-        val headers: Map<String, String>? = entity.headersJson?.let {
+        val savedProtocol = runCatching { McpProtocol.valueOf(entity.protocol) }.getOrNull()
+        val protocol = savedProtocol ?: McpProtocol.STREAMABLE_HTTP
+        val headers: Map<String, String>? = entity.headersJson?.let(SecretCipher::decrypt)?.let {
             try {
                 json.decodeFromString(it)
             } catch (e: Exception) {
@@ -238,7 +238,8 @@ class McpRepository(private val db: AppDatabase) {
             id = entity.id,
             name = entity.name,
             protocol = protocol,
-            url = entity.url,
+            // Preserve obsolete server records for editing, but never treat a saved command as a URL.
+            url = entity.url?.let(SecretCipher::decrypt).takeIf { savedProtocol != null },
             headers = headers
         )
     }
@@ -248,8 +249,8 @@ class McpRepository(private val db: AppDatabase) {
             id = server.id,
             name = server.name,
             protocol = server.protocol.name,
-            url = server.url,
-            headersJson = server.headers?.let { json.encodeToString(it) }
+            url = server.url?.let(SecretCipher::encrypt),
+            headersJson = server.headers?.let { SecretCipher.encrypt(json.encodeToString(it)) }
         )
     }
 }
@@ -282,7 +283,7 @@ class SpeechRepository(private val db: AppDatabase) {
             voice = entity.voice,
             speed = entity.speed,
             pitch = entity.pitch,
-            apiKey = entity.apiKey
+            apiKey = SecretCipher.decrypt(entity.apiKey)
         )
     }
 
@@ -294,7 +295,7 @@ class SpeechRepository(private val db: AppDatabase) {
             voice = service.voice,
             speed = service.speed,
             pitch = service.pitch,
-            apiKey = service.apiKey
+            apiKey = SecretCipher.encrypt(service.apiKey)
         )
     }
 }

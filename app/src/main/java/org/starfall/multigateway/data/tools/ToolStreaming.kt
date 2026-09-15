@@ -15,17 +15,20 @@ internal suspend fun ToolHttp.modelResponse(url:String, body:JsonObject, provide
     val target=if(google) url.replace(":generateContent",":streamGenerateContent")+"?alt=sse" else url
     val payload=if(google) body else JsonObject(body+("stream" to JsonPrimitive(true)))
     return withContext(Dispatchers.IO) {
-        execute(request(target,provider).post(payload.toString().toRequestBody("application/json".toMediaType())).build()).use { response ->
-            check(response.isSuccessful){"HTTP ${response.code}: ${response.message}"}
+        withResponse(request(target,provider).post(payload.toString().toRequestBody("application/json".toMediaType())).build()) { response ->
+            requireSuccess(response)
+            var received = false
             val text=StringBuilder()
             val calls=linkedMapOf<Int,JsonObject>()
             val arguments=mutableMapOf<Int,StringBuilder>()
             val googleParts=mutableListOf<JsonElement>()
             suspend fun consume(value:JsonObject) {
-                if(value["error"]!=null || value.text("type")=="error") error("Provider stream error: ${value["error"].toString().take(300)}")
+                received = true
+                if(value["error"]!=null || value.text("type")=="error") error("Provider stream error: " + safeError(value["error"], requestSecrets(response.request)))
                 suspend fun emitText(chunk:String){if(chunk.isNotEmpty()){text.append(chunk);check(text.length<=512000){"Answer exceeds size limit"};onText(chunk)}}
                 when {
                     google -> {
+                        value.requireArray("candidates")
                         (value["candidates"] as? JsonArray).orEmpty().firstOrNull()?.jsonObject?.get("content")?.jsonObject?.get("parts")?.jsonArray.orEmpty().forEach { part ->
                             val p=part.jsonObject
                             if((p["thought"] as? JsonPrimitive)?.booleanOrNull!=true) emitText(p.text("text"))
@@ -35,16 +38,18 @@ internal suspend fun ToolHttp.modelResponse(url:String, body:JsonObject, provide
                     anthropic -> {
                         val index=(value["index"] as? JsonPrimitive)?.intOrNull ?: 0
                         if(value.text("type")=="content_block_start") {
-                            val block=value["content_block"]!!.jsonObject
+                            val block=value.requireObject("content_block")
                             if(block.text("type")=="tool_use") calls[index]=block
                         }
                         if(value.text("type")=="content_block_delta") {
-                            val delta=value["delta"]!!.jsonObject
+                            val delta=value.requireObject("delta")
                             emitText(delta.text("text"))
                             if(delta.text("type")=="input_json_delta") {val args=arguments.getOrPut(index){StringBuilder()};args.append(delta.text("partial_json"));check(args.length<=65536){"Tool arguments too large"}}
                         }
                     }
                     else -> {
+                        if (!ollama) value.requireArray("choices")
+                        else if (value["message"] !is JsonObject && (value["done"] as? JsonPrimitive)?.booleanOrNull != true) error("Ollama response has no message")
                         val delta=if(ollama) value["message"] as? JsonObject else (value["choices"] as? JsonArray)?.firstOrNull()?.jsonObject?.get("delta") as? JsonObject
                         if(delta!=null) {
                             emitText(delta.text("content"))
@@ -64,7 +69,7 @@ internal suspend fun ToolHttp.modelResponse(url:String, body:JsonObject, provide
                 }
                 check(calls.size<=16 && googleParts.size<=16){"Too many tool calls"}
             }
-            val reader=response.body!!.charStream().buffered()
+            val reader=(response.body ?: error("Empty provider stream (HTTP ${response.code})")).charStream().buffered()
             val event=StringBuilder()
             while(true) {
                 currentCoroutineContext().ensureActive()
@@ -83,6 +88,7 @@ internal suspend fun ToolHttp.modelResponse(url:String, body:JsonObject, provide
                 }
                 if(eof)break
             }
+            check(received) { "Provider stream ended without a response" }
             when {
                 google -> obj("candidates" to JsonArray(listOf(obj("content" to obj("parts" to JsonArray(listOf(obj("text" to str(text.toString())))+googleParts))))))
                 anthropic -> obj("content" to JsonArray(listOf(obj("type" to str("text"),"text" to str(text.toString())))+calls.map { (i,c) ->
@@ -90,7 +96,7 @@ internal suspend fun ToolHttp.modelResponse(url:String, body:JsonObject, provide
                 }))
                 else -> {
                     val message=obj("role" to str("assistant"),"content" to str(text.toString()),"tool_calls" to JsonArray(calls.map{(i,c)->
-                        JsonObject(c+("function" to JsonObject(c["function"]!!.jsonObject+("arguments" to str(arguments[i]?.toString()?:"{}")))))
+                        JsonObject(c+("function" to JsonObject(c.requireObject("function")+("arguments" to str(arguments[i]?.toString()?:"{}")))))
                     }))
                     if(ollama) obj("message" to message) else obj("choices" to JsonArray(listOf(obj("message" to message))))
                 }

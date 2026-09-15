@@ -6,12 +6,13 @@ import okhttp3.MultipartBody
 import org.starfall.multigateway.data.model.*
 
 class SystemMediaTools(private val http: ToolHttp) {
-    suspend fun generate(kind: String, provider: LlmProviderInfo, model: String, prompt: String): JsonObject {
-        require(prompt.isNotBlank() && prompt.length <= 16000) { "A prompt of 1–16000 characters is required" }
+    suspend fun generate(kind: String, provider: LlmProviderInfo, model: String, prompt: String, imageOptions: JsonObject = obj()): JsonObject {
+        http.requireFiles()
+        require(prompt.isNotBlank() && prompt.length <= 32000) { "A prompt of 1–32000 characters is required" }
         val base = providerBase(provider)
         val response = when(provider.type) {
             ProviderType.OPENAI -> if(kind == "generate_image") {
-                http.post("$base/images/generations", obj("model" to str(model), "prompt" to str(prompt), "n" to JsonPrimitive(1)), provider)
+                http.postMedia("$base/images/generations", imageGenerationRequest(provider.type, model, prompt, imageOptions), provider)
             } else {
                 var job = http.json(http.request("$base/videos", provider).post(MultipartBody.Builder().setType(MultipartBody.FORM)
                     .addFormDataPart("model",model).addFormDataPart("prompt",prompt).build()).build())
@@ -34,11 +35,8 @@ class SystemMediaTools(private val http: ToolHttp) {
             ProviderType.GOOGLE -> {
                 val root = if(Regex("/v1(?:beta|alpha)?$").containsMatchIn(base)) base else "$base/v1beta"
                 if(kind == "generate_image") {
-                    if(model.contains("imagen",ignoreCase = true)) http.post("$root/models/$model:predict",obj(
-                        "instances" to JsonArray(listOf(obj("prompt" to str(prompt)))), "parameters" to obj("sampleCount" to JsonPrimitive(1))),provider)
-                    else http.post("$root/models/$model:generateContent",obj(
-                        "contents" to JsonArray(listOf(obj("parts" to JsonArray(listOf(obj("text" to str(prompt))))))),
-                        "generationConfig" to obj("responseModalities" to JsonArray(listOf(str("TEXT"),str("IMAGE"))))),provider)
+                    val method = if(model.contains("imagen",ignoreCase = true)) "predict" else "generateContent"
+                    http.post("$root/models/$model:$method", imageGenerationRequest(provider.type, model, prompt, imageOptions), provider)
                 } else {
                     var job = http.post("$root/models/$model:predictLongRunning",obj("instances" to JsonArray(listOf(obj("prompt" to str(prompt))))),provider)
                     val name = job.text("name")
@@ -64,8 +62,8 @@ class SystemMediaTools(private val http: ToolHttp) {
                     val s = value.contentOrNull.orEmpty()
                     if(s.startsWith("tool-file:")) names += s.removePrefix("tool-file:")
                     else if(key in listOf("url","uri") && s.startsWith("http")) {
-                        check(names.size < 8) { "Too many media files in response" }
-                        val sameOrigin = runCatching { java.net.URI(s).host == java.net.URI(base).host }.getOrDefault(false)
+                        check(names.size < 10) { "Too many media files in response" }
+                        val sameOrigin = runCatching { java.net.URI(s).let { target -> java.net.URI(base).let { origin -> target.scheme == origin.scheme && target.host == origin.host && target.port == origin.port } } }.getOrDefault(false)
                         names += http.download(s, if(sameOrigin) provider else null)
                     }
                 }

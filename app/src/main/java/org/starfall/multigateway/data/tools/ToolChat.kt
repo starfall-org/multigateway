@@ -34,12 +34,14 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                     obj("type" to str("object"),"properties" to obj("prompt" to obj("type" to str("string"))),"required" to JsonArray(listOf(str("prompt")))))
             }
             if(tools.isEmpty()) { llm.generateStream(provider,model,messages,prompt).collect { send(GenerationEvent.Text(it)) }; return@channelFlow }
+            http.requireFiles()
             val history = mutableListOf<JsonObject>()
             if(provider.type != ProviderType.GOOGLE && prompt.isNotBlank()) history += obj("role" to str("system"),"content" to str(prompt))
             messages.forEach { message ->
                 val text = message.content + message.activeVersion.toolActivity.filter { it.status != "running" }.joinToString("\n",prefix="\n") { "Tool ${it.name}: ${it.status}. ${it.summary.take(2000)}" }
                 history += obj("role" to str(if(message.role == ChatRole.MODEL) "assistant" else "user"),"content" to str(text))
             }
+            val budget = ToolBudget()
             repeat(12) {
                 currentCoroutineContext().ensureActive()
                 val allowed = tools.filter { t -> if(t.serverId == null) settings().system[t.name]?.enabled == true else toolAllowed(access()[t.serverId],settings().quickMcp[t.serverId],t.originalName) }
@@ -52,7 +54,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                 history += turn
                 calls.forEach { value ->
                     val call = value.jsonObject
-                    val function = call["function"]!!.jsonObject
+                    val function = call.requireObject("function")
                     val name = function.text("name")
                     val tool = allowed.find { it.name == name }
                     val activity = ToolActivity(UUID.randomUUID().toString(),tool?.let { t -> servers.find { it.id == t.serverId }?.let { "${it.name} / ${t.originalName}" } ?: t.originalName } ?: name)
@@ -60,29 +62,29 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                     var result: JsonObject
                     try {
                         require(tool != null) { "Tool is not enabled" }
-                        val args = when(val a = function["arguments"]) { is JsonObject -> a; is JsonPrimitive -> Json.parseToJsonElement(a.content).jsonObject; else -> obj() }
+                        budget.consume(if (tool.serverId == null) name else null)
+                        val args = toolArguments(function["arguments"])
                         if(tool.serverId != null) {
                             check(toolAllowed(access()[tool.serverId],settings().quickMcp[tool.serverId],tool.originalName)) { "MCP tool disabled" }
-                            result = sessions[tool.serverId]!!.call(tool.originalName,args)
+                            result = (sessions[tool.serverId] ?: error("MCP session unavailable")).call(tool.originalName,args)
                         } else {
                             val cfg = settings().system[name] ?: error("System tool is not configured")
                             check(cfg.enabled) { "System tool disabled" }
                             val mediaProvider = providers.find { it.id == cfg.providerId } ?: error("Select a provider for this system tool")
                             val kind = if(name == "generate_image") ModelType.IMAGE_GENERATION else ModelType.VIDEO_GENERATION
                             check(mediaProvider.config.modelConfigs[cfg.modelId]?.modelType == kind && mediaProvider.config.modelIds?.contains(cfg.modelId) != false) { "Select an available media model in System tools" }
-                            result = SystemMediaTools(http).generate(name,mediaProvider,cfg.modelId,args.text("prompt"))
+                            result = SystemMediaTools(http).generate(name,mediaProvider,cfg.modelId,args.text("prompt"),cfg.imageOptions)
                         }
-                        val names = Regex("tool-file:([a-zA-Z0-9._-]+)").findAll(result.toString()).map { it.groupValues[1] }.distinct().take(32).toList()
                         val isError = (result["isError"] as? JsonPrimitive)?.booleanOrNull == true
-                        val brief = result.toString().take(12000)
-                        val details = http.files!!.save(brief.byteInputStream(),"text/plain")
-                        send(GenerationEvent.Tool(activity.copy(status=if(isError) "error" else "success",summary=brief.take(500),files=names + details)))
+                        val summary = summarizeToolResult(result, http.requireFiles())
+                        result = summary.content
+                        send(GenerationEvent.Tool(activity.copy(status=if(isError) "error" else "success",summary=summary.preview,files=summary.files)))
                     } catch(e: CancellationException) { send(GenerationEvent.Tool(activity.copy(status="cancelled",summary="Stopped"))); throw e }
                     catch(e: Exception) {
                         result = obj("error" to str(e.message.orEmpty().take(500)))
                         send(GenerationEvent.Tool(activity.copy(status="error",summary=e.message.orEmpty().take(500))))
                     }
-                    history += obj("role" to str("tool"),"tool_call_id" to str(call.text("id")),"name" to str(name),"content" to str(result.toString().take(12000)))
+                    history += obj("role" to str("tool"),"tool_call_id" to str(call.text("id")),"name" to str(name),"content" to str(result.toString()))
                 }
             }
             error("Stopped after 12 tool rounds. Send another message to continue.")
@@ -101,7 +103,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                         when(message.text("role")) {
                             "tool" -> JsonObject(message + ("tool_name" to str(message.text("name"))))
                             "assistant" -> JsonObject(message + ("tool_calls" to JsonArray((message["tool_calls"] as? JsonArray).orEmpty().map { c ->
-                                val call=c.jsonObject;val f=call["function"]!!.jsonObject
+                                val call=c.jsonObject;val f=call.requireObject("function")
                                 obj("function" to JsonObject(f+("arguments" to (f["arguments"] as? JsonObject ?: Json.parseToJsonElement(f.text("arguments"))))))
                             })))
                             else -> message
@@ -112,12 +114,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                     else { put("max_tokens",p.config.maxTokens); config.temperature?.let { put("temperature",it) }; config.topP?.let { put("top_p",it) } }
                 }
                 val response = http.modelResponse(if(ollama) base.removeSuffix("/api")+"/api/chat" else "$base/chat/completions",request,p,p.streamEnabledFor(model),onText)
-                val message = if(ollama) response["message"]!!.jsonObject else response["choices"]!!.jsonArray.first().jsonObject["message"]!!.jsonObject
-                val calls = (message["tool_calls"] as? JsonArray).orEmpty().map { c ->
-                    val call = c.jsonObject
-                    JsonObject(call + ("id" to str(call.text("id").ifEmpty { UUID.randomUUID().toString() })))
-                }
-                obj("role" to str("assistant"),"content" to str(message.text("content")),"tool_calls" to JsonArray(calls))
+                providerTurn(p.type, response)
             }
             ProviderType.ANTHROPIC -> {
                 val native = mutableListOf<JsonObject>()
@@ -127,13 +124,13 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                     if(role == "tool") blocks += obj("type" to str("tool_result"),"tool_use_id" to str(message.text("tool_call_id")),"content" to str(message.text("content")))
                     else {
                         if(message.text("content").isNotEmpty()) blocks += obj("type" to str("text"),"text" to str(message.text("content")))
-                        (message["tool_calls"] as? JsonArray).orEmpty().forEach { c -> val call=c.jsonObject; val f=call["function"]!!.jsonObject
+                        (message["tool_calls"] as? JsonArray).orEmpty().forEach { c -> val call=c.jsonObject; val f=call.requireObject("function")
                             blocks += obj("type" to str("tool_use"),"id" to str(call.text("id")),"name" to str(f.text("name")),"input" to (f["arguments"] as? JsonObject ?: Json.parseToJsonElement(f.text("arguments")))) }
                     }
                     val targetRole=if(role=="assistant") "assistant" else "user"
                     if(native.lastOrNull()?.text("role")==targetRole) {
                         val last=native.removeAt(native.lastIndex)
-                        native += obj("role" to str(targetRole),"content" to JsonArray(last["content"]!!.jsonArray+blocks))
+                        native += obj("role" to str(targetRole),"content" to JsonArray(last.requireArray("content")+blocks))
                     } else native += obj("role" to str(targetRole),"content" to JsonArray(blocks))
                 }
                 val response = http.modelResponse(base.removeSuffix("/v1")+"/v1/messages",buildJsonObject {
@@ -141,10 +138,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                     if(tools.isNotEmpty()) put("tools",JsonArray(tools.map { obj("name" to str(it.name),"description" to str(it.description),"input_schema" to it.schema) }))
                     config.temperature?.let { put("temperature",it) }; config.topP?.let { put("top_p",it) }; config.topK?.let { put("top_k",it) }
                 },p,p.streamEnabledFor(model),onText)
-                val blocks=response["content"]!!.jsonArray
-                obj("role" to str("assistant"),"content" to str(blocks.filter { it.jsonObject.text("type")=="text" }.joinToString("") { it.jsonObject.text("text") }),
-                    "tool_calls" to JsonArray(blocks.filter { it.jsonObject.text("type")=="tool_use" }.map { b -> val v=b.jsonObject
-                        obj("id" to str(v.text("id")),"type" to str("function"),"function" to obj("name" to str(v.text("name")),"arguments" to v["input"]!!)) }))
+                providerTurn(p.type, response)
             }
             ProviderType.GOOGLE -> {
                 val native=history.map { message ->
@@ -152,7 +146,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                     if(role=="tool") parts += obj("functionResponse" to obj("name" to str(message.text("name")),"response" to obj("result" to str(message.text("content")))))
                     else {
                         if(message.text("content").isNotBlank()) parts += obj("text" to str(message.text("content")))
-                        (message["tool_calls"] as? JsonArray).orEmpty().forEach { c -> val f=c.jsonObject["function"]!!.jsonObject
+                        (message["tool_calls"] as? JsonArray).orEmpty().forEach { c -> val f=c.requireObject().requireObject("function")
                             parts += (c.jsonObject["googlePart"] ?: obj("functionCall" to obj("name" to str(f.text("name")),"args" to (f["arguments"] as? JsonObject ?: Json.parseToJsonElement(f.text("arguments")))))) }
                     }
                     obj("role" to str(if(role=="assistant") "model" else "user"),"parts" to JsonArray(parts))
@@ -163,10 +157,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                     if(tools.isNotEmpty()) put("tools",JsonArray(listOf(obj("functionDeclarations" to JsonArray(tools.map { obj("name" to str(it.name),"description" to str(it.description),"parameters" to it.schema) })))))
                     put("generationConfig",buildJsonObject { put("maxOutputTokens",p.config.maxTokens); config.temperature?.let { put("temperature",it) }; config.topP?.let { put("topP",it) }; config.topK?.let { put("topK",it) } })
                 },p,p.streamEnabledFor(model),onText)
-                val parts=response["candidates"]!!.jsonArray.first().jsonObject["content"]!!.jsonObject["parts"]!!.jsonArray
-                obj("role" to str("assistant"),"content" to str(parts.joinToString("") { it.jsonObject.text("text") }),
-                    "tool_calls" to JsonArray(parts.filter { it.jsonObject["functionCall"] != null }.map { b -> val f=b.jsonObject["functionCall"]!!.jsonObject
-                        obj("id" to str(UUID.randomUUID().toString()),"type" to str("function"),"googlePart" to b,"function" to obj("name" to str(f.text("name")),"arguments" to (f["args"] ?: obj()))) }))
+                providerTurn(p.type, response)
             }
         }
     }

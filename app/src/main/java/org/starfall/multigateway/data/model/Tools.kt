@@ -6,7 +6,15 @@ import kotlinx.serialization.json.JsonObject
 @Serializable
 data class McpAccess(val enabled: Boolean = false, val tools: Map<String, Boolean> = emptyMap())
 @Serializable
-data class SystemToolConfig(val enabled: Boolean = false, val providerId: String = "", val modelId: String = "")
+data class SystemToolConfig(
+    val enabled: Boolean = false,
+    val providerId: String = "",
+    val modelId: String = "",
+    val imageOptionsByModel: Map<String, JsonObject> = emptyMap()
+) {
+    val imageOptions: JsonObject get() = imageOptionsByModel["$providerId/$modelId"] ?: JsonObject(emptyMap())
+    fun withImageOptions(options: JsonObject) = copy(imageOptionsByModel = imageOptionsByModel + ("$providerId/$modelId" to options))
+}
 @Serializable
 data class ToolSettings(val system: Map<String, SystemToolConfig> = emptyMap(), val quickMcp: Map<String, Boolean> = emptyMap())
 @Serializable

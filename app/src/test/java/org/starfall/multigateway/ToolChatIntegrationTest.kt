@@ -1,5 +1,6 @@
 package org.starfall.multigateway
 
+import kotlinx.serialization.json.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.toList
 import okhttp3.mockwebserver.*
@@ -16,12 +17,14 @@ class ToolChatIntegrationTest {
         val root=Files.createTempDirectory("tool-chat-test").toFile()
         var rounds=0
         var mediaCalls=0
+        var imageRequest=""
         val bytes=ByteArray(24000){42};bytes[0]=0x89.toByte();bytes[1]=0x50
         val b64=java.util.Base64.getEncoder().encodeToString(bytes)
         server.dispatcher=object:Dispatcher(){
             override fun dispatch(request:RecordedRequest):MockResponse {
                 return if(request.path=="/v1/images/generations") {
                     mediaCalls++
+                    imageRequest=request.body.readUtf8()
                     MockResponse().addHeader("Content-Type","application/json").setBody("{\"data\":[{\"b64_json\":\"$b64\"}]}")
                 } else if(request.path=="/v1/chat/completions") {
                     rounds++
@@ -40,8 +43,11 @@ class ToolChatIntegrationTest {
                 modelIds=listOf("chat","image"),modelConfigs=mapOf("chat" to ModelConfiguration(supportsToolCalls=true),"image" to ModelConfiguration(modelType=ModelType.IMAGE_GENERATION))))
             val files=ToolFiles(root);val http=ToolHttp(files)
             val engine=ToolChat(http,McpService(http),LlmService())
-            val events=engine.generate(provider,"chat",listOf(StoredMessage("u",ChatRole.USER,listOf(MessageVersion("Draw a tree")))),"",emptyList(),listOf(provider),{emptyMap()},{ToolSettings(system=mapOf("generate_image" to SystemToolConfig(true,"p","image")))}).toList()
+            val events=engine.generate(provider,"chat",listOf(StoredMessage("u",ChatRole.USER,listOf(MessageVersion("Draw a tree")))),"",emptyList(),listOf(provider),{emptyMap()},{ToolSettings(system=mapOf("generate_image" to SystemToolConfig(true,"p","image").withImageOptions(buildJsonObject { put("quality","high"); put("output_format","webp") })))}).toList()
             assertEquals(1,mediaCalls);assertEquals(2,rounds)
+            val imageBody=Json.parseToJsonElement(imageRequest).jsonObject
+            assertEquals("high",imageBody["quality"]!!.jsonPrimitive.content)
+            assertEquals("webp",imageBody["output_format"]!!.jsonPrimitive.content)
             assertEquals("Image ready.",events.filterIsInstance<GenerationEvent.Text>().joinToString(""){it.text})
             val tool=events.filterIsInstance<GenerationEvent.Tool>().last().activity
             assertEquals("success",tool.status);assertTrue(tool.files.any{it.endsWith(".png")})

@@ -22,7 +22,10 @@ data class Authorization(
     val method: AuthMethod = AuthMethod.BEARER_TOKEN,
     val key: String? = null,
     val value: String? = null
-)
+) {
+    // New bearer records use value; key is retained as a legacy fallback.
+    val token: String get() = value?.takeIf { it.isNotBlank() } ?: key.orEmpty()
+}
 
 @Serializable
 data class ProviderConfiguration(

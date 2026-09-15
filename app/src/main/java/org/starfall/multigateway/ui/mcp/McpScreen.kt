@@ -329,7 +329,6 @@ fun AddOrEditMcpDialog(
     var name by remember { mutableStateOf(initialServer.name) }
     var protocol by remember { mutableStateOf(initialServer.protocol) }
     var url by remember { mutableStateOf(initialServer.url ?: "") }
-    var command by remember { mutableStateOf(if (initialServer.protocol == McpProtocol.STDIO) initialServer.url ?: "" else "") }
     var protocolExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
@@ -374,30 +373,24 @@ fun AddOrEditMcpDialog(
                     }
                 }
 
-                if (protocol == McpProtocol.STDIO) {
-                    OutlinedTextField(
-                        value = command,
-                        onValueChange = { command = it },
-                        label = { Text("Command (e.g. npx @mcp/server)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
-                    OutlinedTextField(
-                        value = url,
-                        onValueChange = { url = it },
-                        label = { Text("Server URL") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                if (url.trim().startsWith("http://", true)) {
+                    Text("HTTP is unencrypted: headers, credentials and tool data are visible on the network. Use HTTPS outside a trusted local network.",
+                        color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("Server URL") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        val endpoint = if (protocol == McpProtocol.STDIO) command.trim() else url.trim()
+                        val endpoint = url.trim()
                         val updated = initialServer.copy(
                             name = name.trim(),
                             protocol = protocol,

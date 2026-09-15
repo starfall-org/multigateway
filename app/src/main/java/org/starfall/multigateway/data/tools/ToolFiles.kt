@@ -52,13 +52,14 @@ class ToolFiles(val directory: File) {
                 String(header, 4, 4) == "ftyp" -> "mp4"
                 header[0] == 0x1a.toByte() && header[1] == 0x45.toByte() -> "webm"
                 mime == "text/plain" -> "txt"
+                mime == "application/json" -> "json"
                 else -> "bin"
             }
             val dest = File(directory, "${UUID.randomUUID()}.$ext")
             check(temp.renameTo(dest)) { "Could not save media" }
             revision.value++
             dest.name
-        } finally { temp.delete() }
+        } finally { input.close(); temp.delete() }
     }
     suspend fun decode(raw: File): String = raw.inputStream().use { source ->
         java.util.Base64.getMimeDecoder().wrap(source).use { save(it) }
@@ -80,6 +81,7 @@ class ToolFiles(val directory: File) {
                 var spool: Writer? = null
                 var escaped = false
                 var length = 0L
+                var media = false
                 try {
                     while (true) {
                         val n = input.read()
@@ -88,7 +90,10 @@ class ToolFiles(val directory: File) {
                         length++
                         if (length % 32768L == 0L) coroutineContext.ensureActive()
                         check(length <= limit * 2) { "Tool result exceeds file limit" }
-                        if (raw == null && value.length >= 16384 && lastKey in setOf("b64_json", "data", "bytesBase64Encoded", "video_base64", "base64", "blob")) {
+                        if (raw == null && value.length >= 16384) {
+                            media = lastKey in setOf("b64_json", "bytesBase64Encoded", "video_base64", "base64", "blob") ||
+                                value.startsWith("data:image/") || value.startsWith("data:video/") ||
+                                (lastKey == "data" && value.all { it.isLetterOrDigit() || it in "+/=\\" })
                             checkSpace()
                             raw = File(directory, "${UUID.randomUUID()}.part")
                             spool = raw.bufferedWriter()
@@ -105,13 +110,27 @@ class ToolFiles(val directory: File) {
                     if (next == ':'.code) {
                         lastKey = value.toString()
                         output.append('"').append(value).append('"')
+                    } else if (raw != null && !media) {
+                        // Keep full escaped text on disk; only its reference enters model/UI state.
+                        val name = save(raw.inputStream(), "text/plain")
+                        output.append('"').append("tool-file:").append(name).append('"')
                     } else if (raw != null) {
                         val normalized = File(directory, "${UUID.randomUUID()}.part")
                         try {
                             // JSON base64 may escape forward slashes. No media string is materialized.
                             raw.reader().buffered().use { r -> normalized.bufferedWriter().use { w ->
                                 var slash = false
+                                r.mark(64)
+                                val prefix = CharArray(11)
+                                val count = r.read(prefix)
+                                r.reset()
+                                if (count > 0 && String(prefix, 0, count).startsWith("data:")) {
+                                    var headerLength = 0
+                                    while (r.read() != ','.code) { check(++headerLength < 256) { "Invalid media data URL" } }
+                                }
+                                var processed = 0
                                 while (true) {
+                                    if (++processed % 32768 == 0) coroutineContext.ensureActive()
                                     val v = r.read(); if (v < 0) break
                                     if (slash) { if (v != 'n'.code && v != 'r'.code) w.write(v); slash = false }
                                     else if (v == '\\'.code) slash = true else w.write(v)
@@ -123,11 +142,11 @@ class ToolFiles(val directory: File) {
                     } else {
                         // Small base64 media is also saved, including small previews.
                         val text = value.toString()
-                        if (lastKey in setOf("b64_json", "bytesBase64Encoded", "video_base64", "base64", "blob") ||
+                        if (text.startsWith("data:image/") || text.startsWith("data:video/") || lastKey in setOf("b64_json", "bytesBase64Encoded", "video_base64", "base64", "blob") ||
                             (lastKey == "data" && text.length > 100 && text.matches(Regex("[A-Za-z0-9+/=\\\\]+")))) {
                             val rawSmall = File(directory, "${UUID.randomUUID()}.part")
                             try {
-                                rawSmall.writeText(text.replace("\\/", "/"))
+                                rawSmall.writeText((if (text.startsWith("data:")) text.substringAfter(",") else text).replace("\\/", "/"))
                                 output.append('"').append("tool-file:").append(decode(rawSmall)).append('"')
                             } finally { rawSmall.delete() }
                         } else {

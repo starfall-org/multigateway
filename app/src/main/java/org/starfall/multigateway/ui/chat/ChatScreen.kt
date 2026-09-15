@@ -92,6 +92,8 @@ fun ChatScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
         topBar = {
             ChatAppBar(
                 currentSession = conversation,
@@ -121,6 +123,7 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
         ) {
             if (isGenerating && !streamingHere) {
                 Text("A response is running in another conversation. Use Stop to cancel it.",

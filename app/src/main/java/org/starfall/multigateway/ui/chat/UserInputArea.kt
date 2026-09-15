@@ -52,14 +52,16 @@ fun UserInputArea(
     val canSend = !isGenerating && textState.isNotBlank()
 
     Surface(
-        modifier = modifier.fillMaxWidth().navigationBarsPadding().imePadding(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 2.dp
+        color = MaterialTheme.colorScheme.background,
+        tonalElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+                .imePadding()
                 .padding(start = 12.dp, top = 4.dp, end = 12.dp, bottom = 4.dp)
         ) {
             // Text Input Box with embedded Suffix Button

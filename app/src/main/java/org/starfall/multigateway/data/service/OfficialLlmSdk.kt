@@ -62,7 +62,7 @@ internal class OfficialLlmSdk {
         when (auth.method) {
             AuthMethod.CUSTOM_HEADER -> if (!auth.key.isNullOrBlank()) result[auth.key] = auth.value.orEmpty()
             AuthMethod.QUERY_PARAM -> Unit
-            else -> (auth.key?.takeIf { it.isNotBlank() } ?: auth.value)?.takeIf { it.isNotBlank() }?.let {
+            else -> auth.token.takeIf { it.isNotBlank() }?.let {
                 result[nativeHeader] = if (nativeHeader == "Authorization") "Bearer $it" else it
             }
         }

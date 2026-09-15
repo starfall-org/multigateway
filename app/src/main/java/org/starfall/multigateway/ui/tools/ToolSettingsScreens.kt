@@ -27,6 +27,16 @@ fun ToolSwitch(label: String, checked: Boolean, enabled: Boolean = true, onChang
 @Composable
 fun SystemToolsScreen(providers: List<LlmProviderInfo>, settings: ToolSettings, onSave: (String,SystemToolConfig)->Unit, onBack:()->Unit) {
     var choosing by remember { mutableStateOf<String?>(null) }
+    var editingImage by remember { mutableStateOf(false) }
+    val imageConfig = settings.system["generate_image"] ?: SystemToolConfig()
+    val imageProvider = providers.find { it.id == imageConfig.providerId }
+    if (editingImage && imageProvider != null) {
+        ImageToolSettingsScreen(imageProvider, imageConfig, onSave = { options ->
+            onSave("generate_image", imageConfig.withImageOptions(options))
+            editingImage = false
+        }, onBack = { editingImage = false })
+        return
+    }
     BackHandler(onBack=onBack)
     Scaffold(topBar={ TopAppBar(title={Text("System tools")},navigationIcon={IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")}}) }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -38,6 +48,10 @@ fun SystemToolsScreen(providers: List<LlmProviderInfo>, settings: ToolSettings, 
                     ToolSwitch(if(name=="generate_image") "Create image" else "Create video",config.enabled) { onSave(name,config.copy(enabled=it)) }
                     Text(if(model==null) "Select a model" else "${provider.name} / ${model.displayName.ifBlank { config.modelId }}",style=MaterialTheme.typography.bodyMedium)
                     TextButton(onClick={choosing=name}) { Text("Choose model") }
+                    if (name == "generate_image") {
+                        TextButton(enabled = provider != null && model?.modelType == ModelType.IMAGE_GENERATION,
+                            onClick = { editingImage = true }) { Text("Image settings") }
+                    }
                 } }
             }
         }

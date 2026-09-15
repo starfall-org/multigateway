@@ -29,6 +29,7 @@ fun ChatAppBar(
     modifier: Modifier = Modifier
 ) {
     TopAppBar(
+        windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
         title = {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
@@ -98,7 +99,8 @@ fun ChatAppBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.background,
+            scrolledContainerColor = MaterialTheme.colorScheme.background
         ),
         modifier = modifier
     )

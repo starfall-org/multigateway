@@ -374,7 +374,10 @@ fun ProviderEditScreen(
     var name by remember { mutableStateOf(initialProvider.name) }
     var type by remember { mutableStateOf(initialProvider.type) }
     var baseUrl by remember { mutableStateOf(initialProvider.baseUrl) }
-    var apiKey by remember { mutableStateOf(initialProvider.auth.key ?: initialProvider.auth.value ?: "") }
+    var authMethod by remember { mutableStateOf(initialProvider.auth.method) }
+    var authName by remember { mutableStateOf(if (initialProvider.auth.method in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) initialProvider.auth.key.orEmpty() else "") }
+    var apiKey by remember { mutableStateOf(if (initialProvider.auth.method in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) initialProvider.auth.value.orEmpty() else initialProvider.auth.token) }
+    fun authorization() = Authorization(authMethod, if (authMethod in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) authName.trim() else null, apiKey.trim())
     var isTestingConnection by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<String?>(null) }
     var testIsSuccess by remember { mutableStateOf(false) }
@@ -395,7 +398,10 @@ fun ProviderEditScreen(
     val headersValid = parsedHeaders != null && parsedHeaders.all { (key, value) ->
         key.isNotBlank() && key.none { it <= ' ' || it == ':' || it.code >= 127 } && value.none { it == '\r' || it == '\n' }
     }
-    val requestValid = maxTokens.toIntOrNull()?.let { it > 0 } == true && headersValid
+    val urlValid = runCatching { org.starfall.multigateway.data.tools.providerBase(initialProvider.copy(baseUrl = baseUrl)) }.isSuccess
+    val authValid = authMethod !in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM) ||
+        (authName.isNotBlank() && authName.none { it <= ' ' || it == ':' || it.code >= 127 })
+    val requestValid = urlValid && authValid && maxTokens.toIntOrNull()?.let { it > 0 } == true && headersValid
     fun requestConfig() = initialProvider.config.copy(
         maxTokens = maxTokens.toIntOrNull() ?: initialProvider.config.maxTokens,
         supportStream = supportStream, headers = parsedHeaders ?: initialProvider.config.headers,
@@ -446,7 +452,7 @@ fun ProviderEditScreen(
                                 name = name.trim().ifEmpty { type.displayName },
                                 type = type,
                                 baseUrl = baseUrl.trim(),
-                                auth = initialProvider.auth.copy(key = apiKey.trim(), value = apiKey.trim()),
+                                auth = authorization(),
                                 config = requestConfig()
                             ))
                         }
@@ -511,6 +517,8 @@ fun ProviderEditScreen(
                         value = baseUrl,
                         onValueChange = { baseUrl = it },
                         label = { Text("Base API Endpoint / URL") },
+                        isError = !urlValid,
+                        supportingText = { if (!urlValid) Text("Use an HTTP(S) base URL without query, fragment or embedded credentials.") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -523,6 +531,22 @@ fun ProviderEditScreen(
                         )
                     }
 
+                    if (baseUrl.trim().startsWith("http://", true)) {
+                        Text("HTTP is unencrypted. API keys, headers and messages can be read on the network. Use HTTPS outside a trusted local network.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                    var authExpanded by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { authExpanded = true }) { Text("Authorization: ${authMethod.name}") }
+                        DropdownMenu(expanded = authExpanded, onDismissRequest = { authExpanded = false }) {
+                            AuthMethod.entries.forEach { method ->
+                                DropdownMenuItem(text = { Text(method.name) }, onClick = { authMethod = method; authExpanded = false })
+                            }
+                        }
+                    }
+                    if (authMethod in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) {
+                        OutlinedTextField(authName, { authName = it }, label = { Text(if (authMethod == AuthMethod.CUSTOM_HEADER) "Header name" else "Query parameter name") },
+                            isError = !authValid, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    }
                     OutlinedTextField(
                         value = apiKey,
                         onValueChange = { apiKey = it },
@@ -556,7 +580,7 @@ fun ProviderEditScreen(
                                 name = name.trim().ifEmpty { "Provider" },
                                 type = type,
                                 baseUrl = baseUrl.trim(),
-                                auth = initialProvider.auth.copy(key = apiKey.trim(), value = apiKey.trim()),
+                                auth = authorization(),
                                 config = requestConfig()
                             )
                             coroutineScope.launch {
@@ -643,7 +667,7 @@ fun ProviderEditScreen(
         ProviderModelCatalogSheet(
             provider = initialProvider.copy(
                 name = name, type = type, baseUrl = baseUrl.trim(),
-                auth = initialProvider.auth.copy(key = apiKey.trim(), value = apiKey.trim()),
+                auth = authorization(),
                 config = requestConfig()
             ),
             selectedModels = modelConfigs.keys,

@@ -16,7 +16,6 @@ class McpService(private val http: ToolHttp = ToolHttp()) {
     suspend fun listTools(info: McpInfo): List<String> = discover(info).map { it.originalName }
     suspend fun discover(info: McpInfo): List<ToolDefinition> = session(info).useSession { it.tools() }
     suspend fun session(info: McpInfo): McpSession {
-        require(info.protocol != McpProtocol.STDIO) { "STDIO requires a local process and is not supported on Android. Use HTTP or SSE." }
         val session = McpSession(info, http)
         try { session.initialize(); return session } catch (e: Throwable) { session.close(); throw e }
     }
@@ -58,15 +57,15 @@ class McpSession(private val info: McpInfo, private val http: ToolHttp) {
             try {
                 val response = http.execute(request(endpoint).header("Accept", "text/event-stream").get().build())
                 stream = response
-                check(response.isSuccessful) { "MCP SSE HTTP ${response.code}" }
-                response.body!!.charStream().buffered().use { reader ->
+                http.requireSuccess(response)
+                (response.body ?: error("Empty MCP response (HTTP ${response.code})")).charStream().buffered().use { reader ->
                     events(reader) { event, data ->
                         if (event == "endpoint") {
                             val original = response.request.url
                             val target = original.resolve(data) ?: error("Invalid MCP endpoint")
                             check(target.host == original.host && target.port == original.port && target.scheme == original.scheme) { "MCP endpoint must have the same origin" }
                             ready.complete(target.toString())
-                        } else if (data.startsWith("{")) messages.send(parse(data))
+                        } else if (data.trimStart().startsWith("{")) messages.send(parse(data))
                     }
                 }
                 error("MCP SSE connection closed")
@@ -75,13 +74,15 @@ class McpSession(private val info: McpInfo, private val http: ToolHttp) {
         postEndpoint = withTimeout(30000) { ready.await() }
     }
     suspend fun tools(): List<ToolDefinition> {
+        if (expired) initialize()
         val result = mutableListOf<ToolDefinition>()
         var cursor = ""
         val seen = mutableSetOf<String>()
         do {
             val page = rpc("tools/list", if(cursor.isEmpty()) obj() else obj("cursor" to str(cursor)))
-            (page["tools"] as? JsonArray).orEmpty().forEach { entry ->
-                val tool = entry.jsonObject
+            page.requireArray("tools").forEach { entry ->
+                val tool = entry.requireObject()
+                require(tool.text("name").isNotBlank()) { "MCP tool name is missing" }
                 result += ToolDefinition("mcp_" + UUID.nameUUIDFromBytes((info.id + ":" + tool.text("name")).toByteArray()).toString().replace("-", ""),
                     tool.text("description").take(4000), tool["inputSchema"] as? JsonObject ?: obj("type" to str("object")), info.id, tool.text("name"))
                 check(result.size <= 256) { "MCP has more than 256 tools" }
@@ -98,7 +99,7 @@ class McpSession(private val info: McpInfo, private val http: ToolHttp) {
     private suspend fun notify(method: String, params: JsonObject) {
         val body = obj("jsonrpc" to str("2.0"), "method" to str(method), "params" to params)
         http.execute(request(postEndpoint).post(body.toString().toRequestBody("application/json".toMediaType())).build()).use {
-            check(it.isSuccessful) { "MCP notification failed: HTTP ${it.code}" }
+            http.requireSuccess(it)
         }
     }
     private suspend fun rpc(method: String, params: JsonObject): JsonObject = withTimeout(180000) {
@@ -106,19 +107,22 @@ class McpSession(private val info: McpInfo, private val http: ToolHttp) {
         val body = obj("jsonrpc" to str("2.0"), "id" to str(id), "method" to str(method), "params" to params)
         try {
             val answer = withContext(Dispatchers.IO) {
-                http.execute(request(postEndpoint).post(body.toString().toRequestBody("application/json".toMediaType())).build()).use { response ->
-                    if(response.code == 404 && sessionId != null) { sessionId = null; version = null; expired = true }
-                    check(response.isSuccessful) { "MCP HTTP ${response.code}. The next call will reconnect if the session expired." }
+                http.withResponse(request(postEndpoint).post(body.toString().toRequestBody("application/json".toMediaType())).build()) { response ->
+                    if(response.code == 404 && sessionId != null) {
+                        sessionId = null; version = null; expired = true
+                        error("MCP session expired. This call was not replayed; the next call will reconnect.")
+                    }
+                    http.requireSuccess(response)
                     response.header("Mcp-Session-Id")?.let { sessionId = it }
                     if (legacy) {
                         var message = messages.receive()
                         while (message.text("id") != id) message = messages.receive()
                         message
-                    } else if (response.header("Content-Type").orEmpty().contains("text/event-stream")) {
+                    } else if (response.header("Content-Type").orEmpty().contains("text/event-stream", true)) {
                         var matched: JsonObject? = null
                         try {
-                            events(response.body!!.charStream().buffered()) { _, data ->
-                                if (data.startsWith("{")) {
+                            events((response.body ?: error("Empty MCP response (HTTP ${response.code})")).charStream().buffered()) { _, data ->
+                                if (data.trimStart().startsWith("{")) {
                                     val message = parse(data)
                                     if (message.text("id") == id) { matched = message; throw EndEvent() }
                                 }
@@ -126,13 +130,14 @@ class McpSession(private val info: McpInfo, private val http: ToolHttp) {
                         } catch (_: EndEvent) { }
                         matched ?: error("MCP stream ended without a result")
                     } else {
-                        val text = http.files?.sanitize(response.body!!.charStream()) ?: response.body!!.string().also { check(it.length < 2*1024*1024) }
+                        val text = http.readJson(response)
                         Json.parseToJsonElement(text).jsonObject
                     }
                 }
             }
+            check(answer.text("jsonrpc") == "2.0") { "Invalid MCP JSON-RPC version" }
             check(answer.text("id") == id) { "MCP response ID mismatch" }
-            check(answer["error"] == null) { "MCP error: ${answer["error"].toString().take(500)}" }
+            check(answer["error"] == null || answer["error"] == JsonNull) { "MCP error: " + safeError(answer["error"], info.headers.orEmpty().values) }
             answer["result"] as? JsonObject ?: error("Missing MCP result")
         } catch (e: CancellationException) {
             withContext(NonCancellable) { withTimeoutOrNull(2000) { runCatching { notify("notifications/cancelled", obj("requestId" to str(id), "reason" to str("Cancelled by user"))) } } }
@@ -155,15 +160,15 @@ class McpSession(private val info: McpInfo, private val http: ToolHttp) {
             val line = StringBuilder()
             while(true) {
                 val c = reader.read()
-                if(c < 0) { if(data.isNotEmpty()) block(event,data.toString().trimEnd()); return }
+                if(c < 0) { if(data.isNotEmpty()) block(event,data.toString().removeSuffix("\n")); return }
                 if(c == 10) break
                 if(c != 13) line.append(c.toChar())
                 check(line.length <= 2*1024*1024) { "MCP SSE event exceeds 2 MB; use a file URL for large output" }
             }
             when {
-                line.isEmpty() -> { if(data.isNotEmpty()) block(event,data.toString().trimEnd()); data.setLength(0); event = "message" }
+                line.isEmpty() -> { if(data.isNotEmpty()) block(event,data.toString().removeSuffix("\n")); data.setLength(0); event = "message" }
                 line.startsWith("event:") -> event = line.substring(6).trim()
-                line.startsWith("data:") -> { data.append(line.substring(5).trimStart()).append('\n'); check(data.length<=2*1024*1024) }
+                line.startsWith("data:") -> { data.append(line.substring(5).removePrefix(" ")).append('\n'); check(data.length<=2*1024*1024) }
             }
         }
     }
