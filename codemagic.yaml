@@ -27,6 +27,8 @@ workflows:
       vars:
         GITHUB_RELEASE_REPO: starfall-org/multigateway
         GITHUB_RELEASE_TAG: v2.0.2
+      android_signing:
+        - MultiGateway
     scripts:
       - name: Set up Android SDK
         ignore_failure: false
