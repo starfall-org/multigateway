@@ -28,7 +28,7 @@ fun ModelConfigDialog(
     var topP by remember { mutableStateOf(config.topP?.toString().orEmpty()) }
     var topK by remember { mutableStateOf(config.topK?.toString().orEmpty()) }
     var supportStream by remember { mutableStateOf(config.supportStream) }
-    val supportsTopK = provider.type != ProviderType.OPENAI
+    val supportsTopK = !provider.type.isOpenAi
     val tempMax = if (provider.type == ProviderType.ANTHROPIC) 1.0 else 2.0
     val tempValid = temperature.isBlank() || temperature.toDoubleOrNull()?.let { it.isFinite() && it in 0.0..tempMax } == true
     val topPValid = topP.isBlank() || topP.toDoubleOrNull()?.let { it.isFinite() && it in 0.0..1.0 } == true

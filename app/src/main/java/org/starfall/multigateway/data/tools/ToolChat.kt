@@ -13,7 +13,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                  servers: List<McpInfo>, providers: List<LlmProviderInfo>,
                  access: () -> Map<String,McpAccess>, settings: () -> ToolSettings): Flow<GenerationEvent> = channelFlow {
         if(provider.config.modelConfigs[model]?.supportsToolCalls != true) {
-            llm.generateStream(provider,model,messages,prompt).collect { send(GenerationEvent.Text(it)) }; return@channelFlow
+            llm.streamContent(provider,model,messages,prompt).collect { send(GenerationEvent.Text(it)) }; return@channelFlow
         }
         val sessions = mutableMapOf<String,McpSession>()
         val tools = mutableListOf<ToolDefinition>()
@@ -33,7 +33,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                     if(name == "generate_image") "Generate an image from a detailed prompt. The app displays the saved image." else "Generate a video from a detailed prompt. The app displays the saved video.",
                     obj("type" to str("object"),"properties" to obj("prompt" to obj("type" to str("string"))),"required" to JsonArray(listOf(str("prompt")))))
             }
-            if(tools.isEmpty()) { llm.generateStream(provider,model,messages,prompt).collect { send(GenerationEvent.Text(it)) }; return@channelFlow }
+            if(tools.isEmpty()) { llm.streamContent(provider,model,messages,prompt).collect { send(GenerationEvent.Text(it)) }; return@channelFlow }
             http.requireFiles()
             val history = mutableListOf<JsonObject>()
             if(provider.type != ProviderType.GOOGLE && prompt.isNotBlank()) history += obj("role" to str("system"),"content" to str(prompt))
@@ -96,6 +96,30 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
         val base = providerBase(p)
         val config = p.config.modelConfigs[model] ?: ModelConfiguration()
         return when(p.type) {
+            ProviderType.OPENAI_RESPONSES -> {
+                val input = history.flatMap { message ->
+                    when {
+                        message["responsesOutput"] is JsonArray -> message.requireArray("responsesOutput").toList()
+                        message.text("role") == "tool" -> listOf(obj(
+                            "type" to str("function_call_output"), "call_id" to str(message.text("tool_call_id")),
+                            "output" to str(message.text("content"))
+                        ))
+                        else -> listOf(message)
+                    }
+                }
+                val response = http.modelResponse("$base/responses", buildJsonObject {
+                    put("model", model); put("input", JsonArray(input)); put("store", false)
+                    put("include", JsonArray(listOf(str("reasoning.encrypted_content"))))
+                    put("max_output_tokens", p.config.maxTokens)
+                    config.temperature?.let { put("temperature", it) }
+                    config.topP?.let { put("top_p", it) }
+                    if (tools.isNotEmpty()) put("tools", JsonArray(tools.map {
+                        obj("type" to str("function"), "name" to str(it.name), "description" to str(it.description),
+                            "parameters" to it.schema, "strict" to JsonPrimitive(false))
+                    }))
+                }, p, p.streamEnabledFor(model), onText)
+                providerTurn(p.type, response)
+            }
             ProviderType.OPENAI, ProviderType.OLLAMA -> {
                 val ollama = p.type == ProviderType.OLLAMA
                 val request = buildJsonObject {

@@ -10,7 +10,7 @@ import org.junit.Test
 import org.starfall.multigateway.data.model.*
 import org.starfall.multigateway.data.service.McpService
 import org.starfall.multigateway.data.tools.*
-import org.starfall.multigateway.ui.viewmodel.ChatGeneration
+import org.starfall.multigateway.ui.chat.ChatGeneration
 import java.io.StringReader
 import java.nio.file.Files
 

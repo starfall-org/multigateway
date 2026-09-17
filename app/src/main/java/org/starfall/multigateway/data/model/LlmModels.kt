@@ -3,12 +3,22 @@ package org.starfall.multigateway.data.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-enum class ProviderType(val displayName: String) {
-    @SerialName("openai") OPENAI("OpenAI"),
-    @SerialName("google") GOOGLE("Google"),
-    @SerialName("anthropic") ANTHROPIC("Anthropic"),
-    @SerialName("ollama") OLLAMA("Ollama")
+enum class ProviderType(val displayName: String, val defaultName: String, val defaultBaseUrl: String) {
+    @SerialName("openai") OPENAI("Chat Completions", "OpenAI", "https://api.openai.com/v1"),
+    @SerialName("openai_responses") OPENAI_RESPONSES("OpenAI Responses", "OpenAI Responses", "https://api.openai.com/v1"),
+    @SerialName("google") GOOGLE("Google", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta"),
+    @SerialName("anthropic") ANTHROPIC("Anthropic", "Anthropic", "https://api.anthropic.com/v1"),
+    @SerialName("ollama") OLLAMA("Ollama", "Ollama", "https://ollama.com/api");
+
+    val isOpenAi: Boolean get() = this == OPENAI || this == OPENAI_RESPONSES
 }
+
+/** Update each default field independently; custom provider details survive type changes. */
+fun LlmProviderInfo.withType(newType: ProviderType): LlmProviderInfo = copy(
+    type = newType,
+    name = if (name == type.defaultName) newType.defaultName else name,
+    baseUrl = if (baseUrl.trimEnd('/') == type.defaultBaseUrl) newType.defaultBaseUrl else baseUrl
+)
 
 enum class AuthMethod {
     @SerialName("query_param") QUERY_PARAM,

@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.*
 import org.junit.Assert.*
 import org.junit.Test
 import org.starfall.multigateway.data.model.*
-import org.starfall.multigateway.ui.viewmodel.*
+import org.starfall.multigateway.ui.chat.*
 
 class ChatGenerationTest {
     private fun message(id: String, role: ChatRole, content: String) =
@@ -106,5 +106,25 @@ class ChatGenerationTest {
         assertTrue(saved!!.messages.last().content.contains("offline"))
         assertEquals("offline", runner.error.value)
         assertFalse(runner.busy.value)
+    }
+    @Test fun clearingOwnerScopePersistsPartialResponseAndReleasesGeneration() = runBlocking {
+        val owner = Job(coroutineContext[Job])
+        var saved: Conversation? = null
+        val runner = ChatGeneration(
+            CoroutineScope(owner + Dispatchers.Unconfined),
+            { saved = it },
+            {}
+        )
+        runner.start(conversation(), "a1", flow {
+            emit("partial before Activity finishes")
+            awaitCancellation()
+        })
+
+        owner.cancelAndJoin()
+
+        assertEquals("partial before Activity finishes", saved!!.messages.last().content)
+        assertFalse(runner.busy.value)
+        assertNull(runner.conversationId.value)
+        assertNull(runner.error.value)
     }
 }

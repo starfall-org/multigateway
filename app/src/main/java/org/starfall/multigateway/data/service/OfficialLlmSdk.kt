@@ -2,6 +2,9 @@ package org.starfall.multigateway.data.service
 
 import com.openai.client.OpenAIClientImpl
 import com.openai.models.chat.completions.ChatCompletionCreateParams
+import com.openai.models.responses.EasyInputMessage
+import com.openai.models.responses.ResponseCreateParams
+import com.openai.models.responses.ResponseInputItem
 import com.anthropic.client.okhttp.AnthropicOkHttpClient
 import com.anthropic.models.messages.MessageCreateParams
 import com.google.genai.Client
@@ -44,7 +47,7 @@ internal class OfficialLlmSdk {
     private fun baseUrl(provider: LlmProviderInfo): String {
         var base = provider.baseUrl.trim().trimEnd('/')
         when (provider.type) {
-            ProviderType.OPENAI -> for (suffix in listOf("/chat/completions", "/responses", "/models")) {
+            ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> for (suffix in listOf("/chat/completions", "/responses", "/models")) {
                 if (base.endsWith(suffix)) base = base.removeSuffix(suffix)
             }
             // Anthropic SDK adds /v1/messages itself.
@@ -138,7 +141,7 @@ internal class OfficialLlmSdk {
     suspend fun testConnection(provider: LlmProviderInfo): Result<String> = try {
         runInterruptible<Unit>(Dispatchers.IO) {
             when (provider.type) {
-                ProviderType.OPENAI -> openAi(provider).useClient { it.models().list() }
+                ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> openAi(provider).useClient { it.models().list() }
                 ProviderType.ANTHROPIC -> anthropic(provider).useClient { it.models().list() }
                 ProviderType.GOOGLE -> google(provider).use { it.models.list(null).iterator().hasNext() }
                 ProviderType.OLLAMA -> error("Use the native Ollama adapter")
@@ -170,6 +173,42 @@ internal class OfficialLlmSdk {
                     val chunk = iterator.next()
                     chunk.choices().firstOrNull()?.delta()?.content()?.orElse(null)?.let { emit(it) }
                 }
+            }
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun streamResponses(provider: LlmProviderInfo, modelName: String, messages: List<StoredMessage>,
+                        systemPrompt: String, temperature: Double?, topP: Double?, maxTokens: Int): Flow<String> = flow {
+        openAi(provider).useClient { client ->
+            val params = ResponseCreateParams.builder().model(modelName).maxOutputTokens(maxTokens.toLong()).store(false)
+                .inputOfResponse(messages.map {
+                    ResponseInputItem.ofEasyInputMessage(EasyInputMessage.builder()
+                        .role(if (it.role == ChatRole.MODEL) EasyInputMessage.Role.ASSISTANT else EasyInputMessage.Role.USER)
+                        .content(it.content).build())
+                })
+            if (systemPrompt.isNotBlank()) params.instructions(systemPrompt)
+            temperature?.let { params.temperature(it) }
+            topP?.let { params.topP(it) }
+            if (!provider.config.supportStream) {
+                val response = sdkCall { client.responses().create(params.build()) }
+                check(!response.error().isPresent) { "OpenAI Responses request failed" }
+                response.output().forEach { item ->
+                    item.message().orElse(null)?.content()?.forEach { content ->
+                        content.outputText().orElse(null)?.text()?.let { emit(it) }
+                    }
+                }
+                return@useClient
+            }
+            sdkCall { client.responses().createStreaming(params.build()) }.use { response ->
+                val iterator = response.stream().iterator()
+                var finished = false
+                while (sdkCall { iterator.hasNext() }) {
+                    val event = iterator.next()
+                    check(!event.error().isPresent && !event.failed().isPresent) { "OpenAI Responses stream failed" }
+                    event.outputTextDelta().orElse(null)?.delta()?.let { emit(it) }
+                    if (event.completed().isPresent || event.incomplete().isPresent) finished = true
+                }
+                check(finished) { "OpenAI Responses stream ended without a final response" }
             }
         }
     }.flowOn(Dispatchers.IO)

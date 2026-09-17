@@ -1,0 +1,40 @@
+package org.starfall.multigateway.di
+
+import android.content.Context
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import org.starfall.multigateway.data.local.db.AppDatabase
+import org.starfall.multigateway.data.local.preferences.AppPreferencesRepository
+import org.starfall.multigateway.data.repository.*
+import org.starfall.multigateway.data.service.*
+import org.starfall.multigateway.data.tools.*
+import org.starfall.multigateway.ui.chat.ChatViewModel
+import org.starfall.multigateway.ui.configuration.ConfigurationViewModel
+import org.starfall.multigateway.ui.settings.SettingsViewModel
+
+/** Application-scoped dependencies. ViewModels receive only their required dependencies. */
+class AppContainer(context: Context) {
+    private val appContext = context.applicationContext
+    private val database = AppDatabase.getInstance(appContext)
+    private val llmService = LlmService()
+    val toolFiles = ToolFiles(appContext)
+    private val toolHttp = ToolHttp(toolFiles)
+    private val mcpService = McpService(toolHttp)
+    private val conversations = ConversationRepository(database)
+    private val profiles = ProfileRepository(database)
+    private val providers = LlmRepository(database, llmService)
+    private val mcp = McpRepository(database, mcpService)
+    private val speech = SpeechRepository(database)
+    private val preferences = AppPreferencesRepository(appContext)
+    private val toolSettings = ToolSettingsStore(appContext)
+    val defaultDataInitializer = DefaultDataInitializer(providers, profiles, speech, preferences)
+
+    val viewModelFactory = viewModelFactory {
+        initializer {
+            ChatViewModel(conversations, profiles, providers, mcp, preferences,
+                ToolChat(toolHttp, mcpService, llmService), toolSettings, TtsHelper(appContext))
+        }
+        initializer { ConfigurationViewModel(profiles, providers, mcp, speech, preferences) }
+        initializer { SettingsViewModel(preferences) }
+    }
+}

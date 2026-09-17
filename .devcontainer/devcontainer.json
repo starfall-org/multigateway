@@ -1,36 +1,13 @@
 {
-    "name": "Flutter & Android SDK",
-    "build": {
-        "dockerfile": "Dockerfile",
-        "context": ".."
-    },
-    // Các thiết lập tùy chỉnh cho VS Code bên trong container
+    "name": "Kotlin Android",
+    "build": { "dockerfile": "Dockerfile", "context": ".." },
     "customizations": {
         "vscode": {
-            "extensions": [
-                "Dart-Code.flutter",
-                "Dart-Code.dart-code"
-            ],
-            "settings": {
-                "dart.flutterSdkPath": "/usr/local/lib/flutter",
-                "dart.sdkPath": "/usr/local/lib/flutter/bin/cache/dart-sdk",
-                "editor.formatOnSave": true,
-                "editor.codeActionsOnSave": {
-                    "source.fixAll": "explicit"
-                }
-            }
+            "extensions": ["vscjava.vscode-gradle"],
+            "settings": { "editor.formatOnSave": true }
         }
     },
-    // Cấu hình mount để lưu cache pub nhằm tăng tốc độ
-    "mounts": [
-        "source=flutter-pub-cache,target=/home/vscode/.pub-cache,type=volume"
-    ],
-    // Chạy các lệnh sau khi container được tạo
-    "postCreateCommand": "flutter pub get",
-    // Chuyển tiếp cổng cho việc phát triển web hoặc debug (nếu cần)
-    "forwardPorts": [
-        8080,
-        5555
-    ],
+    "postCreateCommand": "./gradlew --version",
+    "forwardPorts": [5555],
     "remoteUser": "vscode"
 }

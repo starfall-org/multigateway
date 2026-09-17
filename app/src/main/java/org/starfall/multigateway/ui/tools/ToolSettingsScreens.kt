@@ -64,7 +64,7 @@ fun SystemToolsScreen(providers: List<LlmProviderInfo>, settings: ToolSettings, 
                 item { Text("Choose ${type.displayName}",style=MaterialTheme.typography.titleLarge) }
                 if(choices.isEmpty()) item { Text("Add a model with this type in LLM Providers first.") }
                 items(choices) { (p,id,c) ->
-                    val supported=p.type==ProviderType.OPENAI || p.type==ProviderType.GOOGLE
+                    val supported=p.type.isOpenAi || p.type==ProviderType.GOOGLE
                     TextButton(enabled=supported,onClick={onSave(name,(settings.system[name]?:SystemToolConfig()).copy(providerId=p.id,modelId=id));choosing=null}) {
                         Text("${p.name} / ${c.displayName.ifBlank { id }}${if(!supported) " (media API unsupported)" else ""}")
                     }

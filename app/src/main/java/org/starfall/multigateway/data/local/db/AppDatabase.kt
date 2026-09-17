@@ -38,7 +38,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         // No schema change: upgrade existing v2 secrets atomically before any DAO reads.
         internal fun encryptLegacySecrets(db: SupportSQLiteDatabase) {
-            db.execSQL("PRAGMA secure_delete = ON")
+            db.query("PRAGMA secure_delete = ON").close()
             db.beginTransaction()
             try {
                 val columns = mapOf("llm_providers" to listOf("authJson", "configJson", "baseUrl"),

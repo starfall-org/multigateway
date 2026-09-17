@@ -99,7 +99,7 @@ class LlmService {
             ProviderType.OLLAMA -> base.removeSuffix("/api").removeSuffix("/v1") + "/v1/models"
             ProviderType.ANTHROPIC -> base.removeSuffix("/v1") + "/v1/models"
             ProviderType.GOOGLE -> if (Regex("/v1(?:beta|alpha)?$").containsMatchIn(base)) "$base/models" else "$base/v1beta/models"
-            ProviderType.OPENAI -> "$base/models"
+            ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> "$base/models"
         }
         val models = linkedSetOf<String>()
         var cursor: String? = null
@@ -162,7 +162,7 @@ class LlmService {
         }
     }
 
-    suspend fun generateStream(
+    suspend fun streamContent(
         provider: LlmProviderInfo,
         modelName: String,
         messages: List<StoredMessage>,
@@ -177,6 +177,9 @@ class LlmService {
         when (provider.type) {
             ProviderType.OPENAI -> {
                 emitAll(sdk.streamOpenAi(requestProvider, modelName, messages, systemPrompt, temperature, topP, maxTokens))
+            }
+            ProviderType.OPENAI_RESPONSES -> {
+                emitAll(sdk.streamResponses(requestProvider, modelName, messages, systemPrompt, temperature, topP, maxTokens))
             }
             ProviderType.ANTHROPIC -> {
                 emitAll(sdk.streamAnthropic(requestProvider, modelName, messages, systemPrompt, temperature, topP, maxTokens, topK))

@@ -11,7 +11,7 @@ class SystemMediaTools(private val http: ToolHttp) {
         require(prompt.isNotBlank() && prompt.length <= 32000) { "A prompt of 1–32000 characters is required" }
         val base = providerBase(provider)
         val response = when(provider.type) {
-            ProviderType.OPENAI -> if(kind == "generate_image") {
+            ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> if(kind == "generate_image") {
                 http.postMedia("$base/images/generations", imageGenerationRequest(provider.type, model, prompt, imageOptions), provider)
             } else {
                 var job = http.json(http.request("$base/videos", provider).post(MultipartBody.Builder().setType(MultipartBody.FORM)

@@ -39,6 +39,23 @@ internal fun providerTurn(type: ProviderType, response: JsonObject): JsonObject 
         part?.let { put("googlePart", it) }
     }
     return when (type) {
+        ProviderType.OPENAI_RESPONSES -> {
+            check(response.text("status") != "failed") { "OpenAI Responses request failed" }
+            val output = response.requireArray("output")
+            val text = StringBuilder()
+            val calls = mutableListOf<JsonElement>()
+            output.forEach { item ->
+                val value = item.requireObject()
+                when (value.text("type")) {
+                    "message" -> value.requireArray("content").forEach { part ->
+                        val content = part.requireObject()
+                        if (content.text("type") == "output_text") text.append(content.text("text"))
+                    }
+                    "function_call" -> calls += call(value.text("call_id"), value.text("name"), value["arguments"])
+                }
+            }
+            JsonObject(turn(text.toString(), calls) + ("responsesOutput" to output))
+        }
         ProviderType.OPENAI, ProviderType.OLLAMA -> {
             val message = if (type == ProviderType.OLLAMA) response.requireObject("message") else {
                 val choice = response.requireArray("choices").firstOrNull() ?: error("OpenAI-compatible provider returned no choices")

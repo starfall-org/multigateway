@@ -15,7 +15,7 @@ fun imageOptionFields(type: ProviderType, model: String): List<ImageOptionField>
     fun choice(path: String, label: String, vararg values: String) = ImageOptionField(path, label, choices = values.toList())
     fun integer(path: String, label: String, min: Double, max: Double) = ImageOptionField(path, label, "integer", min = min, max = max)
     return when (type) {
-        ProviderType.OPENAI -> listOf(
+        ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> listOf(
             integer("n", "Number of images", 1.0, 10.0),
             choice("size", "Image size", "auto", "256x256", "512x512", "1024x1024", "1024x1536", "1536x1024", "1024x1792", "1792x1024"),
             choice("quality", "Quality", "auto", "low", "medium", "high", "xhigh", "max", "standard", "hd"),
@@ -102,7 +102,7 @@ fun validateImageOptions(type: ProviderType, model: String, options: JsonObject)
             else -> require(primitive.isString) { "${field.label} must be text" }
         }
     }
-    if (type == ProviderType.OPENAI) {
+    if (type.isOpenAi) {
         require(model != "dall-e-3" || (options["n"] as? JsonPrimitive)?.intOrNull.let { it == null || it == 1 }) { "DALL·E 3 supports one image per request" }
         require(options.text("background") != "transparent" || options.text("output_format") != "jpeg") { "Transparent backgrounds require PNG or WebP" }
         require((options["partial_images"] as? JsonPrimitive)?.intOrNull.let { it == null || it == 0 } ||
@@ -113,7 +113,7 @@ fun validateImageOptions(type: ProviderType, model: String, options: JsonObject)
 internal fun imageGenerationRequest(type: ProviderType, model: String, prompt: String, options: JsonObject): JsonObject {
     validateImageOptions(type, model, options)
     return when (type) {
-        ProviderType.OPENAI -> JsonObject(mergeImageOptions(obj("n" to JsonPrimitive(1)), options) +
+        ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> JsonObject(mergeImageOptions(obj("n" to JsonPrimitive(1)), options) +
             mapOf("model" to str(model), "prompt" to str(prompt)))
         ProviderType.GOOGLE -> if (model.contains("imagen", true)) {
             val defaults = obj("parameters" to obj("sampleCount" to JsonPrimitive(1)))

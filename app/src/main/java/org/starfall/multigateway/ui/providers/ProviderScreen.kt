@@ -3,8 +3,6 @@ package org.starfall.multigateway.ui.providers
 import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.CancellationException
 import org.starfall.multigateway.data.model.ModelConfiguration
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import android.widget.Toast
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +38,7 @@ import kotlinx.coroutines.launch
 import org.starfall.multigateway.data.model.AuthMethod
 import org.starfall.multigateway.data.model.Authorization
 import org.starfall.multigateway.data.model.LlmProviderInfo
+import org.starfall.multigateway.data.model.withType
 import org.starfall.multigateway.data.model.ProviderType
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -257,7 +256,7 @@ fun ProviderListCard(
                         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
                     ) {
                         Text(
-                            text = provider.type.name,
+                            text = provider.type.displayName,
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -382,7 +381,6 @@ fun ProviderEditScreen(
     var testResult by remember { mutableStateOf<String?>(null) }
     var testIsSuccess by remember { mutableStateOf(false) }
     var typeExpanded by remember { mutableStateOf(false) }
-    var maxTokens by remember { mutableStateOf(initialProvider.config.maxTokens.toString()) }
     var supportStream by remember { mutableStateOf(initialProvider.config.supportStream) }
     var headersText by remember { mutableStateOf(Json.encodeToString(initialProvider.config.headers)) }
     var selectedTab by remember { mutableStateOf(0) }
@@ -401,9 +399,8 @@ fun ProviderEditScreen(
     val urlValid = runCatching { org.starfall.multigateway.data.tools.providerBase(initialProvider.copy(baseUrl = baseUrl)) }.isSuccess
     val authValid = authMethod !in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM) ||
         (authName.isNotBlank() && authName.none { it <= ' ' || it == ':' || it.code >= 127 })
-    val requestValid = urlValid && authValid && maxTokens.toIntOrNull()?.let { it > 0 } == true && headersValid
+    val requestValid = urlValid && authValid && headersValid
     fun requestConfig() = initialProvider.config.copy(
-        maxTokens = maxTokens.toIntOrNull() ?: initialProvider.config.maxTokens,
         supportStream = supportStream, headers = parsedHeaders ?: initialProvider.config.headers,
         modelConfigs = modelConfigs, modelIds = modelConfigs.keys.toList()
     )
@@ -449,7 +446,7 @@ fun ProviderEditScreen(
                         enabled = requestValid && baseUrl.isNotBlank(),
                         onClick = {
                             onSave(initialProvider.copy(
-                                name = name.trim().ifEmpty { type.displayName },
+                                name = name.trim().ifEmpty { type.defaultName },
                                 type = type,
                                 baseUrl = baseUrl.trim(),
                                 auth = authorization(),
@@ -494,11 +491,11 @@ fun ProviderEditScreen(
                                 DropdownMenuItem(
                                     text = { Text(t.displayName) },
                                     onClick = {
-                                        type = t
+                                        val updated = initialProvider.copy(name = name, type = type, baseUrl = baseUrl).withType(t)
+                                        name = updated.name
+                                        baseUrl = updated.baseUrl
+                                        type = updated.type
                                         typeExpanded = false
-                                        if (t == ProviderType.OLLAMA && (baseUrl.contains("api.openai.com") || baseUrl.isBlank())) {
-                                            baseUrl = "https://ollama.com/api"
-                                        }
                                     }
                                 )
                             }
@@ -558,11 +555,6 @@ fun ProviderEditScreen(
 
                     HorizontalDivider()
                     Text("Request config", style = MaterialTheme.typography.titleSmall)
-                    OutlinedTextField(maxTokens, { maxTokens = it }, label = { Text("Maximum output tokens") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        supportingText = { if (maxTokens.toIntOrNull()?.let { it > 0 } != true) Text("Enter a positive whole number.") },
-                        singleLine = true, isError = maxTokens.toIntOrNull()?.let { it > 0 } != true,
-                        modifier = Modifier.fillMaxWidth())
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically) {
                         Text("Stream responses", modifier = Modifier.weight(1f).padding(end = 12.dp))
@@ -721,17 +713,14 @@ private fun ProviderModelCatalogSheet(
     val allVisibleSelected = visibleModels.isNotEmpty() && visibleModels.all { it in selectedModels }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).imePadding().padding(horizontal = 16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Available models", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                IconButton(onClick = { refresh++ }, enabled = !loading) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = "Refresh models")
-                }
-            }
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                IconButton(onClick = { refresh++ }, enabled = !loading) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = "Refresh models")
+                }
                 OutlinedTextField(query, { query = it }, label = { Text("Search models") },
                     singleLine = true, modifier = Modifier.weight(1f))
                 IconButton(

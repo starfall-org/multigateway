@@ -87,6 +87,7 @@ On Windows, use `gradlew.bat` instead of `./gradlew`.
 
 ```text
 app/src/main/java/org/starfall/multigateway/
+├── di/              # Application dependency container and ViewModel factories
 ├── data/
 │   ├── local/        # Room database, preferences, local security helpers
 │   ├── model/        # Provider, model, MCP, profile and tool models
@@ -94,15 +95,21 @@ app/src/main/java/org/starfall/multigateway/
 │   ├── service/      # LLM, MCP and speech services
 │   └── tools/        # Tool runtime, media generation and file handling
 └── ui/
-    ├── chat/         # Chat UI and tool activity rendering
+    ├── chat/         # Chat UI, ViewModel and generation lifecycle
+    ├── configuration/ # Provider/profile/MCP/speech mutations
+    ├── navigation/   # Navigation Compose destinations
     ├── drawer/       # Conversation navigation
     ├── mcp/          # MCP server configuration
     ├── profiles/     # Chat profiles
     ├── providers/    # Provider and model configuration
-    ├── settings/     # Application settings
+    ├── settings/     # Settings UI and ViewModel
     ├── speech/       # Speech configuration
     └── tools/        # System tool and storage screens
 ```
+
+See [Android architecture](docs/architecture.md) for dependency ownership, state lifetimes,
+and navigation behavior. Raw assets live in `app/src/main/assets/`; Android resources
+live in `app/src/main/res/`.
 
 ## Security Notes
 

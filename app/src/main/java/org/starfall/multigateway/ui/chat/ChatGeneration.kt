@@ -1,4 +1,4 @@
-package org.starfall.multigateway.ui.viewmodel
+package org.starfall.multigateway.ui.chat
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*

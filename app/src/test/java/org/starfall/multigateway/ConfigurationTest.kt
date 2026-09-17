@@ -44,7 +44,7 @@ class ConfigurationTest {
                 Case(provider, "a", 0.2, 123), Case(provider, "b", null, 123), Case(other, "a", 0.8, 456)
             )) {
                 server.enqueue(MockResponse().setHeader("Content-Type", "text/event-stream").setBody("data: [DONE]\n\n"))
-                service.generateStream(p, model, messages, "Prompt").toList()
+                service.streamContent(p, model, messages, "Prompt").toList()
                 val request = server.takeRequest(5, TimeUnit.SECONDS)!!
                 val body = json.parseToJsonElement(request.body.readUtf8()).jsonObject
                 assertEquals(model, body["model"]!!.jsonPrimitive.content)
@@ -73,7 +73,7 @@ class ConfigurationTest {
                     baseUrl = server.url(if (type == ProviderType.GOOGLE) "/v1beta" else "/v1").toString(),
                     config = ProviderConfiguration(supportStream = true, maxTokens = 37,
                         modelConfigs = mapOf("custom" to ModelConfiguration(0.3, 0.7, 9, supportStream = false))))
-                assertEquals(type.name, "ok", service.generateStream(provider, "custom", messages).toList().joinToString(""))
+                assertEquals(type.name, "ok", service.streamContent(provider, "custom", messages).toList().joinToString(""))
                 val request = server.takeRequest(5, TimeUnit.SECONDS)!!
                 val body = json.parseToJsonElement(request.body.readUtf8()).jsonObject
                 when (type) {
@@ -119,7 +119,7 @@ class ConfigurationTest {
             val provider = LlmProviderInfo("p", "P", ProviderType.OPENAI, Authorization(key = "test"),
                 baseUrl = server.url("/v1").toString(), config = ProviderConfiguration(supportStream = false,
                     modelConfigs = mapOf("custom" to ModelConfiguration(supportStream = true))))
-            LlmService().generateStream(provider, "custom", messages).toList()
+            LlmService().streamContent(provider, "custom", messages).toList()
             val body = json.parseToJsonElement(server.takeRequest(5, TimeUnit.SECONDS)!!.body.readUtf8()).jsonObject
             assertTrue(body["stream"]!!.jsonPrimitive.boolean)
             assertFalse(provider.config.supportStream)

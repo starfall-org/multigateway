@@ -43,17 +43,17 @@ fun UserMessageCard(
         horizontalArrangement = Arrangement.End
     ) {
         Surface(
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
-            color = MaterialTheme.colorScheme.primaryContainer,
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier
-                .widthIn(max = 340.dp)
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp))
+                .widthIn(max = 320.dp)
+                .clip(RoundedCornerShape(24.dp))
                 .combinedClickable(
                     onClick = { /* normal click */ },
                     onLongClick = { showMenu = true }
                 )
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 // Attachments row
                 if (message.files.isNotEmpty()) {
                     Row(
@@ -75,13 +75,13 @@ fun UserMessageCard(
                                         Icons.Outlined.InsertDriveFile,
                                         contentDescription = null,
                                         modifier = Modifier.size(14.dp),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        tint = MaterialTheme.colorScheme.onSurface
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = file.substringAfterLast('/'),
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                             }
@@ -93,7 +93,7 @@ fun UserMessageCard(
                 Text(
                     text = message.content,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 // Version switcher if multiple versions exist
@@ -118,7 +118,7 @@ fun UserMessageCard(
                         Text(
                             text = "${message.activeVersionIndex + 1}/${message.versions.size}",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
                         IconButton(

@@ -1,36 +1,28 @@
-package org.starfall.multigateway.ui.viewmodel
+package org.starfall.multigateway.ui.chat
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import org.starfall.multigateway.data.local.db.AppDatabase
 import org.starfall.multigateway.data.local.preferences.AppPreferences
 import org.starfall.multigateway.data.local.preferences.AppPreferencesRepository
 import org.starfall.multigateway.data.model.*
 import org.starfall.multigateway.data.repository.*
-import org.starfall.multigateway.data.service.LlmService
-import org.starfall.multigateway.data.service.McpService
 import org.starfall.multigateway.data.service.TtsHelper
 import java.util.UUID
 import org.starfall.multigateway.data.tools.*
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class ChatViewModel(
+    private val conversationRepo: ConversationRepository,
+    private val profileRepo: ProfileRepository,
+    private val llmRepo: LlmRepository,
+    private val mcpRepo: McpRepository,
+    private val prefsRepo: AppPreferencesRepository,
+    private val toolChat: ToolChat,
+    private val toolStore: ToolSettingsStore,
+    private val ttsHelper: TtsHelper,
+) : ViewModel() {
 
-    private val db = AppDatabase.getInstance(application)
-    val conversationRepo = ConversationRepository(db)
-    val profileRepo = ProfileRepository(db)
-    val llmRepo = LlmRepository(db)
-    val mcpRepo = McpRepository(db)
-    val speechRepo = SpeechRepository(db)
-    val prefsRepo = AppPreferencesRepository(application)
-    val llmService = LlmService()
-    val toolFiles = ToolFiles(application)
-    private val toolHttp = ToolHttp(toolFiles)
-    val mcpService = McpService(toolHttp)
-    private val toolChat = ToolChat(toolHttp, mcpService, llmService)
-    private val toolStore = ToolSettingsStore(application)
     val toolSettings = toolStore.settings.stateIn(viewModelScope, SharingStarted.Eagerly, ToolSettings())
     fun setSystemTool(name: String, config: SystemToolConfig) { viewModelScope.launch { toolStore.update { it.copy(system = it.system + (name to config)) } } }
     fun setQuickMcp(id: String, enabled: Boolean) { viewModelScope.launch { toolStore.update { it.copy(quickMcp = it.quickMcp + (id to enabled)) } } }
@@ -38,7 +30,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         toolChat.generate(provider, model, messages, prompt, mcpServers.value, providers.value,
             access = { profiles.value.find { it.id == profile?.id }?.config?.mcpAccess ?: emptyMap() },
             settings = { toolSettings.value })
-    val ttsHelper = TtsHelper(application)
 
     val conversations: StateFlow<List<Conversation>> = conversationRepo.allConversations
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -52,11 +43,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val mcpServers: StateFlow<List<McpInfo>> = mcpRepo.allServers
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val speechServices: StateFlow<List<SpeechService>> = speechRepo.allServices
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    val appPreferences: StateFlow<AppPreferences> = prefsRepo.appPreferencesFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, AppPreferences())
+    private val appPreferences: StateFlow<AppPreferences> = prefsRepo.appPreferencesFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AppPreferences())
 
     private val _currentConversation = MutableStateFlow<Conversation?>(null)
     val currentConversation: StateFlow<Conversation?> = _currentConversation.asStateFlow()
@@ -74,122 +62,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try { block() } finally { pendingConversationWrites-- }
         }
-    }
-
-    init {
-        viewModelScope.launch {
-            llmRepo.allProviders.first().let { currentProviders ->
-                if (currentProviders.isEmpty()) {
-                    initDefaultProviders()
-                } else {
-                    val existingOllama = currentProviders.find { it.type == ProviderType.OLLAMA }
-                    if (existingOllama != null && (
-                            existingOllama.baseUrl.contains("108.181.196.208") ||
-                            existingOllama.baseUrl.contains("10.0.2.2") ||
-                            existingOllama.baseUrl.contains("localhost")
-                        )) {
-                        llmRepo.saveProvider(
-                            existingOllama.copy(
-                                name = "Ollama",
-                                baseUrl = "https://ollama.com/api"
-                            )
-                        )
-                    }
-                }
-            }
-
-            profileRepo.allProfiles.first().let { currentProfiles ->
-                if (currentProfiles.isEmpty()) {
-                    initDefaultProfiles()
-                }
-            }
-
-            speechRepo.allServices.first().let { currentServices ->
-                if (currentServices.isEmpty()) {
-                    initDefaultSpeechServices()
-                }
-            }
-        }
-    }
-
-    private suspend fun initDefaultProviders() {
-        val openAi = LlmProviderInfo(
-            id = "openai",
-            name = "OpenAI",
-            type = ProviderType.OPENAI,
-            baseUrl = "https://api.openai.com/v1",
-            auth = Authorization(method = AuthMethod.BEARER_TOKEN, key = "")
-        )
-        val google = LlmProviderInfo(
-            id = "google",
-            name = "Google Gemini",
-            type = ProviderType.GOOGLE,
-            baseUrl = "https://generativelanguage.googleapis.com/v1beta",
-            auth = Authorization(method = AuthMethod.QUERY_PARAM, key = "")
-        )
-        val anthropic = LlmProviderInfo(
-            id = "anthropic",
-            name = "Anthropic",
-            type = ProviderType.ANTHROPIC,
-            baseUrl = "https://api.anthropic.com/v1",
-            auth = Authorization(method = AuthMethod.CUSTOM_HEADER, key = "")
-        )
-        val ollama = LlmProviderInfo(
-            id = "ollama",
-            name = "Ollama",
-            type = ProviderType.OLLAMA,
-            baseUrl = "https://ollama.com/api",
-            auth = Authorization(method = AuthMethod.OTHER, key = "")
-        )
-
-        llmRepo.saveProvider(openAi)
-        llmRepo.saveProvider(google)
-        llmRepo.saveProvider(anthropic)
-        llmRepo.saveProvider(ollama)
-
-        prefsRepo.setSelectedModel("ollama", "llama3.2:latest")
-    }
-
-    private suspend fun initDefaultProfiles() {
-        val general = ChatProfile(
-            id = "profile_general",
-            name = "General Assistant",
-            config = LlmChatConfig(
-                systemPrompt = "You are a helpful, capable, and thoughtful AI assistant. Respond clearly and accurately."
-            )
-        )
-        val coding = ChatProfile(
-            id = "profile_coding",
-            name = "Code Architect",
-            config = LlmChatConfig(
-                systemPrompt = "You are an expert software engineer and system architect. Provide clean, modular, and idiomatic code with explanations."
-            )
-        )
-        val writer = ChatProfile(
-            id = "profile_creative",
-            name = "Creative Writer",
-            config = LlmChatConfig(
-                systemPrompt = "You are an imaginative creative writer, editor, and storyteller. Help users craft engaging stories, prose, and content."
-            )
-        )
-
-        profileRepo.saveProfile(general)
-        profileRepo.saveProfile(coding)
-        profileRepo.saveProfile(writer)
-
-        prefsRepo.setSelectedProfileId("profile_general")
-    }
-
-    private suspend fun initDefaultSpeechServices() {
-        val systemTts = SpeechService(
-            id = "system_tts",
-            name = "Android System TTS",
-            provider = "system",
-            voice = "Default",
-            speed = 1.0f,
-            pitch = 1.0f
-        )
-        speechRepo.saveService(systemTts)
     }
 
     fun selectConversation(conversation: Conversation) {
@@ -268,6 +140,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun speakText(text: String) {
         ttsHelper.speak(text)
     }
+
+    fun testVoice(text: String, speed: Float, pitch: Float) = ttsHelper.speak(text, speed, pitch)
 
     fun stopSpeaking() {
         ttsHelper.stop()
@@ -356,82 +230,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         ) ?: return
         generation.startEvents(conv, messageId, toolEvents(provider, model, conv.messages.dropLast(1), profile,
             profile?.config?.systemPrompt ?: prefs.defaultSystemPrompt))
-    }
-
-    fun saveProfile(profile: ChatProfile) {
-        viewModelScope.launch {
-            profileRepo.saveProfile(profile)
-        }
-    }
-
-    fun deleteProfile(profileId: String) {
-        viewModelScope.launch {
-            profileRepo.deleteProfile(profileId)
-            if (appPreferences.value.selectedProfileId == profileId) {
-                selectProfile(null)
-            }
-        }
-    }
-
-    fun saveModelConfiguration(providerId: String, modelId: String, config: ModelConfiguration) {
-        viewModelScope.launch {
-            val provider = llmRepo.getProviderById(providerId) ?: return@launch
-            llmRepo.saveProvider(provider.copy(config = provider.config.copy(
-                modelConfigs = provider.config.modelConfigs + (modelId to config)
-            )))
-        }
-    }
-
-    fun saveProvider(provider: LlmProviderInfo) {
-        viewModelScope.launch {
-            llmRepo.saveProvider(provider)
-            val prefs = appPreferences.value
-            val modelIds = provider.config.modelIds
-            if (prefs.selectedProviderId == provider.id && modelIds != null && prefs.selectedModelId !in modelIds) {
-                prefsRepo.setSelectedModel(provider.id, modelIds.firstOrNull().orEmpty())
-            }
-        }
-    }
-
-    fun deleteProvider(providerId: String) {
-        viewModelScope.launch {
-            llmRepo.deleteProvider(providerId)
-        }
-    }
-
-    suspend fun testConnection(provider: LlmProviderInfo): Result<String> {
-        return llmService.testConnection(provider)
-    }
-
-    suspend fun fetchProviderModels(provider: LlmProviderInfo): List<String> =
-        llmService.fetchProviderModels(provider)
-
-    suspend fun fetchOllamaModels(baseUrl: String): List<String> {
-        return llmService.fetchOllamaModels(baseUrl)
-    }
-
-    fun saveMcpServer(server: McpInfo) {
-        viewModelScope.launch {
-            mcpRepo.saveServer(server)
-        }
-    }
-
-    fun deleteMcpServer(serverId: String) {
-        viewModelScope.launch {
-            mcpRepo.deleteServer(serverId)
-        }
-    }
-
-    fun saveSpeechService(service: SpeechService) {
-        viewModelScope.launch {
-            speechRepo.saveService(service)
-        }
-    }
-
-    fun deleteSpeechService(serviceId: String) {
-        viewModelScope.launch {
-            speechRepo.deleteService(serviceId)
-        }
     }
 
     override fun onCleared() {

@@ -12,6 +12,7 @@ internal suspend fun ToolHttp.modelResponse(url:String, body:JsonObject, provide
     val google=provider.type==ProviderType.GOOGLE
     val ollama=provider.type==ProviderType.OLLAMA
     val anthropic=provider.type==ProviderType.ANTHROPIC
+    val responses=provider.type==ProviderType.OPENAI_RESPONSES
     val target=if(google) url.replace(":generateContent",":streamGenerateContent")+"?alt=sse" else url
     val payload=if(google) body else JsonObject(body+("stream" to JsonPrimitive(true)))
     return withContext(Dispatchers.IO) {
@@ -22,11 +23,17 @@ internal suspend fun ToolHttp.modelResponse(url:String, body:JsonObject, provide
             val calls=linkedMapOf<Int,JsonObject>()
             val arguments=mutableMapOf<Int,StringBuilder>()
             val googleParts=mutableListOf<JsonElement>()
+            var finalResponse: JsonObject? = null
             suspend fun consume(value:JsonObject) {
                 received = true
                 if(value["error"]!=null || value.text("type")=="error") error("Provider stream error: " + safeError(value["error"], requestSecrets(response.request)))
                 suspend fun emitText(chunk:String){if(chunk.isNotEmpty()){text.append(chunk);check(text.length<=512000){"Answer exceeds size limit"};onText(chunk)}}
                 when {
+                    responses -> when (value.text("type")) {
+                        "response.output_text.delta" -> emitText(value.text("delta"))
+                        "response.completed", "response.incomplete" -> finalResponse = value.requireObject("response")
+                        "response.failed" -> error("OpenAI Responses stream failed: " + safeError(value.requireObject("response")["error"], requestSecrets(response.request)))
+                    }
                     google -> {
                         value.requireArray("candidates")
                         (value["candidates"] as? JsonArray).orEmpty().firstOrNull()?.jsonObject?.get("content")?.jsonObject?.get("parts")?.jsonArray.orEmpty().forEach { part ->
@@ -90,6 +97,7 @@ internal suspend fun ToolHttp.modelResponse(url:String, body:JsonObject, provide
             }
             check(received) { "Provider stream ended without a response" }
             when {
+                responses -> finalResponse ?: error("OpenAI Responses stream ended without a final response")
                 google -> obj("candidates" to JsonArray(listOf(obj("content" to obj("parts" to JsonArray(listOf(obj("text" to str(text.toString())))+googleParts))))))
                 anthropic -> obj("content" to JsonArray(listOf(obj("type" to str("text"),"text" to str(text.toString())))+calls.map { (i,c) ->
                     JsonObject(c+("input" to (arguments[i]?.takeIf{it.isNotEmpty()}?.let{Json.parseToJsonElement(it.toString())} ?: c["input"] ?: obj())))
