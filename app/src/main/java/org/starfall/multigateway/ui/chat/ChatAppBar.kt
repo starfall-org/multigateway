@@ -1,17 +1,15 @@
 package org.starfall.multigateway.ui.chat
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.SmartToy
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -19,7 +17,6 @@ import androidx.compose.ui.unit.sp
 import org.starfall.multigateway.data.model.ChatProfile
 import org.starfall.multigateway.data.model.Conversation
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatAppBar(
     currentSession: Conversation?,
@@ -28,80 +25,86 @@ fun ChatAppBar(
     onOpenEndDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    TopAppBar(
-        windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
-        title = {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = currentSession?.title ?: "New Chat",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = selectedProfile?.name ?: "No Profile",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 12.sp
-                    ),
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        },
-        navigationIcon = {
-            IconButton(onClick = onOpenDrawer) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .height(72.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Surface(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .size(48.dp)
+                .clickable(onClick = onOpenDrawer),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+            shadowElevation = 4.dp,
+            tonalElevation = 2.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.Menu,
-                    contentDescription = "Open Conversations Drawer",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    contentDescription = "Open conversations",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(24.dp)
                 )
             }
-        },
-        actions = {
-            Box(
-                modifier = Modifier
-                    .padding(end = 12.dp)
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer)
-                    .clickable(onClick = onOpenEndDrawer),
-                contentAlignment = Alignment.Center
-            ) {
-                val initials = selectedProfile?.name
-                    ?.split(" ")
-                    ?.filter { it.isNotBlank() }
-                    ?.take(2)
-                    ?.map { it.first().uppercaseChar() }
-                    ?.joinToString("") ?: ""
+        }
 
-                if (initials.isNotEmpty()) {
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 68.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = currentSession?.title ?: "New Chat",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = selectedProfile?.name ?: "No Profile",
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Surface(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .size(48.dp)
+                .clickable(onClick = onOpenEndDrawer),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+            shadowElevation = 4.dp,
+            tonalElevation = 2.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                val profileIcon = selectedProfile?.icon?.trim()?.takeIf { it.isNotEmpty() }
+                if (profileIcon != null) {
                     Text(
-                        text = initials,
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        text = profileIcon,
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
+                        maxLines = 1
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Outlined.SmartToy,
-                        contentDescription = "Profile",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(18.dp)
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = "Open settings",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background,
-            scrolledContainerColor = MaterialTheme.colorScheme.background
-        ),
-        modifier = modifier
-    )
+        }
+    }
 }

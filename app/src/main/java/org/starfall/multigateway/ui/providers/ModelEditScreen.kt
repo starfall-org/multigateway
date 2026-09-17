@@ -6,6 +6,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Audiotrack
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -89,9 +92,35 @@ fun ModelEditScreen(
             if (config.modelType == ModelType.TEXT_GENERATION) {
                 HorizontalDivider()
                 Text("Capabilities", style = MaterialTheme.typography.titleMedium)
-                ModelCapabilitySwitch("Vision", config.supportsVision) { config = config.copy(supportsVision = it) }
+                Text("Input media", style = MaterialTheme.typography.bodyMedium)
+                MultiChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        checked = config.supportsVision,
+                        onCheckedChange = { config = config.copy(supportsVision = it) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                        icon = { Icon(Icons.Outlined.Image, contentDescription = null) },
+                        label = { Text("Image") }
+                    )
+                    SegmentedButton(
+                        checked = config.supportsVideoInput,
+                        onCheckedChange = { config = config.copy(supportsVideoInput = it) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                        icon = { Icon(Icons.Outlined.Videocam, contentDescription = null) },
+                        label = { Text("Video") }
+                    )
+                    SegmentedButton(
+                        checked = config.supportsAudioInput,
+                        onCheckedChange = { config = config.copy(supportsAudioInput = it) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                        icon = { Icon(Icons.Outlined.Audiotrack, contentDescription = null) },
+                        label = { Text("Audio") }
+                    )
+                }
                 ModelCapabilitySwitch("Thinking", config.supportsThinking) { config = config.copy(supportsThinking = it) }
                 ModelCapabilitySwitch("Tool calls", config.supportsToolCalls) { config = config.copy(supportsToolCalls = it) }
+                ModelCapabilitySwitch("Send thinking content back to AI", config.sendThinkingContent) {
+                    config = config.copy(sendThinkingContent = it)
+                }
                 HorizontalDivider()
                 Text("Streaming", style = MaterialTheme.typography.titleMedium)
                 ModelCapabilitySwitch("Use provider stream setting", config.supportStream == null) {

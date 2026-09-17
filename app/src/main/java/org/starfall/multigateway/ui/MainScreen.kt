@@ -65,7 +65,14 @@ fun MainScreen(
 
     val activeProfile: ChatProfile? = appPrefs.selectedProfileId?.let { id -> profiles.find { it.id == id } }
 
-    CompositionLocalProvider(LocalToolControls provides ToolControls(mcpServers, activeProfile, toolSettings, providers.find { it.id == appPrefs.selectedProviderId }?.config?.modelConfigs?.get(appPrefs.selectedModelId)?.supportsToolCalls == true, viewModel::setSystemTool, viewModel::setQuickMcp)) {
+    CompositionLocalProvider(LocalToolControls provides ToolControls(
+        servers = mcpServers,
+        profile = activeProfile,
+        settings = toolSettings,
+        providers = providers,
+        setSystem = viewModel::setSystemTool,
+        setMcp = viewModel::setQuickMcp
+    )) {
         ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
@@ -94,6 +101,12 @@ fun MainScreen(
                     onNavigateToProfiles = {
                         navigate(AppDestination.PROFILES)
                     },
+                    onOpenMenu = {
+                        coroutineScope.launch {
+                            drawerState.close()
+                            showEndMenuSheet = true
+                        }
+                    },
                     onCloseDrawer = {
                         coroutineScope.launch { drawerState.close() }
                     }
@@ -103,49 +116,54 @@ fun MainScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 NavHost(navController = navController, startDestination = AppDestination.CHAT.route) {
                     composable(AppDestination.CHAT.route) {
-                        ChatScreen(
-                            conversation = currentConv,
-                            selectedProfile = activeProfile,
-                            isGenerating = isGenerating,
-                            generatingConversationId = generatingConversationId,
-                            chatError = chatError,
-                            providers = providers,
-                            selectedProviderId = appPrefs.selectedProviderId,
-                            selectedModelName = appPrefs.selectedModelId.ifBlank { "gpt-4o" },
-                            onSendMessage = { text, files ->
-                                viewModel.sendMessage(text, files)
-                            },
-                            onStopGenerating = {
-                                viewModel.stopGeneration()
-                            },
-                            onOpenDrawer = {
-                                coroutineScope.launch { drawerState.open() }
-                            },
-                            onOpenEndDrawer = {
-                                showEndMenuSheet = true
-                            },
-                            onRegenerate = { id ->
-                                viewModel.regenerateMessage(id)
-                            },
-                            onEditMessage = { id, content ->
-                                viewModel.editMessage(id, content)
-                            },
-                            onDeleteMessage = { id ->
-                                viewModel.deleteMessage(id)
-                            },
-                            onSwitchVersion = { id, idx ->
-                                viewModel.switchMessageVersion(id, idx)
-                            },
-                            onSelectModel = { provId, modelId ->
-                                viewModel.selectModel(provId, modelId)
-                            },
-                            onReadMessage = { text ->
-                                viewModel.speakText(text)
-                            },
-                            onFetchOllamaModels = { url ->
-                                configurationViewModel.fetchOllamaModels(url)
-                            }
-                        )
+                        key(currentConv?.id) {
+                            ChatScreen(
+                                conversation = currentConv,
+                                selectedProfile = activeProfile,
+                                isGenerating = isGenerating,
+                                generatingConversationId = generatingConversationId,
+                                chatError = chatError,
+                                providers = providers,
+                                selectedProviderId = appPrefs.selectedProviderId,
+                                selectedModelName = appPrefs.selectedModelId.ifBlank { "gpt-4o" },
+                                onSendMessage = { text, files ->
+                                    viewModel.sendMessage(text, files)
+                                },
+                                onStopGenerating = {
+                                    viewModel.stopGeneration()
+                                },
+                                onOpenDrawer = {
+                                    coroutineScope.launch { drawerState.open() }
+                                },
+                                onOpenEndDrawer = {
+                                    showEndMenuSheet = true
+                                },
+                                onRegenerate = { id ->
+                                    viewModel.regenerateMessage(id)
+                                },
+                                onEditMessage = { id, content ->
+                                    viewModel.editMessage(id, content)
+                                },
+                                onDeleteMessage = { id ->
+                                    viewModel.deleteMessage(id)
+                                },
+                                onDeleteMessageVersion = { id ->
+                                    viewModel.deleteMessageVersion(id)
+                                },
+                                onSwitchVersion = { id, idx ->
+                                    viewModel.switchMessageVersion(id, idx)
+                                },
+                                onSelectModel = { provId, modelId ->
+                                    viewModel.selectModel(provId, modelId)
+                                },
+                                onReadMessage = { text ->
+                                    viewModel.speakText(text)
+                                },
+                                onFetchOllamaModels = { url ->
+                                    configurationViewModel.fetchOllamaModels(url)
+                                }
+                            )
+                        }
                     }
 
                     composable(AppDestination.PROFILES.route) {
@@ -166,7 +184,7 @@ fun MainScreen(
                             providers = providers,
                             onSaveProvider = { configurationViewModel.saveProvider(it) },
                             onDeleteProvider = { configurationViewModel.deleteProvider(it) },
-                            onTestConnection = { prov -> configurationViewModel.testConnection(prov) },
+                            onTestConnection = { prov, modelId -> configurationViewModel.testConnection(prov, modelId) },
                             onFetchModels = { provider -> configurationViewModel.fetchProviderModels(provider) },
                             onBack = { navController.popBackStack() }
                         )
@@ -204,6 +222,9 @@ fun MainScreen(
                             providerCount = providers.size,
                             onThemeChange = { mode ->
                                 settingsViewModel.setThemeMode(mode)
+                            },
+                            onAmoledChange = { use ->
+                                settingsViewModel.setUseAmoled(use)
                             },
                             onDynamicColorChange = { use ->
                                 settingsViewModel.setUseDynamicColor(use)

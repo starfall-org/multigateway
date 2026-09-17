@@ -6,8 +6,6 @@ import org.starfall.multigateway.data.model.ModelConfiguration
 import android.widget.Toast
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,7 +45,7 @@ fun ProviderScreen(
     providers: List<LlmProviderInfo>,
     onSaveProvider: (LlmProviderInfo) -> Unit,
     onDeleteProvider: (String) -> Unit,
-    onTestConnection: (suspend (LlmProviderInfo) -> Result<String>)? = null,
+    onTestConnection: (suspend (LlmProviderInfo, String) -> Result<String>)? = null,
     onFetchModels: (suspend (LlmProviderInfo) -> List<String>)? = null,
     onBack: () -> Unit
 ) {
@@ -363,7 +361,7 @@ fun ProviderGridCard(
 fun ProviderEditScreen(
     initialProvider: LlmProviderInfo,
     isNew: Boolean,
-    onTestConnection: (suspend (LlmProviderInfo) -> Result<String>)? = null,
+    onTestConnection: (suspend (LlmProviderInfo, String) -> Result<String>)? = null,
     onFetchModels: (suspend (LlmProviderInfo) -> List<String>)? = null,
     onDismiss: () -> Unit,
     onSave: (LlmProviderInfo) -> Unit
@@ -377,12 +375,17 @@ fun ProviderEditScreen(
     var authName by remember { mutableStateOf(if (initialProvider.auth.method in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) initialProvider.auth.key.orEmpty() else "") }
     var apiKey by remember { mutableStateOf(if (initialProvider.auth.method in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) initialProvider.auth.value.orEmpty() else initialProvider.auth.token) }
     fun authorization() = Authorization(authMethod, if (authMethod in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) authName.trim() else null, apiKey.trim())
-    var isTestingConnection by remember { mutableStateOf(false) }
-    var testResult by remember { mutableStateOf<String?>(null) }
-    var testIsSuccess by remember { mutableStateOf(false) }
+    var showTestDialog by remember { mutableStateOf(false) }
+    val testingModels = remember { mutableStateMapOf<String, Boolean>() }
+    val modelTestResults = remember { mutableStateMapOf<String, Result<String>>() }
     var typeExpanded by remember { mutableStateOf(false) }
     var supportStream by remember { mutableStateOf(initialProvider.config.supportStream) }
-    var headersText by remember { mutableStateOf(Json.encodeToString(initialProvider.config.headers)) }
+    val headerRows = remember {
+        mutableStateListOf<Pair<String, String>>().apply {
+            if (initialProvider.config.headers.isEmpty()) add("" to "")
+            else addAll(initialProvider.config.headers.entries.map { it.key to it.value })
+        }
+    }
     var selectedTab by remember { mutableStateOf(0) }
     var modelConfigs by remember {
         mutableStateOf(initialProvider.config.modelIds?.associateWith {
@@ -392,10 +395,13 @@ fun ProviderEditScreen(
     var configuringModel by remember { mutableStateOf<String?>(null) }
     var showModelCatalog by remember { mutableStateOf(false) }
     BackHandler(onBack = onDismiss)
-    val parsedHeaders = runCatching { Json.decodeFromString<Map<String, String>>(headersText) }.getOrNull()
-    val headersValid = parsedHeaders != null && parsedHeaders.all { (key, value) ->
-        key.isNotBlank() && key.none { it <= ' ' || it == ':' || it.code >= 127 } && value.none { it == '\r' || it == '\n' }
-    }
+    val activeHeaders = headerRows.filterNot { (key, value) -> key.isBlank() && value.isBlank() }
+    val headersValid = activeHeaders.all { (key, value) ->
+        key.isNotBlank() &&
+            key.none { it <= ' ' || it == ':' || it.code >= 127 } &&
+            value.none { it == '\r' || it == '\n' }
+    } && activeHeaders.map { it.first.lowercase() }.distinct().size == activeHeaders.size
+    val parsedHeaders = if (headersValid) activeHeaders.associate { it.first.trim() to it.second } else null
     val urlValid = runCatching { org.starfall.multigateway.data.tools.providerBase(initialProvider.copy(baseUrl = baseUrl)) }.isSuccess
     val authValid = authMethod !in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM) ||
         (authName.isNotBlank() && authName.none { it <= ' ' || it == ':' || it.code >= 127 })
@@ -571,72 +577,66 @@ fun ProviderEditScreen(
                         Text("Stream responses", modifier = Modifier.weight(1f).padding(end = 12.dp))
                         Switch(checked = supportStream, onCheckedChange = { supportStream = it })
                     }
-                    OutlinedTextField(headersText, { headersText = it }, label = { Text("Request headers (JSON)") },
-                        supportingText = { if (!headersValid) Text("Use a JSON object with valid header names and text values.") },
-                        isError = !headersValid, minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth())
-
-                    OutlinedButton(
-                        onClick = {
-                            isTestingConnection = true
-                            testResult = null
-                            val testTarget = initialProvider.copy(
-                                name = name.trim().ifEmpty { "Provider" },
-                                type = type,
-                                baseUrl = baseUrl.trim(),
-                                auth = authorization(),
-                                config = requestConfig()
+                    HorizontalDivider()
+                    Text("Custom Headers", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Add custom HTTP headers for LLM provider requests",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    headerRows.forEachIndexed { index, row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = row.first,
+                                onValueChange = { headerRows[index] = it to headerRows[index].second },
+                                placeholder = { Text("Header") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
                             )
-                            coroutineScope.launch {
-                                val res = onTestConnection?.invoke(testTarget) ?: Result.success("Endpoint reachable")
-                                isTestingConnection = false
-                                if (res.isSuccess) {
-                                    testIsSuccess = true
-                                    testResult = res.getOrNull() ?: "Connected successfully!"
-                                } else {
-                                    testIsSuccess = false
-                                    testResult = res.exceptionOrNull()?.localizedMessage ?: "Connection failed"
-                                }
+                            OutlinedTextField(
+                                value = row.second,
+                                onValueChange = { headerRows[index] = headerRows[index].first to it },
+                                placeholder = { Text("Value") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = {
+                                headerRows.removeAt(index)
+                                if (headerRows.isEmpty()) headerRows.add("" to "")
+                            }) {
+                                Icon(Icons.Outlined.Delete, contentDescription = "Delete header")
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isTestingConnection && baseUrl.isNotBlank() && requestValid
-                    ) {
-                        if (isTestingConnection) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Testing...")
-                        } else {
-                            Icon(Icons.Outlined.NetworkCheck, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Test Connection")
                         }
                     }
+                    if (!headersValid) {
+                        Text(
+                            "Header names and values must be valid and header names must be unique.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Button(
+                        onClick = { headerRows.add("" to "") },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                        shape = RoundedCornerShape(28.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Add Header")
+                    }
 
-                    // Test result banner
-                    if (testResult != null) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (testIsSuccess) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = if (testIsSuccess) Icons.Default.CheckCircle else Icons.Default.Error,
-                                    contentDescription = null,
-                                    tint = if (testIsSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = testResult ?: "",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (testIsSuccess) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
-                        }
+                    OutlinedButton(
+                        onClick = { showTestDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = baseUrl.isNotBlank() && requestValid && modelConfigs.isNotEmpty()
+                    ) {
+                        Icon(Icons.Outlined.NetworkCheck, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Test Connection")
                     }
                 }
             } else {
@@ -666,6 +666,93 @@ fun ProviderEditScreen(
             }
         }
     }
+    if (showTestDialog) {
+        val testTarget = initialProvider.copy(
+            name = name.trim().ifEmpty { "Provider" },
+            type = type,
+            baseUrl = baseUrl.trim(),
+            auth = authorization(),
+            config = requestConfig()
+        )
+        AlertDialog(
+            onDismissRequest = { showTestDialog = false },
+            title = { Text("Test Connection") },
+            text = {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        Text(
+                            "Select a model to test. The result is shown directly below that model.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    items(modelConfigs.keys.toList(), key = { it }) { modelId ->
+                        val testing = testingModels[modelId] == true
+                        val result = modelTestResults[modelId]
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            tonalElevation = 1.dp,
+                            modifier = Modifier.fillMaxWidth().clickable(enabled = !testing) {
+                                testingModels[modelId] = true
+                                modelTestResults.remove(modelId)
+                                coroutineScope.launch {
+                                    val tested = try {
+                                        onTestConnection?.invoke(testTarget, modelId)
+                                            ?: Result.success("Model responded successfully")
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        Result.failure(e)
+                                    }
+                                    modelTestResults[modelId] = tested
+                                    testingModels[modelId] = false
+                                }
+                            }
+                        ) {
+                            Column(Modifier.padding(14.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        val config = modelConfigs[modelId] ?: ModelConfiguration()
+                                        Text(config.displayName.ifBlank { modelId }, fontWeight = FontWeight.SemiBold)
+                                        if (config.displayName.isNotBlank()) {
+                                            Text(modelId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                    if (testing) {
+                                        CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                                    } else {
+                                        Icon(Icons.Outlined.NetworkCheck, contentDescription = "Test $modelId")
+                                    }
+                                }
+                                result?.let { tested ->
+                                    Spacer(Modifier.height(8.dp))
+                                    Row(verticalAlignment = Alignment.Top) {
+                                        Icon(
+                                            if (tested.isSuccess) Icons.Default.CheckCircle else Icons.Default.Error,
+                                            contentDescription = null,
+                                            tint = if (tested.isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            tested.getOrNull() ?: tested.exceptionOrNull()?.localizedMessage ?: "Connection failed",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (tested.isSuccess) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showTestDialog = false }) { Text("Close") } }
+        )
+    }
+
     if (showModelCatalog) {
         ProviderModelCatalogSheet(
             provider = initialProvider.copy(

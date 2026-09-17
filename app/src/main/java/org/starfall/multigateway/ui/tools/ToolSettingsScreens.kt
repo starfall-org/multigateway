@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -17,7 +18,10 @@ import org.starfall.multigateway.data.model.*
 
 @Composable
 fun ToolSwitch(label: String, checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().heightIn(min=48.dp),verticalAlignment=Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min=48.dp).alpha(if (enabled) 1f else 0.38f),
+        verticalAlignment=Alignment.CenterVertically
+    ) {
         Text(label,Modifier.weight(1f).padding(end=8.dp))
         Switch(checked=checked,onCheckedChange=onChange,enabled=enabled)
     }
@@ -44,8 +48,9 @@ fun SystemToolsScreen(providers: List<LlmProviderInfo>, settings: ToolSettings, 
                 val config=settings.system[name] ?: SystemToolConfig()
                 val provider=providers.find { it.id==config.providerId }
                 val model=provider?.config?.modelConfigs?.get(config.modelId)
+                val available = systemMediaToolAvailable(name, config, providers)
                 Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
-                    ToolSwitch(if(name=="generate_image") "Create image" else "Create video",config.enabled) { onSave(name,config.copy(enabled=it)) }
+                    ToolSwitch(if(name=="generate_image") "Create image" else "Create video",config.enabled,enabled=available) { onSave(name,config.copy(enabled=it)) }
                     Text(if(model==null) "Select a model" else "${provider.name} / ${model.displayName.ifBlank { config.modelId }}",style=MaterialTheme.typography.bodyMedium)
                     TextButton(onClick={choosing=name}) { Text("Choose model") }
                     if (name == "generate_image") {

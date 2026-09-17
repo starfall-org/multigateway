@@ -13,7 +13,8 @@ data class AppPreferences(
     val selectedProfileId: String? = null,
     val selectedProviderId: String = "",
     val selectedModelId: String = "",
-    val themeMode: String = "SYSTEM", // SYSTEM, LIGHT, DARK, AMOLED
+    val themeMode: String = "SYSTEM", // SYSTEM, LIGHT, DARK
+    val useAmoled: Boolean = false,
     val useDynamicColor: Boolean = true,
     val colorSchemeName: String = "DEFAULT", // DEFAULT, EMERALD, SUNSET, CRIMSON, VIOLET
     val defaultSystemPrompt: String = "",
@@ -36,6 +37,7 @@ class AppPreferencesRepository(private val context: Context) {
         val SELECTED_PROVIDER_ID = stringPreferencesKey("selected_provider_id")
         val SELECTED_MODEL_ID = stringPreferencesKey("selected_model_id")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val USE_AMOLED = booleanPreferencesKey("use_amoled")
         val USE_DYNAMIC_COLOR = booleanPreferencesKey("use_dynamic_color")
         val COLOR_SCHEME_NAME = stringPreferencesKey("color_scheme_name")
         val DEFAULT_SYSTEM_PROMPT = stringPreferencesKey("default_system_prompt")
@@ -54,11 +56,14 @@ class AppPreferencesRepository(private val context: Context) {
     val appPreferencesFlow: Flow<AppPreferences> = context.dataStore.data
         .map { preferences ->
             val profileId = preferences[PreferenceKeys.SELECTED_PROFILE_ID]
+            val storedThemeMode = preferences[PreferenceKeys.THEME_MODE] ?: "SYSTEM"
+            val legacyAmoled = storedThemeMode == "AMOLED"
             AppPreferences(
                 selectedProfileId = if (profileId.isNullOrEmpty()) null else profileId,
                 selectedProviderId = preferences[PreferenceKeys.SELECTED_PROVIDER_ID] ?: "",
                 selectedModelId = preferences[PreferenceKeys.SELECTED_MODEL_ID] ?: "",
-                themeMode = preferences[PreferenceKeys.THEME_MODE] ?: "SYSTEM",
+                themeMode = if (legacyAmoled) "DARK" else storedThemeMode,
+                useAmoled = preferences[PreferenceKeys.USE_AMOLED] ?: legacyAmoled,
                 useDynamicColor = preferences[PreferenceKeys.USE_DYNAMIC_COLOR] ?: true,
                 colorSchemeName = preferences[PreferenceKeys.COLOR_SCHEME_NAME] ?: "DEFAULT",
                 defaultSystemPrompt = preferences[PreferenceKeys.DEFAULT_SYSTEM_PROMPT] ?: "",
@@ -94,10 +99,21 @@ class AppPreferencesRepository(private val context: Context) {
 
     suspend fun setThemeMode(mode: String) {
         context.dataStore.edit { preferences ->
-            preferences[PreferenceKeys.THEME_MODE] = mode
+            if (preferences[PreferenceKeys.THEME_MODE] == "AMOLED" &&
+                preferences[PreferenceKeys.USE_AMOLED] == null
+            ) {
+                preferences[PreferenceKeys.USE_AMOLED] = true
+            }
+            preferences[PreferenceKeys.THEME_MODE] = if (mode == "AMOLED") "DARK" else mode
+            if (mode == "AMOLED") preferences[PreferenceKeys.USE_AMOLED] = true
         }
     }
 
+    suspend fun setUseAmoled(useAmoled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.USE_AMOLED] = useAmoled
+        }
+    }
     suspend fun setUseDynamicColor(useDynamic: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.USE_DYNAMIC_COLOR] = useDynamic

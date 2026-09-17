@@ -155,37 +155,97 @@ internal class OfficialLlmSdk {
         Result.failure(e)
     }
 
-    fun streamOpenAi(provider: LlmProviderInfo, modelName: String, messages: List<StoredMessage>,
-                     systemPrompt: String, temperature: Double?, topP: Double?, maxTokens: Int): Flow<String> = flow {
+    fun streamOpenAi(
+        provider: LlmProviderInfo,
+        modelName: String,
+        messages: List<StoredMessage>,
+        systemPrompt: String,
+        temperature: Double?,
+        topP: Double?,
+        maxTokens: Int,
+        sendThinkingContent: Boolean = false
+    ): Flow<GenerationEvent> = flow {
         openAi(provider).useClient { client ->
             val params = ChatCompletionCreateParams.builder().model(modelName).maxTokens(maxTokens.toLong())
             if (systemPrompt.isNotBlank()) params.addSystemMessage(systemPrompt)
-            messages.forEach { if (it.role == ChatRole.MODEL) params.addAssistantMessage(it.content) else params.addUserMessage(it.content) }
+            messages.forEach { message ->
+                if (message.role == ChatRole.MODEL) {
+                    val assistant = com.openai.models.chat.completions.ChatCompletionAssistantMessageParam.builder()
+                        .content(message.content)
+                    message.reasoningContent
+                        ?.takeIf { sendThinkingContent && it.isNotBlank() }
+                        ?.let { reasoning ->
+                            assistant.putAdditionalProperty(
+                                "reasoning_content",
+                                com.openai.core.JsonValue.from(reasoning)
+                            )
+                        }
+                    params.addMessage(assistant.build())
+                } else {
+                    params.addUserMessage(message.content)
+                }
+            }
             temperature?.let { params.temperature(it) }
             topP?.let { params.topP(it) }
+
+            fun reasoningFrom(properties: Map<String, com.openai.core.JsonValue>): String? =
+                runCatching { properties["reasoning_content"]?.convert(String::class.java) }
+                    .getOrNull()?.takeIf { it.isNotBlank() }
+
             if (!provider.config.supportStream) {
-                sdkCall { client.chat().completions().create(params.build()) }.choices().firstOrNull()?.message()?.content()?.orElse(null)?.let { emit(it) }
+                val response = sdkCall { client.chat().completions().create(params.build()) }
+                response.choices().firstOrNull()?.message()?.let { message ->
+                    reasoningFrom(message._additionalProperties())?.let { emit(GenerationEvent.Reasoning(it)) }
+                    message.content().orElse(null)?.takeIf { it.isNotEmpty() }?.let { emit(GenerationEvent.Text(it)) }
+                }
                 return@useClient
             }
+
             sdkCall { client.chat().completions().createStreaming(params.build()) }.use { response ->
                 val iterator = response.stream().iterator()
                 while (sdkCall { iterator.hasNext() }) {
-                    val chunk = iterator.next()
-                    chunk.choices().firstOrNull()?.delta()?.content()?.orElse(null)?.let { emit(it) }
+                    val delta = iterator.next().choices().firstOrNull()?.delta() ?: continue
+                    reasoningFrom(delta._additionalProperties())?.let { emit(GenerationEvent.Reasoning(it)) }
+                    delta.content().orElse(null)?.takeIf { it.isNotEmpty() }?.let { emit(GenerationEvent.Text(it)) }
                 }
             }
         }
     }.flowOn(Dispatchers.IO)
 
-    fun streamResponses(provider: LlmProviderInfo, modelName: String, messages: List<StoredMessage>,
-                        systemPrompt: String, temperature: Double?, topP: Double?, maxTokens: Int): Flow<String> = flow {
+    fun streamResponses(
+        provider: LlmProviderInfo,
+        modelName: String,
+        messages: List<StoredMessage>,
+        systemPrompt: String,
+        temperature: Double?,
+        topP: Double?,
+        maxTokens: Int,
+        sendThinkingContent: Boolean = false
+    ): Flow<GenerationEvent> = flow {
         openAi(provider).useClient { client ->
+            val inputItems = buildList {
+                messages.forEach { message ->
+                    if (message.role == ChatRole.MODEL && sendThinkingContent) {
+                        message.reasoningContent?.takeIf { it.isNotBlank() }?.let { reasoning ->
+                            val content = com.openai.models.responses.ResponseReasoningItem.Content.builder()
+                                .text(reasoning)
+                                .build()
+                            val reasoningItem = com.openai.models.responses.ResponseReasoningItem.builder()
+                                .id("rs_${message.id}")
+                                .summary(emptyList())
+                                .content(listOf(content))
+                                .build()
+                            add(ResponseInputItem.ofReasoning(reasoningItem))
+                        }
+                    }
+                    add(ResponseInputItem.ofEasyInputMessage(EasyInputMessage.builder()
+                        .role(if (message.role == ChatRole.MODEL) EasyInputMessage.Role.ASSISTANT else EasyInputMessage.Role.USER)
+                        .content(message.content)
+                        .build()))
+                }
+            }
             val params = ResponseCreateParams.builder().model(modelName).maxOutputTokens(maxTokens.toLong()).store(false)
-                .inputOfResponse(messages.map {
-                    ResponseInputItem.ofEasyInputMessage(EasyInputMessage.builder()
-                        .role(if (it.role == ChatRole.MODEL) EasyInputMessage.Role.ASSISTANT else EasyInputMessage.Role.USER)
-                        .content(it.content).build())
-                })
+                .inputOfResponse(inputItems)
             if (systemPrompt.isNotBlank()) params.instructions(systemPrompt)
             temperature?.let { params.temperature(it) }
             topP?.let { params.topP(it) }
@@ -193,8 +253,11 @@ internal class OfficialLlmSdk {
                 val response = sdkCall { client.responses().create(params.build()) }
                 check(!response.error().isPresent) { "OpenAI Responses request failed" }
                 response.output().forEach { item ->
+                    item.reasoning().orElse(null)?.content()?.orElse(emptyList())?.forEach { part ->
+                        part.text().takeIf { it.isNotBlank() }?.let { emit(GenerationEvent.Reasoning(it)) }
+                    }
                     item.message().orElse(null)?.content()?.forEach { content ->
-                        content.outputText().orElse(null)?.text()?.let { emit(it) }
+                        content.outputText().orElse(null)?.text()?.takeIf { it.isNotEmpty() }?.let { emit(GenerationEvent.Text(it)) }
                     }
                 }
                 return@useClient
@@ -205,7 +268,12 @@ internal class OfficialLlmSdk {
                 while (sdkCall { iterator.hasNext() }) {
                     val event = iterator.next()
                     check(!event.error().isPresent && !event.failed().isPresent) { "OpenAI Responses stream failed" }
-                    event.outputTextDelta().orElse(null)?.delta()?.let { emit(it) }
+                    event.reasoningTextDelta().orElse(null)?.delta()?.takeIf { it.isNotEmpty() }?.let {
+                        emit(GenerationEvent.Reasoning(it))
+                    }
+                    event.outputTextDelta().orElse(null)?.delta()?.takeIf { it.isNotEmpty() }?.let {
+                        emit(GenerationEvent.Text(it))
+                    }
                     if (event.completed().isPresent || event.incomplete().isPresent) finished = true
                 }
                 check(finished) { "OpenAI Responses stream ended without a final response" }
@@ -213,48 +281,105 @@ internal class OfficialLlmSdk {
         }
     }.flowOn(Dispatchers.IO)
 
-    fun streamAnthropic(provider: LlmProviderInfo, modelName: String, messages: List<StoredMessage>,
-                        systemPrompt: String, temperature: Double?, topP: Double?, maxTokens: Int, topK: Int? = null): Flow<String> = flow {
+    fun streamAnthropic(
+        provider: LlmProviderInfo,
+        modelName: String,
+        messages: List<StoredMessage>,
+        systemPrompt: String,
+        temperature: Double?,
+        topP: Double?,
+        maxTokens: Int,
+        topK: Int? = null,
+        sendThinkingContent: Boolean = false
+    ): Flow<GenerationEvent> = flow {
         anthropic(provider).useClient { client ->
             val params = MessageCreateParams.builder().model(modelName).maxTokens(maxTokens.toLong())
             if (systemPrompt.isNotBlank()) params.system(systemPrompt)
-            messages.forEach { if (it.role == ChatRole.MODEL) params.addAssistantMessage(it.content) else params.addUserMessage(it.content) }
+            messages.forEach { message ->
+                if (message.role == ChatRole.MODEL && sendThinkingContent && !message.reasoningContent.isNullOrBlank()) {
+                    val blocks = mutableListOf<com.anthropic.models.messages.ContentBlockParam>()
+                    val thinking = com.anthropic.models.messages.ThinkingBlockParam.builder()
+                        .thinking(message.reasoningContent!!)
+                        .signature(message.reasoningSignature.orEmpty())
+                        .build()
+                    blocks += com.anthropic.models.messages.ContentBlockParam.ofThinking(thinking)
+                    if (message.content.isNotEmpty()) {
+                        blocks += com.anthropic.models.messages.ContentBlockParam.ofText(message.content)
+                    }
+                    params.addMessage(
+                        com.anthropic.models.messages.MessageParam.builder()
+                            .role(com.anthropic.models.messages.MessageParam.Role.ASSISTANT)
+                            .contentOfBlockParams(blocks)
+                            .build()
+                    )
+                } else if (message.role == ChatRole.MODEL) {
+                    params.addAssistantMessage(message.content)
+                } else {
+                    params.addUserMessage(message.content)
+                }
+            }
             temperature?.let { params.temperature(it) }
             topP?.let { params.topP(it) }
             topK?.let { params.topK(it.toLong()) }
+
             if (!provider.config.supportStream) {
                 sdkCall { client.messages().create(params.build()) }.content().forEach { block ->
-                    block.text().orElse(null)?.text()?.let { emit(it) }
+                    block.thinking().orElse(null)?.let { thinking ->
+                        emit(GenerationEvent.Reasoning(thinking.thinking(), thinking.signature()))
+                    }
+                    block.text().orElse(null)?.text()?.takeIf { it.isNotEmpty() }?.let { emit(GenerationEvent.Text(it)) }
                 }
                 return@useClient
             }
+
             sdkCall { client.messages().createStreaming(params.build()) }.use { response ->
                 val iterator = response.stream().iterator()
                 while (sdkCall { iterator.hasNext() }) {
-                    iterator.next().contentBlockDelta().orElse(null)?.delta()?.text()?.orElse(null)?.text()?.let { emit(it) }
+                    val delta = iterator.next().contentBlockDelta().orElse(null)?.delta() ?: continue
+                    delta.thinking().orElse(null)?.thinking()?.takeIf { it.isNotEmpty() }?.let {
+                        emit(GenerationEvent.Reasoning(it))
+                    }
+                    delta.signature().orElse(null)?.signature()?.takeIf { it.isNotEmpty() }?.let {
+                        emit(GenerationEvent.Reasoning("", it))
+                    }
+                    delta.text().orElse(null)?.text()?.takeIf { it.isNotEmpty() }?.let { emit(GenerationEvent.Text(it)) }
                 }
             }
         }
     }.flowOn(Dispatchers.IO)
 
-    fun streamGoogle(provider: LlmProviderInfo, modelName: String, messages: List<StoredMessage>,
-                     systemPrompt: String, temperature: Double?, topP: Double?, maxTokens: Int, topK: Int? = null): Flow<String> = flow {
+    fun streamGoogle(
+        provider: LlmProviderInfo,
+        modelName: String,
+        messages: List<StoredMessage>,
+        systemPrompt: String,
+        temperature: Double?,
+        topP: Double?,
+        maxTokens: Int,
+        topK: Int? = null,
+        sendThinkingContent: Boolean = false
+    ): Flow<GenerationEvent> = flow {
         google(provider).use { client ->
-            val contents = messages.map { Content.builder().role(if (it.role == ChatRole.MODEL) "model" else "user")
-                .parts(Part.fromText(it.content)).build() }
+            val contents = messages.map { message ->
+                Content.builder()
+                    .role(if (message.role == ChatRole.MODEL) "model" else "user")
+                    .parts(Part.fromText(message.content))
+                    .build()
+            }
             val config = GenerateContentConfig.builder().maxOutputTokens(maxTokens)
             if (systemPrompt.isNotBlank()) config.systemInstruction(Content.fromParts(Part.fromText(systemPrompt)))
             temperature?.let { config.temperature(it.toFloat()) }
             topP?.let { config.topP(it.toFloat()) }
             topK?.let { config.topK(it.toFloat()) }
             if (!provider.config.supportStream) {
-                sdkCall { client.models.generateContent(modelName.removePrefix("models/"), contents, config.build()) }.text()?.let { emit(it) }
+                sdkCall { client.models.generateContent(modelName.removePrefix("models/"), contents, config.build()) }
+                    .text()?.takeIf { it.isNotEmpty() }?.let { emit(GenerationEvent.Text(it)) }
                 return@use
             }
             sdkCall { client.models.generateContentStream(modelName.removePrefix("models/"), contents, config.build()) }.use { response ->
                 val iterator = response.iterator()
                 while (sdkCall { iterator.hasNext() }) {
-                    iterator.next().text()?.takeIf { it.isNotEmpty() }?.let { emit(it) }
+                    iterator.next().text()?.takeIf { it.isNotEmpty() }?.let { emit(GenerationEvent.Text(it)) }
                 }
             }
         }

@@ -9,49 +9,131 @@ import java.util.UUID
 
 /** Native structured tool calls, bounded rounds, no executable text extracted from answers. */
 class ToolChat(private val http: ToolHttp, private val mcp: McpService, private val llm: LlmService) {
-    fun generate(provider: LlmProviderInfo, model: String, messages: List<StoredMessage>, prompt: String,
-                 servers: List<McpInfo>, providers: List<LlmProviderInfo>,
-                 access: () -> Map<String,McpAccess>, settings: () -> ToolSettings): Flow<GenerationEvent> = channelFlow {
-        if(provider.config.modelConfigs[model]?.supportsToolCalls != true) {
-            llm.streamContent(provider,model,messages,prompt).collect { send(GenerationEvent.Text(it)) }; return@channelFlow
-        }
-        val sessions = mutableMapOf<String,McpSession>()
+    fun generate(
+        provider: LlmProviderInfo,
+        model: String,
+        messages: List<StoredMessage>,
+        prompt: String,
+        servers: List<McpInfo>,
+        providers: List<LlmProviderInfo>,
+        access: () -> Map<String, McpAccess>,
+        settings: () -> ToolSettings
+    ): Flow<GenerationEvent> = channelFlow {
+        val sessions = mutableMapOf<String, McpSession>()
         val tools = mutableListOf<ToolDefinition>()
         try {
-            servers.filter { access()[it.id]?.enabled == true && settings().quickMcp[it.id] != false }.forEach { server ->
-                val activity = ToolActivity(UUID.randomUUID().toString(), "${server.name}: connect")
-                send(GenerationEvent.Tool(activity))
-                try {
-                    val session = mcp.session(server); sessions[server.id] = session
-                    tools += session.tools().filter { toolAllowed(access()[server.id],settings().quickMcp[server.id],it.originalName) }
-                    send(GenerationEvent.Tool(activity.copy(status="success",summary="Tools ready")))
-                } catch(e: CancellationException) { send(GenerationEvent.Tool(activity.copy(status="cancelled"))); throw e }
-                catch(e: Exception) { send(GenerationEvent.Tool(activity.copy(status="error",summary=e.message.orEmpty().take(500)))) }
+            servers
+                .filter { access()[it.id]?.enabled == true && settings().quickMcp[it.id] != false }
+                .forEach { server ->
+                    val activity = ToolActivity(UUID.randomUUID().toString(), "${server.name}: connect")
+                    send(GenerationEvent.Tool(activity))
+                    try {
+                        val session = mcp.session(server)
+                        sessions[server.id] = session
+                        tools += session.tools().filter {
+                            toolAllowed(access()[server.id], settings().quickMcp[server.id], it.originalName)
+                        }
+                        send(GenerationEvent.Tool(activity.copy(status = "success", summary = "Tools ready")))
+                    } catch (e: CancellationException) {
+                        send(GenerationEvent.Tool(activity.copy(status = "cancelled")))
+                        throw e
+                    } catch (e: Exception) {
+                        send(GenerationEvent.Tool(activity.copy(status = "error", summary = e.message.orEmpty().take(500))))
+                    }
+                }
+
+            listOf("generate_image", "generate_video").forEach { name ->
+                val config = settings().system[name]
+                if (config?.enabled == true && systemMediaToolAvailable(name, config, providers)) {
+                    tools += ToolDefinition(
+                        name = name,
+                        description = if (name == "generate_image") {
+                            "Generate an image from a detailed prompt. The app displays the saved image."
+                        } else {
+                            "Generate a video from a detailed prompt. The app displays the saved video."
+                        },
+                        schema = obj(
+                            "type" to str("object"),
+                            "properties" to obj("prompt" to obj("type" to str("string"))),
+                            "required" to JsonArray(listOf(str("prompt")))
+                        )
+                    )
+                }
             }
-            listOf("generate_image","generate_video").forEach { name ->
-                if(settings().system[name]?.enabled == true) tools += ToolDefinition(name,
-                    if(name == "generate_image") "Generate an image from a detailed prompt. The app displays the saved image." else "Generate a video from a detailed prompt. The app displays the saved video.",
-                    obj("type" to str("object"),"properties" to obj("prompt" to obj("type" to str("string"))),"required" to JsonArray(listOf(str("prompt")))))
+
+            if (tools.isEmpty()) {
+                llm.streamEvents(provider, model, messages, prompt).collect { send(it) }
+                return@channelFlow
             }
-            if(tools.isEmpty()) { llm.streamContent(provider,model,messages,prompt).collect { send(GenerationEvent.Text(it)) }; return@channelFlow }
+
             http.requireFiles()
             val history = mutableListOf<JsonObject>()
-            if(provider.type != ProviderType.GOOGLE && prompt.isNotBlank()) history += obj("role" to str("system"),"content" to str(prompt))
-            messages.forEach { message ->
-                val text = message.content + message.activeVersion.toolActivity.filter { it.status != "running" }.joinToString("\n",prefix="\n") { "Tool ${it.name}: ${it.status}. ${it.summary.take(2000)}" }
-                history += obj("role" to str(if(message.role == ChatRole.MODEL) "assistant" else "user"),"content" to str(text))
+            if (provider.type != ProviderType.GOOGLE && prompt.isNotBlank()) {
+                history += obj("role" to str("system"), "content" to str(prompt))
             }
+            val sendThinkingContent = provider.config.modelConfigs[model]?.sendThinkingContent == true
+            messages.forEach { message ->
+                val toolSummary = message.activeVersion.toolActivity
+                    .filter { it.status != "running" }
+                    .joinToString("\n", prefix = "\n") {
+                        "Tool ${it.name}: ${it.status}. ${it.summary.take(2000)}"
+                    }
+                val baseMessage = obj(
+                    "role" to str(if (message.role == ChatRole.MODEL) "assistant" else "user"),
+                    "content" to str(message.content + toolSummary)
+                )
+                var wireMessage = baseMessage
+                val reasoning = message.reasoningContent?.takeIf {
+                    sendThinkingContent && message.role == ChatRole.MODEL && it.isNotBlank()
+                }
+                if (reasoning != null) {
+                    wireMessage = JsonObject(wireMessage + ("reasoning_content" to str(reasoning)))
+                    message.reasoningSignature?.takeIf { it.isNotBlank() }?.let { signature ->
+                        wireMessage = JsonObject(wireMessage + ("reasoning_signature" to str(signature)))
+                    }
+                }
+                history += wireMessage
+            }
+
             val budget = ToolBudget()
             repeat(12) {
                 currentCoroutineContext().ensureActive()
-                val allowed = tools.filter { t -> if(t.serverId == null) settings().system[t.name]?.enabled == true else toolAllowed(access()[t.serverId],settings().quickMcp[t.serverId],t.originalName) }
-                val turn = request(provider,model,history,allowed,prompt) { send(GenerationEvent.Text(it)) }
-                val content = turn.text("content")
-                if(content.isNotBlank() && !provider.streamEnabledFor(model)) send(GenerationEvent.Text(content))
+                val allowed = tools.filter { tool ->
+                    if (tool.serverId == null) {
+                        val config = settings().system[tool.name]
+                        config?.enabled == true && systemMediaToolAvailable(tool.name, config, providers)
+                    } else {
+                        toolAllowed(access()[tool.serverId], settings().quickMcp[tool.serverId], tool.originalName)
+                    }
+                }
+
+                val streaming = provider.streamEnabledFor(model)
+                val turn = request(
+                    provider,
+                    model,
+                    history,
+                    allowed,
+                    prompt,
+                    onText = { send(GenerationEvent.Text(it)) },
+                    onReasoning = { send(GenerationEvent.Reasoning(it)) }
+                )
+                val reasoningSignature = turn.text("reasoning_signature").takeIf { it.isNotBlank() }
+                if (!streaming) {
+                    turn.text("reasoning_content").takeIf { it.isNotBlank() }?.let {
+                        send(GenerationEvent.Reasoning(it, reasoningSignature))
+                    }
+                    turn.text("content").takeIf { it.isNotBlank() }?.let {
+                        send(GenerationEvent.Text(it))
+                    }
+                } else if (reasoningSignature != null) {
+                    send(GenerationEvent.Reasoning("", reasoningSignature))
+                }
+
                 val calls = turn["tool_calls"] as? JsonArray ?: JsonArray(emptyList())
-                if(calls.isEmpty()) return@channelFlow
+                if (calls.isEmpty()) return@channelFlow
                 check(calls.size <= 16) { "Too many tool calls in a single response" }
                 history += turn
+
                 calls.forEach { value ->
                     val call = value.jsonObject
                     val function = call.requireObject("function")
@@ -64,74 +146,137 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                     }
                     val activity = ToolActivity(
                         id = UUID.randomUUID().toString(),
-                        name = tool?.let { t ->
-                            servers.find { it.id == t.serverId }?.let { "${it.name} / ${t.originalName}" } ?: t.originalName
+                        name = tool?.let { definition ->
+                            servers.find { it.id == definition.serverId }
+                                ?.let { "${it.name} / ${definition.originalName}" }
+                                ?: definition.originalName
                         } ?: name,
                         arguments = rawArguments
                     )
                     send(GenerationEvent.Tool(activity))
+
                     var result: JsonObject
                     try {
                         require(tool != null) { "Tool is not enabled" }
                         budget.consume(if (tool.serverId == null) name else null)
                         val args = toolArguments(function["arguments"])
-                        if(tool.serverId != null) {
-                            check(toolAllowed(access()[tool.serverId],settings().quickMcp[tool.serverId],tool.originalName)) { "MCP tool disabled" }
-                            result = (sessions[tool.serverId] ?: error("MCP session unavailable")).call(tool.originalName,args)
+                        result = if (tool.serverId != null) {
+                            check(
+                                toolAllowed(
+                                    access()[tool.serverId],
+                                    settings().quickMcp[tool.serverId],
+                                    tool.originalName
+                                )
+                            ) { "MCP tool disabled" }
+                            (sessions[tool.serverId] ?: error("MCP session unavailable"))
+                                .call(tool.originalName, args)
                         } else {
                             val cfg = settings().system[name] ?: error("System tool is not configured")
                             check(cfg.enabled) { "System tool disabled" }
-                            val mediaProvider = providers.find { it.id == cfg.providerId } ?: error("Select a provider for this system tool")
-                            val kind = if(name == "generate_image") ModelType.IMAGE_GENERATION else ModelType.VIDEO_GENERATION
-                            check(mediaProvider.config.modelConfigs[cfg.modelId]?.modelType == kind && mediaProvider.config.modelIds?.contains(cfg.modelId) != false) { "Select an available media model in System tools" }
-                            result = SystemMediaTools(http).generate(name,mediaProvider,cfg.modelId,args.text("prompt"),cfg.imageOptions)
+                            val mediaProvider = providers.find { it.id == cfg.providerId }
+                                ?: error("Select a provider for this system tool")
+                            val kind = if (name == "generate_image") {
+                                ModelType.IMAGE_GENERATION
+                            } else {
+                                ModelType.VIDEO_GENERATION
+                            }
+                            check(
+                                mediaProvider.config.modelConfigs[cfg.modelId]?.modelType == kind &&
+                                    mediaProvider.config.modelIds?.contains(cfg.modelId) != false
+                            ) { "Select an available media model in System tools" }
+                            SystemMediaTools(http).generate(
+                                name,
+                                mediaProvider,
+                                cfg.modelId,
+                                args.text("prompt"),
+                                cfg.imageOptions
+                            )
                         }
+
                         val isError = (result["isError"] as? JsonPrimitive)?.booleanOrNull == true
                         val summary = summarizeToolResult(result, http.requireFiles())
                         result = summary.content
-                        send(GenerationEvent.Tool(activity.copy(
-                            status = if(isError) "error" else "success",
-                            summary = summary.preview,
-                            files = summary.files,
-                            response = result.toString()
-                        )))
-                    } catch(e: CancellationException) {
-                        send(GenerationEvent.Tool(activity.copy(status="cancelled",summary="Stopped")))
+                        send(
+                            GenerationEvent.Tool(
+                                activity.copy(
+                                    status = if (isError) "error" else "success",
+                                    summary = summary.preview,
+                                    files = summary.files,
+                                    response = result.toString()
+                                )
+                            )
+                        )
+                    } catch (e: CancellationException) {
+                        send(GenerationEvent.Tool(activity.copy(status = "cancelled", summary = "Stopped")))
                         throw e
-                    } catch(e: Exception) {
+                    } catch (e: Exception) {
                         result = obj("error" to str(e.message.orEmpty().take(500)))
-                        send(GenerationEvent.Tool(activity.copy(
-                            status = "error",
-                            summary = e.message.orEmpty().take(500),
-                            response = result.toString()
-                        )))
+                        send(
+                            GenerationEvent.Tool(
+                                activity.copy(
+                                    status = "error",
+                                    summary = e.message.orEmpty().take(500),
+                                    response = result.toString()
+                                )
+                            )
+                        )
                     }
-                    history += obj("role" to str("tool"),"tool_call_id" to str(call.text("id")),"name" to str(name),"content" to str(result.toString()))
+
+                    history += obj(
+                        "role" to str("tool"),
+                        "tool_call_id" to str(call.text("id")),
+                        "name" to str(name),
+                        "content" to str(result.toString())
+                    )
                 }
             }
             error("Stopped after 12 tool rounds. Send another message to continue.")
-        } finally { sessions.values.forEach { it.close() } }
+        } finally {
+            sessions.values.forEach { it.close() }
+        }
     }.flowOn(Dispatchers.IO)
 
-    private suspend fun request(p: LlmProviderInfo, model: String, history: List<JsonObject>, tools: List<ToolDefinition>, prompt: String, onText: suspend (String) -> Unit): JsonObject {
+    private suspend fun request(
+        p: LlmProviderInfo,
+        model: String,
+        history: List<JsonObject>,
+        tools: List<ToolDefinition>,
+        prompt: String,
+        onText: suspend (String) -> Unit,
+        onReasoning: suspend (String) -> Unit
+    ): JsonObject {
         val defs = JsonArray(tools.map { obj("type" to str("function"),"function" to obj("name" to str(it.name),"description" to str(it.description),"parameters" to it.schema)) })
         val base = providerBase(p)
         val config = p.config.modelConfigs[model] ?: ModelConfiguration()
         return when(p.type) {
             ProviderType.OPENAI_RESPONSES -> {
+                val sendReasoning = config.sendThinkingContent
+                val isDeepSeek = p.baseUrl.contains("deepseek.com", ignoreCase = true) || model.startsWith("deepseek-", ignoreCase = true)
                 val input = history.flatMap { message ->
                     when {
-                        message["responsesOutput"] is JsonArray -> message.requireArray("responsesOutput").toList()
+                        message["responsesOutput"] is JsonArray -> {
+                            val items = message.requireArray("responsesOutput").toList()
+                            if (sendReasoning) items else items.filterNot { it.requireObject().text("type") == "reasoning" }
+                        }
                         message.text("role") == "tool" -> listOf(obj(
                             "type" to str("function_call_output"), "call_id" to str(message.text("tool_call_id")),
                             "output" to str(message.text("content"))
                         ))
-                        else -> listOf(message)
+                        message.text("role") == "assistant" -> buildList {
+                            message.text("reasoning_content").takeIf { sendReasoning && it.isNotBlank() }?.let { reasoning ->
+                                add(obj(
+                                    "type" to str("reasoning"),
+                                    "content" to JsonArray(listOf(obj("type" to str("reasoning_text"), "text" to str(reasoning))))
+                                ))
+                            }
+                            add(obj("role" to str("assistant"), "content" to str(message.text("content"))))
+                        }
+                        else -> listOf(JsonObject(message.filterKeys { it != "reasoning_content" && it != "reasoning_signature" }))
                     }
                 }
                 val response = http.modelResponse("$base/responses", buildJsonObject {
                     put("model", model); put("input", JsonArray(input)); put("store", false)
-                    put("include", JsonArray(listOf(str("reasoning.encrypted_content"))))
+                    if (!isDeepSeek) put("include", JsonArray(listOf(str("reasoning.encrypted_content"))))
                     put("max_output_tokens", p.config.maxTokens)
                     config.temperature?.let { put("temperature", it) }
                     config.topP?.let { put("top_p", it) }
@@ -139,27 +284,58 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                         obj("type" to str("function"), "name" to str(it.name), "description" to str(it.description),
                             "parameters" to it.schema, "strict" to JsonPrimitive(false))
                     }))
-                }, p, p.streamEnabledFor(model), onText)
+                }, p, p.streamEnabledFor(model), onText, onReasoning)
                 providerTurn(p.type, response)
             }
             ProviderType.OPENAI, ProviderType.OLLAMA -> {
                 val ollama = p.type == ProviderType.OLLAMA
-                val request = buildJsonObject {
-                    put("model",model); put("messages",JsonArray(if(!ollama) history else history.map { message ->
-                        when(message.text("role")) {
-                            "tool" -> JsonObject(message + ("tool_name" to str(message.text("name"))))
-                            "assistant" -> JsonObject(message + ("tool_calls" to JsonArray((message["tool_calls"] as? JsonArray).orEmpty().map { c ->
-                                val call=c.jsonObject;val f=call.requireObject("function")
-                                obj("function" to JsonObject(f+("arguments" to (f["arguments"] as? JsonObject ?: Json.parseToJsonElement(f.text("arguments"))))))
-                            })))
-                            else -> message
+                val sendReasoning = config.sendThinkingContent && !ollama
+                val wireHistory = history.map { message ->
+                    val clean = JsonObject(message.filterKeys { key ->
+                        key != "responsesOutput" && key != "reasoning_signature" && (sendReasoning || key != "reasoning_content")
+                    })
+                    when (message.text("role")) {
+                        "tool" -> if (ollama) JsonObject(clean + ("tool_name" to str(message.text("name")))) else clean
+                        "assistant" -> {
+                            val calls = (message["tool_calls"] as? JsonArray).orEmpty().map { c ->
+                                val call = c.requireObject()
+                                val f = call.requireObject("function")
+                                val rawArgs = f["arguments"]
+                                val args = if (ollama) {
+                                    rawArgs as? JsonObject ?: Json.parseToJsonElement(f.text("arguments"))
+                                } else {
+                                    str(if (rawArgs is JsonPrimitive) rawArgs.content else rawArgs?.toString() ?: "{}")
+                                }
+                                if (ollama) obj("function" to JsonObject(f + ("arguments" to args)))
+                                else obj(
+                                    "id" to str(call.text("id")),
+                                    "type" to str("function"),
+                                    "function" to JsonObject(f + ("arguments" to args))
+                                )
+                            }
+                            JsonObject(clean + ("tool_calls" to JsonArray(calls)))
                         }
-                    })); put("stream",false)
-                    if(tools.isNotEmpty()) put("tools",defs)
-                    if(ollama) put("options",buildJsonObject { config.temperature?.let { put("temperature",it) }; config.topP?.let { put("top_p",it) }; config.topK?.let { put("top_k",it) }; put("num_predict",p.config.maxTokens) })
-                    else { put("max_tokens",p.config.maxTokens); config.temperature?.let { put("temperature",it) }; config.topP?.let { put("top_p",it) } }
+                        else -> clean
+                    }
                 }
-                val response = http.modelResponse(if(ollama) base.removeSuffix("/api")+"/api/chat" else "$base/chat/completions",request,p,p.streamEnabledFor(model),onText)
+                val request = buildJsonObject {
+                    put("model", model); put("messages", JsonArray(wireHistory)); put("stream", false)
+                    if (tools.isNotEmpty()) put("tools", defs)
+                    if (ollama) put("options", buildJsonObject {
+                        config.temperature?.let { put("temperature", it) }
+                        config.topP?.let { put("top_p", it) }
+                        config.topK?.let { put("top_k", it) }
+                        put("num_predict", p.config.maxTokens)
+                    }) else {
+                        put("max_tokens", p.config.maxTokens)
+                        config.temperature?.let { put("temperature", it) }
+                        config.topP?.let { put("top_p", it) }
+                    }
+                }
+                val response = http.modelResponse(
+                    if (ollama) base.removeSuffix("/api") + "/api/chat" else "$base/chat/completions",
+                    request, p, p.streamEnabledFor(model), onText, onReasoning
+                )
                 providerTurn(p.type, response)
             }
             ProviderType.ANTHROPIC -> {
@@ -167,23 +343,54 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                 history.filter { it.text("role") != "system" }.forEach { message ->
                     val role = message.text("role")
                     val blocks = mutableListOf<JsonElement>()
-                    if(role == "tool") blocks += obj("type" to str("tool_result"),"tool_use_id" to str(message.text("tool_call_id")),"content" to str(message.text("content")))
-                    else {
-                        if(message.text("content").isNotEmpty()) blocks += obj("type" to str("text"),"text" to str(message.text("content")))
-                        (message["tool_calls"] as? JsonArray).orEmpty().forEach { c -> val call=c.jsonObject; val f=call.requireObject("function")
-                            blocks += obj("type" to str("tool_use"),"id" to str(call.text("id")),"name" to str(f.text("name")),"input" to (f["arguments"] as? JsonObject ?: Json.parseToJsonElement(f.text("arguments")))) }
+                    if (role == "tool") {
+                        blocks += obj(
+                            "type" to str("tool_result"),
+                            "tool_use_id" to str(message.text("tool_call_id")),
+                            "content" to str(message.text("content"))
+                        )
+                    } else {
+                        if (role == "assistant" && config.sendThinkingContent) {
+                            message.text("reasoning_content").takeIf { it.isNotBlank() }?.let { reasoning ->
+                                val signature = message.text("reasoning_signature")
+                                blocks += buildJsonObject {
+                                    put("type", "thinking")
+                                    put("thinking", reasoning)
+                                    if (signature.isNotBlank()) put("signature", signature)
+                                }
+                            }
+                        }
+                        if (message.text("content").isNotEmpty()) {
+                            blocks += obj("type" to str("text"), "text" to str(message.text("content")))
+                        }
+                        (message["tool_calls"] as? JsonArray).orEmpty().forEach { c ->
+                            val call = c.jsonObject
+                            val f = call.requireObject("function")
+                            blocks += obj(
+                                "type" to str("tool_use"),
+                                "id" to str(call.text("id")),
+                                "name" to str(f.text("name")),
+                                "input" to (f["arguments"] as? JsonObject ?: Json.parseToJsonElement(f.text("arguments")))
+                            )
+                        }
                     }
-                    val targetRole=if(role=="assistant") "assistant" else "user"
-                    if(native.lastOrNull()?.text("role")==targetRole) {
-                        val last=native.removeAt(native.lastIndex)
-                        native += obj("role" to str(targetRole),"content" to JsonArray(last.requireArray("content")+blocks))
-                    } else native += obj("role" to str(targetRole),"content" to JsonArray(blocks))
+                    val targetRole = if (role == "assistant") "assistant" else "user"
+                    if (native.lastOrNull()?.text("role") == targetRole) {
+                        val last = native.removeAt(native.lastIndex)
+                        native += obj("role" to str(targetRole), "content" to JsonArray(last.requireArray("content") + blocks))
+                    } else {
+                        native += obj("role" to str(targetRole), "content" to JsonArray(blocks))
+                    }
                 }
-                val response = http.modelResponse(base.removeSuffix("/v1")+"/v1/messages",buildJsonObject {
-                    put("model",model); put("max_tokens",p.config.maxTokens); put("system",prompt); put("messages",JsonArray(native))
-                    if(tools.isNotEmpty()) put("tools",JsonArray(tools.map { obj("name" to str(it.name),"description" to str(it.description),"input_schema" to it.schema) }))
-                    config.temperature?.let { put("temperature",it) }; config.topP?.let { put("top_p",it) }; config.topK?.let { put("top_k",it) }
-                },p,p.streamEnabledFor(model),onText)
+                val response = http.modelResponse(base.removeSuffix("/v1") + "/v1/messages", buildJsonObject {
+                    put("model", model); put("max_tokens", p.config.maxTokens); put("system", prompt); put("messages", JsonArray(native))
+                    if (tools.isNotEmpty()) put("tools", JsonArray(tools.map {
+                        obj("name" to str(it.name), "description" to str(it.description), "input_schema" to it.schema)
+                    }))
+                    config.temperature?.let { put("temperature", it) }
+                    config.topP?.let { put("top_p", it) }
+                    config.topK?.let { put("top_k", it) }
+                }, p, p.streamEnabledFor(model), onText, onReasoning)
                 providerTurn(p.type, response)
             }
             ProviderType.GOOGLE -> {

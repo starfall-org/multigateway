@@ -31,18 +31,43 @@ internal fun validateToolTurn(turn: JsonObject): JsonObject {
     return JsonObject(turn + ("tool_calls" to JsonArray(calls)))
 }
 internal fun providerTurn(type: ProviderType, response: JsonObject): JsonObject {
-    check(response["error"] == null || response["error"] == JsonNull) { "${type.displayName} returned an error: " + safeError(response["error"]) }
-    fun turn(text: String, calls: List<JsonElement>) = validateToolTurn(obj("role" to str("assistant"), "content" to str(text), "tool_calls" to JsonArray(calls)))
+    check(response["error"] == null || response["error"] == JsonNull) {
+        "${type.displayName} returned an error: " + safeError(response["error"])
+    }
+
+    fun turn(
+        text: String,
+        calls: List<JsonElement>,
+        reasoning: String? = null,
+        reasoningSignature: String? = null
+    ): JsonObject {
+        var value = obj(
+            "role" to str("assistant"),
+            "content" to str(text),
+            "tool_calls" to JsonArray(calls)
+        )
+        if (!reasoning.isNullOrBlank()) {
+            value = JsonObject(value + ("reasoning_content" to str(reasoning)))
+        }
+        if (!reasoningSignature.isNullOrBlank()) {
+            value = JsonObject(value + ("reasoning_signature" to str(reasoningSignature)))
+        }
+        return validateToolTurn(value)
+    }
+
     fun call(id: String, name: String, args: JsonElement?, part: JsonElement? = null) = buildJsonObject {
-        put("id", id); put("type", "function")
+        put("id", id)
+        put("type", "function")
         put("function", obj("name" to str(name), "arguments" to toolArguments(args)))
         part?.let { put("googlePart", it) }
     }
+
     return when (type) {
         ProviderType.OPENAI_RESPONSES -> {
             check(response.text("status") != "failed") { "OpenAI Responses request failed" }
             val output = response.requireArray("output")
             val text = StringBuilder()
+            val reasoning = StringBuilder()
             val calls = mutableListOf<JsonElement>()
             output.forEach { item ->
                 val value = item.requireObject()
@@ -51,40 +76,77 @@ internal fun providerTurn(type: ProviderType, response: JsonObject): JsonObject 
                         val content = part.requireObject()
                         if (content.text("type") == "output_text") text.append(content.text("text"))
                     }
+                    "reasoning" -> (value["content"] as? JsonArray).orEmpty().forEach { part ->
+                        val content = part.requireObject()
+                        if (content.text("type") == "reasoning_text") reasoning.append(content.text("text"))
+                    }
                     "function_call" -> calls += call(value.text("call_id"), value.text("name"), value["arguments"])
                 }
             }
-            JsonObject(turn(text.toString(), calls) + ("responsesOutput" to output))
+            JsonObject(turn(text.toString(), calls, reasoning.toString()) + ("responsesOutput" to output))
         }
+
         ProviderType.OPENAI, ProviderType.OLLAMA -> {
-            val message = if (type == ProviderType.OLLAMA) response.requireObject("message") else {
-                val choice = response.requireArray("choices").firstOrNull() ?: error("OpenAI-compatible provider returned no choices")
+            val message = if (type == ProviderType.OLLAMA) {
+                response.requireObject("message")
+            } else {
+                val choice = response.requireArray("choices").firstOrNull()
+                    ?: error("OpenAI-compatible provider returned no choices")
                 choice.requireObject().requireObject("message")
             }
             val values = message["tool_calls"]
-            require(values == null || values == JsonNull || values is JsonArray) { "Provider returned invalid tool_calls" }
-            turn(message.text("content"), (values as? JsonArray).orEmpty().map {
-                val c = it.requireObject(); val f = c.requireObject("function")
-                call(c.text("id").ifBlank { if (type == ProviderType.OLLAMA) UUID.randomUUID().toString() else error("Tool call is missing an ID") }, f.text("name"), f["arguments"])
-            })
+            require(values == null || values == JsonNull || values is JsonArray) {
+                "Provider returned invalid tool_calls"
+            }
+            turn(
+                message.text("content"),
+                (values as? JsonArray).orEmpty().map { item ->
+                    val c = item.requireObject()
+                    val f = c.requireObject("function")
+                    call(
+                        c.text("id").ifBlank {
+                            if (type == ProviderType.OLLAMA) UUID.randomUUID().toString()
+                            else error("Tool call is missing an ID")
+                        },
+                        f.text("name"),
+                        f["arguments"]
+                    )
+                },
+                message.text("reasoning_content").takeIf { it.isNotBlank() }
+            )
         }
+
         ProviderType.ANTHROPIC -> {
             val blocks = response.requireArray("content").map { it.requireObject() }
-            turn(blocks.filter { it.text("type") == "text" }.joinToString("") { it.text("text") },
-                blocks.filter { it.text("type") == "tool_use" }.map { call(it.text("id"), it.text("name"), it["input"]) })
+            val thinkingBlocks = blocks.filter { it.text("type") == "thinking" }
+            turn(
+                blocks.filter { it.text("type") == "text" }.joinToString("") { it.text("text") },
+                blocks.filter { it.text("type") == "tool_use" }
+                    .map { call(it.text("id"), it.text("name"), it["input"]) },
+                thinkingBlocks.joinToString("") { it.text("thinking") }.takeIf { it.isNotBlank() },
+                thinkingBlocks.joinToString("") { it.text("signature") }.takeIf { it.isNotBlank() }
+            )
         }
+
         ProviderType.GOOGLE -> {
-            val candidate = response.requireArray("candidates").firstOrNull() ?: error("Google response has no candidates")
-            val parts = candidate.requireObject().requireObject("content").requireArray("parts").map { it.requireObject() }
-            turn(parts.filter { (it["thought"] as? JsonPrimitive)?.booleanOrNull != true }.joinToString("") { it.text("text") },
+            val candidate = response.requireArray("candidates").firstOrNull()
+                ?: error("Google response has no candidates")
+            val parts = candidate.requireObject().requireObject("content")
+                .requireArray("parts").map { it.requireObject() }
+            turn(
+                parts.filter { (it["thought"] as? JsonPrimitive)?.booleanOrNull != true }
+                    .joinToString("") { it.text("text") },
                 parts.filter { it.containsKey("functionCall") }.map {
                     val f = it.requireObject("functionCall")
                     call(UUID.randomUUID().toString(), f.text("name"), f["args"] ?: obj(), it)
-                })
+                },
+                parts.filter { (it["thought"] as? JsonPrimitive)?.booleanOrNull == true }
+                    .joinToString("") { it.text("text") }
+                    .takeIf { it.isNotBlank() }
+            )
         }
     }
 }
-
 /** Only display bounded error details; redact common secret formats and echoed request credentials. */
 internal fun safeError(value: JsonElement?, secrets: Collection<String> = emptyList()): String {
     var text = when (value) {

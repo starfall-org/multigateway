@@ -7,7 +7,7 @@ data class ToolControls(
     val servers: List<McpInfo> = emptyList(),
     val profile: ChatProfile? = null,
     val settings: ToolSettings = ToolSettings(),
-    val supportsTools: Boolean = true,
+    val providers: List<LlmProviderInfo> = emptyList(),
     val setSystem: (String,SystemToolConfig)->Unit = {_,_->},
     val setMcp: (String,Boolean)->Unit = {_,_->}
 )

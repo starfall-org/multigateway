@@ -63,8 +63,8 @@ class ConfigurationViewModel(
         }
     }
 
-    suspend fun testConnection(provider: LlmProviderInfo): Result<String> {
-        return llmRepo.testConnection(provider)
+    suspend fun testConnection(provider: LlmProviderInfo, modelId: String): Result<String> {
+        return llmRepo.testModel(provider, modelId)
     }
 
     suspend fun fetchProviderModels(provider: LlmProviderInfo): List<String> =

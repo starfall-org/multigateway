@@ -42,6 +42,7 @@ fun SettingsScreen(
     profileCount: Int,
     providerCount: Int,
     onThemeChange: (String) -> Unit,
+    onAmoledChange: (Boolean) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
     onColorSchemeChange: (String) -> Unit,
     onContinueLastConversationChange: (Boolean) -> Unit,
@@ -155,6 +156,7 @@ fun SettingsScreen(
                     AppearanceSettingsView(
                         appPreferences = appPreferences,
                         onThemeChange = onThemeChange,
+                        onAmoledChange = onAmoledChange,
                         onDynamicColorChange = onDynamicColorChange,
                         onColorSchemeChange = onColorSchemeChange
                     )
@@ -197,6 +199,7 @@ fun SettingsScreen(
 fun AppearanceSettingsView(
     appPreferences: AppPreferences,
     onThemeChange: (String) -> Unit,
+    onAmoledChange: (Boolean) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
     onColorSchemeChange: (String) -> Unit
 ) {
@@ -212,7 +215,7 @@ fun AppearanceSettingsView(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val modes = listOf("SYSTEM", "LIGHT", "DARK", "AMOLED")
+                val modes = listOf("SYSTEM", "LIGHT", "DARK")
                 modes.forEach { mode ->
                     val isSelected = appPreferences.themeMode == mode
                     FilterChip(
@@ -237,7 +240,35 @@ fun AppearanceSettingsView(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Dynamic Color (Material You)",
+                        text = "AMOLED",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "Use pure black surfaces when dark mode is active",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+                Switch(
+                    checked = appPreferences.useAmoled,
+                    onCheckedChange = onAmoledChange
+                )
+            }
+        }
+
+        item {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Dynamic Color (Material Design)",
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(

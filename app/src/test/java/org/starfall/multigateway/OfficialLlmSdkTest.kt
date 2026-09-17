@@ -28,7 +28,7 @@ class OfficialLlmSdkTest {
             first.enqueue(openAiResponse("first")); second.enqueue(openAiResponse("second"))
             for ((server, key, expected) in listOf(Triple(first, "key-a", "first"), Triple(second, "key-b", "second"))) {
                 val result = sdk.streamOpenAi(provider(server, ProviderType.OPENAI, key), "custom-model", messages, "system", 0.5, 0.9, 99).toList()
-                assertEquals(expected, result.joinToString(""))
+                assertEquals(expected, result.filterIsInstance<GenerationEvent.Text>().joinToString("") { it.text })
                 val request = server.takeRequest(5, TimeUnit.SECONDS)!!
                 assertEquals("/v1/chat/completions", request.path)
                 assertEquals("Bearer $key", request.getHeader("Authorization"))
@@ -51,7 +51,8 @@ class OfficialLlmSdkTest {
     @Test fun anthropicUsesNativePathAndParsesSdkEvents() = runBlocking {
         MockWebServer().use { server ->
             server.enqueue(sse("event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"hello\"}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"))
-            assertEquals("hello", sdk.streamAnthropic(provider(server, ProviderType.ANTHROPIC), "custom-claude", messages, "", null, null, 50).toList().joinToString(""))
+            assertEquals("hello", sdk.streamAnthropic(provider(server, ProviderType.ANTHROPIC), "custom-claude", messages, "", null, null, 50)
+                .toList().filterIsInstance<GenerationEvent.Text>().joinToString("") { it.text })
             val request = server.takeRequest(5, TimeUnit.SECONDS)!!
             assertEquals("/v1/messages", request.path)
             assertEquals("test-key", request.getHeader("x-api-key"))
@@ -62,7 +63,8 @@ class OfficialLlmSdkTest {
         MockWebServer().use { server ->
             server.enqueue(sse("data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"hello\"}]}}]}\n\n"))
             val provider = provider(server, ProviderType.GOOGLE).copy(auth = Authorization(AuthMethod.CUSTOM_HEADER, "X-Gateway-Key", "secret"))
-            assertEquals("hello", sdk.streamGoogle(provider, "models/custom-gemini", messages, "", null, null, 50).toList().joinToString(""))
+            assertEquals("hello", sdk.streamGoogle(provider, "models/custom-gemini", messages, "", null, null, 50)
+                .toList().filterIsInstance<GenerationEvent.Text>().joinToString("") { it.text })
             val request = server.takeRequest(5, TimeUnit.SECONDS)!!
             assertEquals("/v1beta/models/custom-gemini:streamGenerateContent", request.requestUrl!!.encodedPath)
             assertEquals("secret", request.getHeader("X-Gateway-Key"))

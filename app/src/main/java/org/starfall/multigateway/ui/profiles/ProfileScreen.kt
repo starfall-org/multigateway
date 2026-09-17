@@ -479,6 +479,7 @@ fun AddOrEditProfileDialog(
                         val newProfile = ChatProfile(
                             id = profile?.id ?: UUID.randomUUID().toString(),
                             name = name.trim(),
+                            icon = profile?.icon,
                             config = LlmChatConfig(
                                 systemPrompt = systemPrompt.trim(), mcpAccess = mcpAccess
                             )

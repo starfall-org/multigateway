@@ -36,6 +36,7 @@ fun ConversationsDrawer(
     onDeleteConversation: (id: String) -> Unit,
     onSelectProfile: (ChatProfile) -> Unit,
     onNavigateToProfiles: () -> Unit,
+    onOpenMenu: () -> Unit,
     onCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -279,61 +280,74 @@ fun ConversationsDrawer(
                         width = 1.dp,
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
                     ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showProfileDropdown = true }
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
+                        Row(
                             modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
-                            contentAlignment = Alignment.Center
+                                .weight(1f)
+                                .clickable(onClick = onOpenMenu)
+                                .padding(start = 12.dp, top = 12.dp, bottom = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val initials = selectedProfile?.name
-                                ?.split(" ")
-                                ?.filter { it.isNotBlank() }
-                                ?.take(2)
-                                ?.map { it.first().uppercaseChar() }
-                                ?.joinToString("") ?: "SG"
-                            Text(
-                                text = initials,
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val initials = selectedProfile?.name
+                                    ?.split(" ")
+                                    ?.filter { it.isNotBlank() }
+                                    ?.take(2)
+                                    ?.map { it.first().uppercaseChar() }
+                                    ?.joinToString("") ?: "SG"
+                                Text(
+                                    text = initials,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "ACTIVE PROFILE",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.8.sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = selectedProfile?.name ?: "Standard Gateway",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "ACTIVE PROFILE",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.8.sp
-                                ),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = selectedProfile?.name ?: "Standard Gateway",
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                        IconButton(
+                            onClick = { showProfileDropdown = true },
+                            modifier = Modifier
+                                .padding(end = 4.dp)
+                                .size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.UnfoldMore,
+                                contentDescription = "Switch Profile",
+                                tint = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
-
-                        Icon(
-                            imageVector = Icons.Default.UnfoldMore,
-                            contentDescription = "Switch Profile",
-                            tint = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(20.dp)
-                        )
                     }
                 }
 

@@ -11,8 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.outlined.Extension
-import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,6 +39,7 @@ fun UserInputArea(
     var textState by remember { mutableStateOf("") }
     val context = LocalContext.current
 
+    val focusManager = LocalFocusManager.current
     var showModelPicker by remember { mutableStateOf(false) }
     var showQuickActions by remember { mutableStateOf(false) }
     var showAddMenu by remember { mutableStateOf(false) }
@@ -47,64 +47,42 @@ fun UserInputArea(
 
     val canSend = !isGenerating && textState.isNotBlank()
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background,
-        tonalElevation = 0.dp
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+            .imePadding()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
+        Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                .imePadding()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .widthIn(max = 720.dp)
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(36.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 3.dp,
+            shadowElevation = 8.dp
         ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(36.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                tonalElevation = 1.dp,
-                shadowElevation = 2.dp
-            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 6.dp, top = 6.dp, end = 6.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box {
-                        IconButton(
-                            onClick = { showAddMenu = true },
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Attachments and tools",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(30.dp)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showAddMenu,
-                            onDismissRequest = { showAddMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Attach files") },
-                                leadingIcon = { Icon(Icons.Outlined.InsertDriveFile, contentDescription = null) },
-                                onClick = {
-                                    showAddMenu = false
-                                    showFilesSheet = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("MCP & tools") },
-                                leadingIcon = { Icon(Icons.Outlined.Extension, contentDescription = null) },
-                                onClick = {
-                                    showAddMenu = false
-                                    showQuickActions = true
-                                }
-                            )
-                        }
+                    IconButton(
+                        onClick = {
+                            focusManager.clearFocus()
+                            showAddMenu = true
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Attachments and tools",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(30.dp)
+                        )
                     }
 
                     BasicTextField(
@@ -199,6 +177,15 @@ fun UserInputArea(
                 }
             }
         }
+
+    if (showAddMenu) {
+        FilesActionSheet(
+            onPickImage = { showFilesSheet = true },
+            onPickDocument = { showFilesSheet = true },
+            onTakePhoto = { showFilesSheet = true },
+            onOpenTools = { showQuickActions = true },
+            onDismiss = { showAddMenu = false }
+        )
     }
 
     if (showModelPicker) {

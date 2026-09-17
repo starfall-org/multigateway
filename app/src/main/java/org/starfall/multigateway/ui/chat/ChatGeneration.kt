@@ -4,6 +4,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.starfall.multigateway.data.model.*
 
+private const val STREAM_RENDER_INTERVAL_MS = 24L
+
 /** A single generation owns its conversation snapshot, independently of navigation. */
 internal class ChatGeneration(
     private val scope: CoroutineScope,
@@ -32,16 +34,56 @@ internal class ChatGeneration(
         publish(conversation)
         job = scope.launch(start = CoroutineStart.LAZY) {
             var output = ""
+            var reasoningOutput = ""
+            var reasoningSignatureOutput = ""
+            var renderJob: Job? = null
+            var lastRenderAt = 0L
+
             fun update() {
-                snapshot = updateResponse(snapshot!!, messageId, output)
+                snapshot = updateResponse(
+                    snapshot!!,
+                    messageId,
+                    output,
+                    reasoningOutput.takeIf { it.isNotBlank() },
+                    reasoningSignatureOutput.takeIf { it.isNotBlank() }
+                )
                 publish(snapshot!!)
+                lastRenderAt = System.currentTimeMillis()
             }
+
+            fun scheduleUpdate() {
+                if (renderJob?.isActive == true) return
+                val elapsed = System.currentTimeMillis() - lastRenderAt
+                val waitMs = (STREAM_RENDER_INTERVAL_MS - elapsed).coerceAtLeast(0L)
+                if (waitMs == 0L) {
+                    update()
+                } else {
+                    renderJob = launch {
+                        delay(waitMs)
+                        update()
+                    }
+                }
+            }
+
             try {
                 save(snapshot!!)
                 chunks.collect { chunk ->
                     when (chunk) {
-                        is GenerationEvent.Text -> { output += chunk.text; update() }
+                        is GenerationEvent.Text -> {
+                            output += chunk.text
+                            scheduleUpdate()
+                        }
+                        is GenerationEvent.Reasoning -> {
+                            reasoningOutput += chunk.text
+                            chunk.signature?.let { reasoningSignatureOutput += it }
+                            scheduleUpdate()
+                        }
                         is GenerationEvent.Tool -> {
+                            // Flush pending text before inserting a tool block so its visual anchor is stable.
+                            renderJob?.cancel()
+                            renderJob = null
+                            update()
+
                             val contentOffset = visibleResponseContent(output).length
                             snapshot = snapshot!!.copy(messages = snapshot!!.messages.map { message ->
                                 if (message.id != messageId) message else message.copy(versions = message.versions.mapIndexed { index, version ->
@@ -64,16 +106,29 @@ internal class ChatGeneration(
                         }
                     }
                 }
+                renderJob?.cancel()
+                renderJob = null
+                update()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                renderJob?.cancel()
+                renderJob = null
                 _error.value = e.localizedMessage ?: "Generation failed"
                 output += "\n[Error: ${_error.value}]"
                 update()
             } finally {
+                renderJob?.cancel()
                 try {
                     // A stopped stream must retain its partial response before allowing another send.
                     withContext(NonCancellable) {
+                        snapshot = updateResponse(
+                            snapshot!!,
+                            messageId,
+                            output,
+                            reasoningOutput.takeIf { it.isNotBlank() },
+                            reasoningSignatureOutput.takeIf { it.isNotBlank() }
+                        )
                         snapshot = snapshot!!.copy(messages = snapshot!!.messages.map { message ->
                             if (message.id != messageId) message else message.copy(versions = message.versions.mapIndexed { index, version ->
                                 if (index != message.activeVersionIndex) version else version.copy(
@@ -118,16 +173,25 @@ private fun visibleReasoningContent(output: String): String? {
     val end = output.indexOf("</think>")
     return output.substring(7, if (end >= 0) end else output.length).trim()
 }
-
-internal fun updateResponse(conversation: Conversation, messageId: String, output: String): Conversation {
-    val reasoning = visibleReasoningContent(output)
+internal fun updateResponse(
+    conversation: Conversation,
+    messageId: String,
+    output: String,
+    explicitReasoning: String? = null,
+    explicitReasoningSignature: String? = null
+): Conversation {
+    val reasoning = explicitReasoning ?: visibleReasoningContent(output)
     val content = visibleResponseContent(output)
     return conversation.copy(
         updatedAt = System.currentTimeMillis(),
         messages = conversation.messages.map { message ->
             if (message.id != messageId) message else message.copy(
                 versions = message.versions.mapIndexed { index, version ->
-                    if (index == message.activeVersionIndex) version.copy(content = content, reasoningContent = reasoning) else version
+                    if (index == message.activeVersionIndex) version.copy(
+                        content = content,
+                        reasoningContent = reasoning,
+                        reasoningSignature = explicitReasoningSignature
+                    ) else version
                 }
             )
         }

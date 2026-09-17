@@ -167,6 +167,7 @@ private val VioletDark = darkColorScheme(
 @Composable
 fun MultiGatewayTheme(
     themeMode: String = "SYSTEM",
+    amoledMode: Boolean = false,
     dynamicColor: Boolean = true,
     colorSchemeName: String = "DEFAULT",
     content: @Composable () -> Unit
@@ -174,10 +175,10 @@ fun MultiGatewayTheme(
     val systemDark = isSystemInDarkTheme()
     val isDark = when (themeMode) {
         "LIGHT" -> false
-        "DARK", "AMOLED" -> true
+        "DARK" -> true
         else -> systemDark
     }
-    val isAmoled = themeMode == "AMOLED"
+    val isAmoled = amoledMode && isDark
 
     val colorScheme = when {
         isAmoled -> AmoledDark

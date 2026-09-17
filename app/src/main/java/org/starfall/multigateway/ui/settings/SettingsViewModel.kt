@@ -15,6 +15,9 @@ class SettingsViewModel(private val repository: AppPreferencesRepository) : View
     fun setThemeMode(value: String) {
         viewModelScope.launch { repository.setThemeMode(value) }
     }
+    fun setUseAmoled(value: Boolean) {
+        viewModelScope.launch { repository.setUseAmoled(value) }
+    }
     fun setUseDynamicColor(value: Boolean) {
         viewModelScope.launch { repository.setUseDynamicColor(value) }
     }

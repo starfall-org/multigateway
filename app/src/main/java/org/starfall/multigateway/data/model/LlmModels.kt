@@ -109,9 +109,13 @@ data class ModelConfiguration(
     val supportStream: Boolean? = null,
     val displayName: String = "",
     val modelType: ModelType = ModelType.TEXT_GENERATION,
-    val supportsVision: Boolean = false,
-    val supportsThinking: Boolean = false,
-    val supportsToolCalls: Boolean = false
+    // Image input capability. Kept as supportsVision for backward compatibility with saved configs.
+    val supportsVision: Boolean = true,
+    val supportsVideoInput: Boolean = false,
+    val supportsAudioInput: Boolean = false,
+    val supportsThinking: Boolean = true,
+    val supportsToolCalls: Boolean = true,
+    @SerialName("send_thinking_content") val sendThinkingContent: Boolean = false
 )
 
 fun LlmProviderInfo.streamEnabledFor(modelId: String): Boolean =

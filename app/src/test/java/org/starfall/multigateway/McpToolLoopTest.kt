@@ -37,13 +37,25 @@ class McpToolLoopTest {
                     if(rounds==2)assertTrue(type.name,body.toString().contains("hello_from_mcp"))
                     val first=rounds==1
                     val tools=body["tools"]!!.jsonArray
-                    val name=when(type){ProviderType.ANTHROPIC->tools[0].jsonObject["name"]!!.jsonPrimitive.content
+                    val name=when(type){
+                        ProviderType.ANTHROPIC, ProviderType.OPENAI_RESPONSES -> tools[0].jsonObject["name"]!!.jsonPrimitive.content
                         ProviderType.GOOGLE->tools[0].jsonObject["functionDeclarations"]!!.jsonArray[0].jsonObject["name"]!!.jsonPrimitive.content
-                        else->tools[0].jsonObject["function"]!!.jsonObject["name"]!!.jsonPrimitive.content}
+                        else->tools[0].jsonObject["function"]!!.jsonObject["name"]!!.jsonPrimitive.content
+                    }
                     val call=buildJsonObject{put("id","c1");put("type","function");put("function",buildJsonObject{put("name",name);if(type==ProviderType.OLLAMA)put("arguments",buildJsonObject{}) else put("arguments","{}")})}
                     val message=buildJsonObject{put("role","assistant");put("content",if(first) "" else "done");if(first)put("tool_calls",buildJsonArray{add(call)})}
                     return json(when(type){
                         ProviderType.OPENAI->buildJsonObject{put("choices",buildJsonArray{add(buildJsonObject{put("message",message)})})}
+                        ProviderType.OPENAI_RESPONSES->buildJsonObject{
+                            put("status","completed")
+                            put("output",buildJsonArray{
+                                add(if(first) buildJsonObject{
+                                    put("type","function_call");put("call_id","c1");put("name",name);put("arguments","{}")
+                                } else buildJsonObject{
+                                    put("type","message");put("content",buildJsonArray{add(buildJsonObject{put("type","output_text");put("text","done")})})
+                                })
+                            })
+                        }
                         ProviderType.OLLAMA->buildJsonObject{put("message",message)}
                         ProviderType.ANTHROPIC->buildJsonObject{put("content",buildJsonArray{add(if(first)buildJsonObject{put("type","tool_use");put("id","c1");put("name",name);put("input",buildJsonObject{})}else buildJsonObject{put("type","text");put("text","done")})})}
                         ProviderType.GOOGLE->buildJsonObject{put("candidates",buildJsonArray{add(buildJsonObject{put("content",buildJsonObject{put("parts",buildJsonArray{add(if(first)buildJsonObject{put("functionCall",buildJsonObject{put("name",name);put("args",buildJsonObject{})});put("thoughtSignature","sig")}else buildJsonObject{put("text","done")})})})})})}

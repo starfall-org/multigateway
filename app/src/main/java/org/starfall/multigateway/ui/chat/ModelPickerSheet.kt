@@ -12,6 +12,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
@@ -266,8 +268,30 @@ private fun ModelCapabilityBadges(config: ModelConfiguration) {
         )
         if (config.supportsVision) {
             ModelBadge(
-                label = "Vision",
+                label = "Image",
                 icon = Icons.Outlined.Image,
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    labelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    leadingIconContentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            )
+        }
+        if (config.supportsVideoInput) {
+            ModelBadge(
+                label = "Video",
+                icon = Icons.Outlined.Videocam,
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    labelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    leadingIconContentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            )
+        }
+        if (config.supportsAudioInput) {
+            ModelBadge(
+                label = "Audio",
+                icon = Icons.Outlined.Audiotrack,
                 colors = AssistChipDefaults.assistChipColors(
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                     labelColor = MaterialTheme.colorScheme.onTertiaryContainer,

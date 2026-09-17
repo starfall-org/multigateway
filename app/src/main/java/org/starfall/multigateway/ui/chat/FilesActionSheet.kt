@@ -6,7 +6,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,70 +23,124 @@ fun FilesActionSheet(
     onPickImage: () -> Unit,
     onPickDocument: () -> Unit,
     onTakePhoto: () -> Unit,
+    onOpenTools: () -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 28.dp)
         ) {
-            Text(
-                text = "Attach Media & Files",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                AddActionTile(
+                    icon = Icons.Outlined.Image,
+                    label = "Photos",
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        onPickImage()
+                        onDismiss()
+                    }
+                )
+                AddActionTile(
+                    icon = Icons.Outlined.CameraAlt,
+                    label = "Camera",
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        onTakePhoto()
+                        onDismiss()
+                    }
+                )
+                AddActionTile(
+                    icon = Icons.Outlined.Description,
+                    label = "Files",
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        onPickDocument()
+                        onDismiss()
+                    }
+                )
+            }
 
-            FileActionOption(
+            Spacer(modifier = Modifier.height(28.dp))
+
+            AddActionRow(
                 icon = Icons.Outlined.Image,
-                title = "Photo / Gallery",
-                subtitle = "Select photos from your device",
+                title = "Image",
+                subtitle = "Create and edit images",
                 onClick = {
-                    onPickImage()
+                    onOpenTools()
                     onDismiss()
                 }
             )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 6.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-            )
-
-            FileActionOption(
-                icon = Icons.Outlined.Description,
-                title = "Document / File",
-                subtitle = "Upload PDF, TXT, code or data files",
+            AddActionRow(
+                icon = Icons.Outlined.Videocam,
+                title = "Video",
+                subtitle = "Create video",
                 onClick = {
-                    onPickDocument()
+                    onOpenTools()
                     onDismiss()
                 }
             )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 6.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-            )
-
-            FileActionOption(
-                icon = Icons.Outlined.CameraAlt,
-                title = "Take Photo",
-                subtitle = "Capture image with camera",
+            AddActionRow(
+                icon = Icons.Outlined.Extension,
+                title = "MCP & tools",
+                subtitle = "Choose tools available to the model",
                 onClick = {
-                    onTakePhoto()
+                    onOpenTools()
                     onDismiss()
                 }
             )
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-private fun FileActionOption(
+private fun AddActionTile(
+    icon: ImageVector,
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier
+            .aspectRatio(1f)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(30.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(34.dp),
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddActionRow(
     icon: ImageVector,
     title: String,
     subtitle: String,
@@ -94,34 +150,32 @@ private fun FileActionOption(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
+            .padding(horizontal = 12.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-            modifier = Modifier.size(44.dp)
+        Box(
+            modifier = Modifier.size(56.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(30.dp),
+                tint = MaterialTheme.colorScheme.onSurface
+            )
         }
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Normal),
                 color = MaterialTheme.colorScheme.onSurface
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

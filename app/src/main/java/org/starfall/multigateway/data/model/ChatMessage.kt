@@ -16,6 +16,7 @@ data class MessageVersion(
     val files: List<String> = emptyList(),
     val toolActivity: List<ToolActivity> = emptyList(),
     @SerialName("reasoning_content") val reasoningContent: String? = null,
+    @SerialName("reasoning_signature") val reasoningSignature: String? = null,
     @SerialName("processing_finished_at") val processingFinishedAt: Long? = null
 )
 
@@ -38,9 +39,13 @@ data class StoredMessage(
 
     val files: List<String>
         get() = activeVersion.files
+    val reasoningSignature: String?
+        get() = activeVersion.reasoningSignature
+
 
     val reasoningContent: String?
         get() = activeVersion.reasoningContent
+
 }
 
 @Serializable

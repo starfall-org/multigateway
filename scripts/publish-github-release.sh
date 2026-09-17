@@ -8,12 +8,14 @@ repo="${GITHUB_RELEASE_REPO:-starfall-org/multigateway}"
 cd "${CM_BUILD_DIR:-$(git rev-parse --show-toplevel)}"
 command -v gh >/dev/null || { echo 'GitHub CLI (gh) is required.' >&2; exit 1; }
 
-# Keep the GitHub tag in sync with the version embedded in the APK.
+# Keep the GitHub tag in sync with both Codemagic config and the version embedded in the APK.
 version="$(python3 -c 'import json; print(json.load(open("app/build/outputs/apk/release/output-metadata.json"))["elements"][0]["versionName"])')"
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]] || { echo 'Invalid app version.' >&2; exit 1; }
-tag="v$version"
+expected_tag="v$version"
+tag="${GITHUB_RELEASE_TAG:-$expected_tag}"
+[[ "$tag" == "$expected_tag" ]] || { echo "Configured GitHub release tag $tag does not match app version $expected_tag." >&2; exit 1; }
 if [[ -n "${CM_TAG:-}" && "$CM_TAG" != "$tag" ]]; then
-  echo "Build tag $CM_TAG does not match app version $tag." >&2
+  echo "Build tag $CM_TAG does not match configured release tag $tag." >&2
   exit 1
 fi
 

@@ -12,6 +12,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +43,7 @@ fun ChatScreen(
     onRegenerate: (String) -> Unit,
     onEditMessage: (messageId: String, newContent: String) -> Unit,
     onDeleteMessage: (messageId: String) -> Unit,
+    onDeleteMessageVersion: (messageId: String) -> Unit,
     onSwitchVersion: (messageId: String, versionIndex: Int) -> Unit,
     onSelectModel: (providerId: String, modelId: String) -> Unit,
     onReadMessage: (String) -> Unit,
@@ -62,6 +65,12 @@ fun ChatScreen(
 
     var regeneratingMessageId by remember(conversation?.id) { mutableStateOf<String?>(null) }
     val streamingHere = isGenerating && generatingConversationId == conversation?.id
+    val lastMessage = messages.lastOrNull()
+    val autoScrollTick = if (streamingHere) {
+        ((lastMessage?.content?.length ?: 0) + (lastMessage?.reasoningContent?.length ?: 0)) / 48
+    } else {
+        lastMessage?.activeVersionIndex
+    }
     fun whenIdle(action: () -> Unit) {
         if (isGenerating) Toast.makeText(context, "Stop the current response before editing messages.", Toast.LENGTH_SHORT).show()
         else action()
@@ -78,7 +87,7 @@ fun ChatScreen(
             }
         }
     }
-    LaunchedEffect(conversation?.id, messages.size, messages.lastOrNull()?.activeVersion, followBottom) {
+    LaunchedEffect(conversation?.id, messages.size, autoScrollTick, followBottom, streamingHere) {
         if (followBottom && messages.isNotEmpty()) {
             listState.scrollToItem(messages.lastIndex)
             val height = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.size ?: 0
@@ -89,18 +98,139 @@ fun ChatScreen(
         chatError?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
-        topBar = {
-            ChatAppBar(
-                currentSession = conversation,
-                selectedProfile = selectedProfile,
-                onOpenDrawer = onOpenDrawer,
-                onOpenEndDrawer = onOpenEndDrawer
-            )
-        },
-        bottomBar = {
+    val topBarClearance = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 80.dp
+
+    Box(modifier = modifier.fillMaxSize()) {
+        if (messages.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = topBarClearance, bottom = 88.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    Text(
+                        text = "MultiGateway",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = selectedProfile?.config?.systemPrompt?.take(90)?.plus("...")
+                            ?: "Connect to multiple LLM providers and agents seamlessly.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.outline,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+
+            if (isGenerating && !streamingHere) {
+                Text(
+                    "A response is running in another conversation. Use Stop to cancel it.",
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = topBarClearance, start = 12.dp, end = 12.dp),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollConnection),
+                contentPadding = PaddingValues(top = topBarClearance, bottom = 104.dp)
+            ) {
+                if (isGenerating && !streamingHere) {
+                    item(key = "generation-warning") {
+                        Text(
+                            "A response is running in another conversation. Use Stop to cancel it.",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+                items(messages, key = { it.id }) { msg ->
+                    val isLast = msg.id == messages.lastOrNull()?.id
+
+                    if (msg.role == ChatRole.USER) {
+                        UserMessageCard(
+                            message = msg,
+                            onEdit = {
+                                whenIdle {
+                                    editingMessage = msg
+                                    editContentText = msg.content
+                                }
+                            },
+                            onDelete = {
+                                whenIdle { deletingMessageId = msg.id }
+                            },
+                            onSwitchVersion = { newIdx ->
+                                whenIdle { onSwitchVersion(msg.id, newIdx) }
+                            }
+                        )
+                    } else {
+                        AssistantMessageCard(
+                            message = msg,
+                            isStreaming = streamingHere && isLast,
+                            onCopy = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Copied", msg.content))
+                                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                            },
+                            onRegenerate = {
+                                whenIdle {
+                                    if (!isLast) regeneratingMessageId = msg.id
+                                    else onRegenerate(msg.id)
+                                }
+                            },
+                            onEdit = {
+                                whenIdle {
+                                    editingMessage = msg
+                                    editContentText = msg.content
+                                }
+                            },
+                            onDelete = {
+                                whenIdle { deletingMessageId = msg.id }
+                            },
+                            onRead = {
+                                onReadMessage(msg.content)
+                            },
+                            onSwitchVersion = { newIdx ->
+                                whenIdle { onSwitchVersion(msg.id, newIdx) }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+        ) {
+            if (messages.isNotEmpty() && !followBottom) {
+                TextButton(
+                    onClick = { followBottom = true },
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(end = 12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Jump to latest")
+                }
+            }
             UserInputArea(
                 isGenerating = isGenerating,
                 onSendMessage = { text, files ->
@@ -113,112 +243,15 @@ fun ChatScreen(
                 onSelectModel = onSelectModel,
                 onFetchOllamaModels = onFetchOllamaModels
             )
-        },
-        modifier = modifier.fillMaxSize()
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .consumeWindowInsets(innerPadding)
-        ) {
-            if (isGenerating && !streamingHere) {
-                Text("A response is running in another conversation. Use Stop to cancel it.",
-                    modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
-            }
-            if (messages.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(24.dp)
-                    ) {
-                        Text(
-                            text = "MultiGateway",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = selectedProfile?.config?.systemPrompt?.take(90)?.plus("...")
-                                ?: "Connect to multiple LLM providers and agents seamlessly.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.outline,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .nestedScroll(scrollConnection),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(messages, key = { it.id }) { msg ->
-                        val isLast = msg.id == messages.lastOrNull()?.id
-
-                        if (msg.role == ChatRole.USER) {
-                            UserMessageCard(
-                                message = msg,
-                                onEdit = {
-                                    whenIdle {
-                                        editingMessage = msg
-                                        editContentText = msg.content
-                                    }
-                                },
-                                onDelete = {
-                                    whenIdle { deletingMessageId = msg.id }
-                                },
-                                onSwitchVersion = { newIdx ->
-                                    whenIdle { onSwitchVersion(msg.id, newIdx) }
-                                }
-                            )
-                        } else {
-                            AssistantMessageCard(
-                                message = msg,
-                                isStreaming = streamingHere && isLast,
-                                onCopy = {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("Copied", msg.content))
-                                    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-                                },
-                                onRegenerate = { whenIdle {
-                                    if (!isLast) regeneratingMessageId = msg.id
-                                    else onRegenerate(msg.id)
-                                } },
-                                onEdit = {
-                                    whenIdle {
-                                        editingMessage = msg
-                                        editContentText = msg.content
-                                    }
-                                },
-                                onDelete = {
-                                    whenIdle { deletingMessageId = msg.id }
-                                },
-                                onRead = {
-                                    onReadMessage(msg.content)
-                                },
-                                onSwitchVersion = { newIdx ->
-                                    whenIdle { onSwitchVersion(msg.id, newIdx) }
-                                }
-                            )
-                        }
-                    }
-                }
-                if (!followBottom) {
-                    TextButton(onClick = { followBottom = true }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Jump to latest")
-                    }
-                }
-            }
         }
+
+        ChatAppBar(
+            currentSession = conversation,
+            selectedProfile = selectedProfile,
+            onOpenDrawer = onOpenDrawer,
+            onOpenEndDrawer = onOpenEndDrawer,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
 
     if (regeneratingMessageId != null) {
@@ -268,21 +301,54 @@ fun ChatScreen(
         )
     }
 
-    // Delete message confirmation dialog
-    if (deletingMessageId != null) {
+    // Delete message/version confirmation dialog
+    val deletingMessage = deletingMessageId?.let { id -> messages.firstOrNull { it.id == id } }
+    if (deletingMessage != null) {
+        val hasMultipleVersions = deletingMessage.versions.size > 1
         AlertDialog(
             onDismissRequest = { deletingMessageId = null },
-            title = { Text("Delete Message") },
-            text = { Text("Are you sure you want to delete this message?") },
+            title = { Text(if (hasMultipleVersions) "Delete Message Version" else "Delete Message") },
+            text = {
+                Text(
+                    if (hasMultipleVersions) {
+                        "This message has ${deletingMessage.versions.size} versions. Delete only the current version or delete the entire message with all versions?"
+                    } else {
+                        "Are you sure you want to delete this message?"
+                    }
+                )
+            },
             confirmButton = {
-                Button(
-                    onClick = {
-                        deletingMessageId?.let { onDeleteMessage(it) }
-                        deletingMessageId = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
+                if (hasMultipleVersions) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        TextButton(
+                            onClick = {
+                                onDeleteMessageVersion(deletingMessage.id)
+                                deletingMessageId = null
+                            },
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Delete current version")
+                        }
+                        TextButton(
+                            onClick = {
+                                onDeleteMessage(deletingMessage.id)
+                                deletingMessageId = null
+                            },
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Delete all versions")
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            onDeleteMessage(deletingMessage.id)
+                            deletingMessageId = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Delete")
+                    }
                 }
             },
             dismissButton = {

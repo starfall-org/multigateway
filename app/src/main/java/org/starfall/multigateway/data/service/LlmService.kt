@@ -8,9 +8,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.utils.io.*
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
 import org.starfall.multigateway.data.model.*
 
@@ -82,6 +80,42 @@ class LlmService {
                     }
                 }
                 else -> sdk.testConnection(provider)
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun testModel(provider: LlmProviderInfo, modelId: String): Result<String> {
+        return try {
+            require(modelId.isNotBlank()) { "Model ID is empty" }
+            val modelConfig = provider.config.modelConfigs[modelId] ?: ModelConfiguration()
+            require(modelConfig.modelType == ModelType.TEXT_GENERATION) {
+                "${modelConfig.modelType.displayName} models cannot be tested with a text request"
+            }
+            val testProvider = provider.copy(config = provider.config.copy(
+                supportStream = false,
+                maxTokens = minOf(provider.config.maxTokens, 64),
+                modelConfigs = provider.config.modelConfigs + (modelId to modelConfig.copy(supportStream = false))
+            ))
+            val message = StoredMessage(
+                id = "connection-test",
+                role = ChatRole.USER,
+                versions = listOf(MessageVersion(content = "Reply with OK."))
+            )
+            val outputBuilder = StringBuilder()
+            streamContent(testProvider, modelId, listOf(message)).collect { chunk ->
+                if (outputBuilder.length < 500) {
+                    outputBuilder.append(chunk.take(500 - outputBuilder.length))
+                }
+            }
+            val output = outputBuilder.toString().trim()
+            if (output.startsWith("[Error:") || output.startsWith(" [Error:")) {
+                Result.failure(Exception(output.trim()))
+            } else {
+                Result.success(if (output.isBlank()) "Model request completed successfully" else output)
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
@@ -162,12 +196,12 @@ class LlmService {
         }
     }
 
-    suspend fun streamContent(
+    fun streamEvents(
         provider: LlmProviderInfo,
         modelName: String,
         messages: List<StoredMessage>,
         systemPrompt: String = ""
-    ): Flow<String> = flow {
+    ): Flow<GenerationEvent> = flow {
         val modelConfig = provider.config.modelConfigs[modelName] ?: ModelConfiguration()
         val requestProvider = provider.copy(config = provider.config.copy(supportStream = provider.streamEnabledFor(modelName)))
         val temperature = modelConfig.temperature
@@ -175,23 +209,46 @@ class LlmService {
         val topK = modelConfig.topK
         val maxTokens = provider.config.maxTokens
         when (provider.type) {
-            ProviderType.OPENAI -> {
-                emitAll(sdk.streamOpenAi(requestProvider, modelName, messages, systemPrompt, temperature, topP, maxTokens))
-            }
-            ProviderType.OPENAI_RESPONSES -> {
-                emitAll(sdk.streamResponses(requestProvider, modelName, messages, systemPrompt, temperature, topP, maxTokens))
-            }
-            ProviderType.ANTHROPIC -> {
-                emitAll(sdk.streamAnthropic(requestProvider, modelName, messages, systemPrompt, temperature, topP, maxTokens, topK))
-            }
-            ProviderType.GOOGLE -> {
-                emitAll(sdk.streamGoogle(requestProvider, modelName, messages, systemPrompt, temperature, topP, maxTokens, topK))
-            }
-            ProviderType.OLLAMA -> {
-                emitAll(streamOllama(requestProvider, modelName, messages, systemPrompt, temperature, topP, maxTokens, topK))
-            }
+            ProviderType.OPENAI -> emitAll(
+                sdk.streamOpenAi(
+                    requestProvider, modelName, messages, systemPrompt,
+                    temperature, topP, maxTokens, modelConfig.sendThinkingContent
+                )
+            )
+            ProviderType.OPENAI_RESPONSES -> emitAll(
+                sdk.streamResponses(
+                    requestProvider, modelName, messages, systemPrompt,
+                    temperature, topP, maxTokens, modelConfig.sendThinkingContent
+                )
+            )
+            ProviderType.ANTHROPIC -> emitAll(
+                sdk.streamAnthropic(
+                    requestProvider, modelName, messages, systemPrompt,
+                    temperature, topP, maxTokens, topK, modelConfig.sendThinkingContent
+                )
+            )
+            ProviderType.GOOGLE -> emitAll(
+                sdk.streamGoogle(
+                    requestProvider, modelName, messages, systemPrompt,
+                    temperature, topP, maxTokens, topK, modelConfig.sendThinkingContent
+                )
+            )
+            ProviderType.OLLAMA -> streamOllama(
+                requestProvider, modelName, messages, systemPrompt,
+                temperature, topP, maxTokens, topK
+            ).collect { emit(GenerationEvent.Text(it)) }
         }
     }
+
+    suspend fun streamContent(
+        provider: LlmProviderInfo,
+        modelName: String,
+        messages: List<StoredMessage>,
+        systemPrompt: String = ""
+    ): Flow<String> = streamEvents(provider, modelName, messages, systemPrompt)
+        .transform { event ->
+            if (event is GenerationEvent.Text) emit(event.text)
+        }
 
     private fun streamOllama(
         provider: LlmProviderInfo,
@@ -212,10 +269,10 @@ class LlmService {
                 put("content", systemPrompt)
             })
         }
-        for (m in messages) {
+        for (message in messages) {
             ollamaMessages.add(buildJsonObject {
-                put("role", if (m.role == ChatRole.MODEL) "assistant" else "user")
-                put("content", m.content)
+                put("role", if (message.role == ChatRole.MODEL) "assistant" else "user")
+                put("content", message.content)
             })
         }
 
@@ -245,10 +302,9 @@ class LlmService {
                     try {
                         val parsed = json.parseToJsonElement(line).jsonObject
                         val content = parsed["message"]?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull
-                        if (!content.isNullOrEmpty()) {
-                            emit(content)
-                        }
-                    } catch (_: Exception) {}
+                        if (!content.isNullOrEmpty()) emit(content)
+                    } catch (_: Exception) {
+                    }
                 }
             }
         } catch (e: Exception) {

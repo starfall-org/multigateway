@@ -17,12 +17,16 @@ fun QuickActionsSheet(onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest=onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.7f),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             item { Text("Tools",style=MaterialTheme.typography.titleLarge) }
-            if(!controls.supportsTools) item { Text("The selected model has Tool calls disabled. Enable it in Edit Model to use these tools.", color=MaterialTheme.colorScheme.error) }
             item { Text("System tools",style=MaterialTheme.typography.titleMedium) }
             items(listOf("generate_image","generate_video")) { name ->
                 val cfg=controls.settings.system[name] ?: SystemToolConfig()
-                ToolSwitch(if(name=="generate_image") "Create image" else "Create video",cfg.enabled) { controls.setSystem(name,cfg.copy(enabled=it)) }
-                if(cfg.modelId.isBlank()) Text("Choose a model in System tools.",style=MaterialTheme.typography.bodySmall)
+                val available = systemMediaToolAvailable(name, cfg, controls.providers)
+                ToolSwitch(
+                    if(name=="generate_image") "Create image" else "Create video",
+                    cfg.enabled,
+                    enabled = available
+                ) { controls.setSystem(name,cfg.copy(enabled=it)) }
+                if(!available) Text("Choose a model in System tools.",style=MaterialTheme.typography.bodySmall)
             }
             item { HorizontalDivider(); Text("MCP servers",style=MaterialTheme.typography.titleMedium) }
             if(controls.profile==null) item { Text("Select a profile and enable its MCP permissions first.") }

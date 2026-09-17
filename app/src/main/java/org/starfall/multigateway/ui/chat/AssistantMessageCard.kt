@@ -39,7 +39,6 @@ fun AssistantMessageCard(
 ) {
     val context = LocalContext.current
     var showMoreMenu by remember { mutableStateOf(false) }
-    var feedback by remember(message.id, message.activeVersionIndex) { mutableStateOf<Int?>(null) }
     val activeVersion = message.activeVersion
     val processingDurationMillis = activeVersion.processingFinishedAt?.let { finishedAt ->
         activeVersion.timestamp.toLongOrNull()?.let { startedAt -> (finishedAt - startedAt).coerceAtLeast(0L) }
@@ -138,20 +137,6 @@ fun AssistantMessageCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                MessageActionButton(
-                    onClick = { feedback = if (feedback == 1) null else 1 },
-                    selected = feedback == 1,
-                    contentDescription = "Good response"
-                ) {
-                    Icon(Icons.Outlined.ThumbUp, contentDescription = null, modifier = Modifier.size(22.dp))
-                }
-                MessageActionButton(
-                    onClick = { feedback = if (feedback == -1) null else -1 },
-                    selected = feedback == -1,
-                    contentDescription = "Bad response"
-                ) {
-                    Icon(Icons.Outlined.ThumbDown, contentDescription = null, modifier = Modifier.size(22.dp))
-                }
                 MessageActionButton(onClick = onRegenerate, contentDescription = "Regenerate") {
                     Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(22.dp))
                 }
@@ -292,18 +277,13 @@ private fun buildProcessingBlocks(version: MessageVersion): List<ProcessingBlock
 private fun MessageActionButton(
     onClick: () -> Unit,
     contentDescription: String,
-    selected: Boolean = false,
     content: @Composable () -> Unit
 ) {
     IconButton(
         onClick = onClick,
         modifier = Modifier.size(40.dp),
         colors = IconButtonDefaults.iconButtonColors(
-            contentColor = if (selected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            }
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     ) {
         Box(contentAlignment = Alignment.Center) { content() }

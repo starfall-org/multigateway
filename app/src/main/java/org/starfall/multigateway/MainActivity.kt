@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
             val appPrefs by settingsViewModel.preferences.collectAsStateWithLifecycle()
             MultiGatewayTheme(
                 themeMode = appPrefs.themeMode,
+                amoledMode = appPrefs.useAmoled,
                 dynamicColor = appPrefs.useDynamicColor,
                 colorSchemeName = appPrefs.colorSchemeName
             ) {

@@ -69,7 +69,13 @@ class ChatViewModel(
     }
 
     fun startNewChat() {
-        _currentConversation.value = null
+        val now = System.currentTimeMillis()
+        _currentConversation.value = Conversation(
+            id = UUID.randomUUID().toString(),
+            title = "New Chat",
+            createdAt = now,
+            updatedAt = now
+        )
     }
 
     fun deleteConversation(id: String) {
@@ -159,11 +165,13 @@ class ChatViewModel(
         val assistant = StoredMessage(UUID.randomUUID().toString(), ChatRole.MODEL,
             listOf(MessageVersion(timestamp = now.toString())))
         val existing = _currentConversation.value
+        val generatedTitle = userText.take(30) + if (userText.length > 30) "..." else ""
         val conv = (existing ?: Conversation(
             id = UUID.randomUUID().toString(),
-            title = userText.take(30) + if (userText.length > 30) "..." else "",
+            title = generatedTitle,
             createdAt = now, updatedAt = now
         )).copy(
+            title = if (existing?.messages?.isEmpty() == true) generatedTitle else existing?.title ?: generatedTitle,
             messages = (existing?.messages ?: emptyList()) + user + assistant,
             updatedAt = now, providerId = provider.id, modelId = modelId, profileId = profile?.id
         )
@@ -197,6 +205,31 @@ class ChatViewModel(
         if (isGenerating.value || pendingConversationWrites > 0) return
         val conv = _currentConversation.value ?: return
         val currentMsgs = conv.messages.filter { it.id != messageId }
+        val updated = conv.copy(messages = currentMsgs, updatedAt = System.currentTimeMillis())
+        _currentConversation.value = updated
+        writeConversation { conversationRepo.saveConversation(updated) }
+    }
+
+    fun deleteMessageVersion(messageId: String) {
+        if (isGenerating.value || pendingConversationWrites > 0) return
+        val conv = _currentConversation.value ?: return
+        val currentMsgs = conv.messages.toMutableList()
+        val messageIndex = currentMsgs.indexOfFirst { it.id == messageId }
+        if (messageIndex == -1) return
+
+        val message = currentMsgs[messageIndex]
+        if (message.versions.size <= 1) {
+            currentMsgs.removeAt(messageIndex)
+        } else {
+            val versions = message.versions.toMutableList().apply {
+                removeAt(message.activeVersionIndex.coerceIn(indices))
+            }
+            currentMsgs[messageIndex] = message.copy(
+                versions = versions,
+                activeVersionIndex = message.activeVersionIndex.coerceAtMost(versions.lastIndex)
+            )
+        }
+
         val updated = conv.copy(messages = currentMsgs, updatedAt = System.currentTimeMillis())
         _currentConversation.value = updated
         writeConversation { conversationRepo.saveConversation(updated) }
