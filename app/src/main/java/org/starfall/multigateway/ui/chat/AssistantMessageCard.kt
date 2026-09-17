@@ -138,7 +138,7 @@ fun AssistantMessageCard(
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 MessageActionButton(onClick = onRegenerate, contentDescription = "Regenerate") {
-                    Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(22.dp))
+                    Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
                 MessageActionButton(
                     onClick = {
@@ -150,10 +150,10 @@ fun AssistantMessageCard(
                     },
                     contentDescription = "Share"
                 ) {
-                    Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(22.dp))
+                    Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
                 MessageActionButton(onClick = onCopy, contentDescription = "Copy") {
-                    Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(22.dp))
+                    Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
 
                 Box {
@@ -161,7 +161,7 @@ fun AssistantMessageCard(
                         onClick = { showMoreMenu = true },
                         contentDescription = "More"
                     ) {
-                        Icon(Icons.Default.MoreHoriz, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.MoreHoriz, contentDescription = null, modifier = Modifier.size(18.dp))
                     }
                     DropdownMenu(
                         expanded = showMoreMenu,
@@ -189,7 +189,7 @@ fun AssistantMessageCard(
                 Spacer(modifier = Modifier.weight(1f))
 
                 MessageActionButton(onClick = onRead, contentDescription = "Read aloud") {
-                    Icon(Icons.Outlined.VolumeUp, contentDescription = null, modifier = Modifier.size(24.dp))
+                    Icon(Icons.Outlined.VolumeUp, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -281,7 +281,7 @@ private fun MessageActionButton(
 ) {
     IconButton(
         onClick = onClick,
-        modifier = Modifier.size(40.dp),
+        modifier = Modifier.size(32.dp),
         colors = IconButtonDefaults.iconButtonColors(
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -42,7 +42,7 @@ fun SystemToolsScreen(providers: List<LlmProviderInfo>, settings: ToolSettings, 
         return
     }
     BackHandler(onBack=onBack)
-    Scaffold(topBar={ TopAppBar(title={Text("System tools")},navigationIcon={IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")}}) }) { padding ->
+    Scaffold(topBar={ TopAppBar(title={Text("Default Models")},navigationIcon={IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")}}) }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             items(listOf("generate_image","generate_video")) { name ->
                 val config=settings.system[name] ?: SystemToolConfig()

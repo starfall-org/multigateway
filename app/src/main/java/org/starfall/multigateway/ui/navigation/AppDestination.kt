@@ -10,4 +10,5 @@ enum class AppDestination(val route: String) {
     SETTINGS("settings"),
     SYSTEM_TOOLS("system_tools"),
     STORAGE("storage"),
+    MENU("menu"),
 }

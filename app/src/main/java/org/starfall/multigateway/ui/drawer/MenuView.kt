@@ -37,16 +37,17 @@ fun MenuView(
     onCloseMenu: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ModalDrawerSheet(
-        modifier = modifier.width(320.dp),
-        drawerContainerColor = MaterialTheme.colorScheme.surface
+    Surface(
+        modifier = modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.systemBars),
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header: Close icon + "Menu" title
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(60.dp)
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -132,7 +133,7 @@ fun MenuView(
                 }
 
                 item {
-                    MenuItemTile(icon = Icons.Outlined.Build, title = "System tools", subtitle = "Image and video generation", onClick = { onNavigateToSystemTools(); onCloseMenu() })
+                    MenuItemTile(icon = Icons.Outlined.Build, title = "Default Models", subtitle = "Image and video generation", onClick = { onNavigateToSystemTools(); onCloseMenu() })
                 }
                 item {
                     MenuItemTile(icon = Icons.Outlined.Storage, title = "Storage", subtitle = "Tool files, images and videos", onClick = { onNavigateToStorage(); onCloseMenu() })

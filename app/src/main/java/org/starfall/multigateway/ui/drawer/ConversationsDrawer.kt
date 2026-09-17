@@ -351,10 +351,11 @@ fun ConversationsDrawer(
                     }
                 }
 
-                // Profile Selector Dropdown
+                // Profile Selector Dropdown (same width as the active profile card)
                 DropdownMenu(
                     expanded = showProfileDropdown,
-                    onDismissRequest = { showProfileDropdown = false }
+                    onDismissRequest = { showProfileDropdown = false },
+                    modifier = Modifier.matchParentSize()
                 ) {
                     profiles.forEach { profile ->
                         val isSelected = profile.id == selectedProfile?.id

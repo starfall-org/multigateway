@@ -21,7 +21,6 @@ import org.starfall.multigateway.ui.chat.ChatViewModel
 import org.starfall.multigateway.ui.configuration.ConfigurationViewModel
 import org.starfall.multigateway.ui.settings.SettingsViewModel
 import org.starfall.multigateway.data.tools.ToolFiles
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -48,8 +47,6 @@ fun MainScreen(
             restoreState = true
         }
     }
-    var showEndMenuSheet by rememberSaveable { mutableStateOf(false) }
-
     val conversations: List<Conversation> by viewModel.conversations.collectAsStateWithLifecycle()
     val currentConv: Conversation? by viewModel.currentConversation.collectAsStateWithLifecycle()
     val isGenerating: Boolean by viewModel.isGenerating.collectAsStateWithLifecycle()
@@ -104,7 +101,7 @@ fun MainScreen(
                     onOpenMenu = {
                         coroutineScope.launch {
                             drawerState.close()
-                            showEndMenuSheet = true
+                            navigate(AppDestination.MENU)
                         }
                     },
                     onCloseDrawer = {
@@ -136,7 +133,7 @@ fun MainScreen(
                                     coroutineScope.launch { drawerState.open() }
                                 },
                                 onOpenEndDrawer = {
-                                    showEndMenuSheet = true
+                                    navigate(AppDestination.MENU)
                                 },
                                 onRegenerate = { id ->
                                     viewModel.regenerateMessage(id)
@@ -256,46 +253,20 @@ fun MainScreen(
                             onBack = { navController.popBackStack() }
                         )
                     }
-                }
 
-                // Right-side Menu bottom sheet
-                if (showEndMenuSheet) {
-                    ModalBottomSheet(
-                        onDismissRequest = { showEndMenuSheet = false },
-                        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-                    ) {
+                    composable(AppDestination.MENU.route) {
                         MenuView(
                             selectedProfile = activeProfile,
-                            onNavigateToProfiles = {
-                                navigate(AppDestination.PROFILES)
-                                showEndMenuSheet = false
-                            },
-                            onEditProfile = {
-                                navigate(AppDestination.PROFILES)
-                                showEndMenuSheet = false
-                            },
-                            onNavigateToProviders = {
-                                navigate(AppDestination.PROVIDERS)
-                                showEndMenuSheet = false
-                            },
-                            onNavigateToMcp = {
-                                navigate(AppDestination.MCP)
-                                showEndMenuSheet = false
-                            },
-                            onNavigateToSpeech = {
-                                navigate(AppDestination.SPEECH)
-                                showEndMenuSheet = false
-                            },
-                            onNavigateToSystemTools = { navigate(AppDestination.SYSTEM_TOOLS); showEndMenuSheet = false },
-                            onNavigateToStorage = { navigate(AppDestination.STORAGE); showEndMenuSheet = false },
-                            onNavigateToSettings = {
-                                navigate(AppDestination.SETTINGS)
-                                showEndMenuSheet = false
-                            },
-                            onCloseMenu = {
-                                showEndMenuSheet = false
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                            onNavigateToProfiles = { navigate(AppDestination.PROFILES) },
+                            onEditProfile = { navigate(AppDestination.PROFILES) },
+                            onNavigateToProviders = { navigate(AppDestination.PROVIDERS) },
+                            onNavigateToMcp = { navigate(AppDestination.MCP) },
+                            onNavigateToSpeech = { navigate(AppDestination.SPEECH) },
+                            onNavigateToSystemTools = { navigate(AppDestination.SYSTEM_TOOLS) },
+                            onNavigateToStorage = { navigate(AppDestination.STORAGE) },
+                            onNavigateToSettings = { navigate(AppDestination.SETTINGS) },
+                            onCloseMenu = { navController.popBackStack() },
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
                 }

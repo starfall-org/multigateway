@@ -382,8 +382,7 @@ fun ProviderEditScreen(
     var supportStream by remember { mutableStateOf(initialProvider.config.supportStream) }
     val headerRows = remember {
         mutableStateListOf<Pair<String, String>>().apply {
-            if (initialProvider.config.headers.isEmpty()) add("" to "")
-            else addAll(initialProvider.config.headers.entries.map { it.key to it.value })
+            addAll(initialProvider.config.headers.entries.map { it.key to it.value })
         }
     }
     var selectedTab by remember { mutableStateOf(0) }
@@ -606,7 +605,6 @@ fun ProviderEditScreen(
                             )
                             IconButton(onClick = {
                                 headerRows.removeAt(index)
-                                if (headerRows.isEmpty()) headerRows.add("" to "")
                             }) {
                                 Icon(Icons.Outlined.Delete, contentDescription = "Delete header")
                             }
