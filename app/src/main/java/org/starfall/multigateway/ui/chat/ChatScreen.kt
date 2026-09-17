@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import org.starfall.multigateway.data.model.ChatProfile
 import org.starfall.multigateway.data.model.ChatRole
 import org.starfall.multigateway.data.model.Conversation
-import org.starfall.multigateway.data.model.ModelConfiguration
 import org.starfall.multigateway.data.model.LlmProviderInfo
 import org.starfall.multigateway.data.model.StoredMessage
 
@@ -44,7 +43,6 @@ fun ChatScreen(
     onDeleteMessage: (messageId: String) -> Unit,
     onSwitchVersion: (messageId: String, versionIndex: Int) -> Unit,
     onSelectModel: (providerId: String, modelId: String) -> Unit,
-    onSaveModelConfig: (String, String, ModelConfiguration) -> Unit,
     onReadMessage: (String) -> Unit,
     onFetchOllamaModels: (suspend (String) -> List<String>)? = null,
     modifier: Modifier = Modifier
@@ -113,7 +111,6 @@ fun ChatScreen(
                 providers = providers,
                 selectedProviderId = selectedProviderId,
                 onSelectModel = onSelectModel,
-                onSaveModelConfig = onSaveModelConfig,
                 onFetchOllamaModels = onFetchOllamaModels
             )
         },

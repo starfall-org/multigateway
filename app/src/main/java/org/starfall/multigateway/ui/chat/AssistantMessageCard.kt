@@ -21,7 +21,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.starfall.multigateway.data.model.MessageVersion
 import org.starfall.multigateway.data.model.StoredMessage
+import org.starfall.multigateway.data.model.ToolActivity
 
 @Composable
 fun AssistantMessageCard(
@@ -38,41 +40,51 @@ fun AssistantMessageCard(
     val context = LocalContext.current
     var showMoreMenu by remember { mutableStateOf(false) }
     var feedback by remember(message.id, message.activeVersionIndex) { mutableStateOf<Int?>(null) }
+    val activeVersion = message.activeVersion
+    val processingDurationMillis = activeVersion.processingFinishedAt?.let { finishedAt ->
+        activeVersion.timestamp.toLongOrNull()?.let { startedAt -> (finishedAt - startedAt).coerceAtLeast(0L) }
+    }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        ToolActivityCards(message.activeVersion.toolActivity)
-
-        if (!message.reasoningContent.isNullOrBlank()) {
-            ReasoningDropdown(
-                reasoning = message.reasoningContent!!,
-                isStreaming = isStreaming && message.content.isBlank(),
-                modifier = Modifier.padding(bottom = 10.dp)
-            )
-        }
-
-        if (message.content.isBlank() && isStreaming && message.reasoningContent.isNullOrBlank()) {
-            Row(
-                modifier = Modifier.padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Thinking...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+        if (isStreaming) {
+            ToolActivityCards(activeVersion.toolActivity)
+            if (!message.reasoningContent.isNullOrBlank()) {
+                ReasoningDropdown(
+                    reasoning = message.reasoningContent!!,
+                    isStreaming = message.content.isBlank(),
+                    modifier = Modifier.padding(bottom = 10.dp)
                 )
             }
-        } else if (message.content.isNotBlank()) {
-            FormattedMarkdownMessage(content = message.content)
+
+            if (message.content.isBlank() && message.reasoningContent.isNullOrBlank()) {
+                Row(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Thinking...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else if (message.content.isNotBlank()) {
+                FormattedMarkdownMessage(content = message.content)
+            }
+        } else {
+            CompletedAssistantContent(
+                version = activeVersion,
+                processingDurationMillis = processingDurationMillis
+            )
         }
 
         if (message.versions.size > 1) {
@@ -197,6 +209,83 @@ fun AssistantMessageCard(
             }
         }
     }
+}
+
+private data class ProcessingBlock(
+    val offset: Int,
+    val reasoning: String? = null,
+    val activities: List<ToolActivity> = emptyList()
+)
+
+@Composable
+private fun CompletedAssistantContent(
+    version: MessageVersion,
+    processingDurationMillis: Long?
+) {
+    val blocks = remember(version.content, version.reasoningContent, version.toolActivity) {
+        buildProcessingBlocks(version)
+    }
+    val content = version.content
+
+    if (blocks.isEmpty()) {
+        if (content.isNotBlank()) FormattedMarkdownMessage(content = content)
+        return
+    }
+
+    var cursor = 0
+    blocks.forEach { block ->
+        val offset = block.offset.coerceIn(cursor, content.length)
+        if (offset > cursor) {
+            val textBefore = content.substring(cursor, offset)
+            if (textBefore.isNotBlank()) {
+                FormattedMarkdownMessage(content = textBefore)
+                Spacer(Modifier.height(6.dp))
+            }
+        }
+
+        ProcessingDropdown(
+            reasoning = block.reasoning,
+            activities = block.activities,
+            durationMillis = processingDurationMillis.takeIf { blocks.size == 1 },
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+        cursor = offset
+    }
+
+    if (cursor < content.length) {
+        val remaining = content.substring(cursor)
+        if (remaining.isNotBlank()) FormattedMarkdownMessage(content = remaining)
+    }
+}
+
+private fun buildProcessingBlocks(version: MessageVersion): List<ProcessingBlock> {
+    val content = version.content
+    val toolsByOffset = version.toolActivity
+        .filterNot { it.name.endsWith(": connect") }
+        .groupBy { it.contentOffset.coerceIn(0, content.length) }
+    val offsets = buildSet {
+        if (!version.reasoningContent.isNullOrBlank()) add(0)
+        addAll(toolsByOffset.keys)
+    }.sorted()
+
+    val merged = mutableListOf<ProcessingBlock>()
+    offsets.forEach { offset ->
+        val block = ProcessingBlock(
+            offset = offset,
+            reasoning = version.reasoningContent?.takeIf { offset == 0 && it.isNotBlank() },
+            activities = toolsByOffset[offset].orEmpty()
+        )
+        val previous = merged.lastOrNull()
+        if (previous != null && content.substring(previous.offset, offset).isBlank()) {
+            merged[merged.lastIndex] = previous.copy(
+                reasoning = previous.reasoning ?: block.reasoning,
+                activities = previous.activities + block.activities
+            )
+        } else {
+            merged += block
+        }
+    }
+    return merged
 }
 
 @Composable

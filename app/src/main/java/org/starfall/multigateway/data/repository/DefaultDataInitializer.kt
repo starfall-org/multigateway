@@ -7,7 +7,6 @@ import org.starfall.multigateway.data.model.*
 /** Runs once per application process; existing records retain their persisted format. */
 class DefaultDataInitializer(
     private val llmRepo: LlmRepository,
-    private val profileRepo: ProfileRepository,
     private val speechRepo: SpeechRepository,
     private val prefsRepo: AppPreferencesRepository,
 ) {
@@ -29,12 +28,6 @@ class DefaultDataInitializer(
                         )
                     )
                 }
-            }
-        }
-
-        profileRepo.allProfiles.first().let { currentProfiles ->
-            if (currentProfiles.isEmpty()) {
-                initDefaultProfiles()
             }
         }
 
@@ -81,36 +74,6 @@ class DefaultDataInitializer(
         llmRepo.saveProvider(ollama)
 
         prefsRepo.setSelectedModel("ollama", "llama3.2:latest")
-    }
-
-    private suspend fun initDefaultProfiles() {
-        val general = ChatProfile(
-            id = "profile_general",
-            name = "General Assistant",
-            config = LlmChatConfig(
-                systemPrompt = "You are a helpful, capable, and thoughtful AI assistant. Respond clearly and accurately."
-            )
-        )
-        val coding = ChatProfile(
-            id = "profile_coding",
-            name = "Code Architect",
-            config = LlmChatConfig(
-                systemPrompt = "You are an expert software engineer and system architect. Provide clean, modular, and idiomatic code with explanations."
-            )
-        )
-        val writer = ChatProfile(
-            id = "profile_creative",
-            name = "Creative Writer",
-            config = LlmChatConfig(
-                systemPrompt = "You are an imaginative creative writer, editor, and storyteller. Help users craft engaging stories, prose, and content."
-            )
-        )
-
-        profileRepo.saveProfile(general)
-        profileRepo.saveProfile(coding)
-        profileRepo.saveProfile(writer)
-
-        prefsRepo.setSelectedProfileId("profile_general")
     }
 
     private suspend fun initDefaultSpeechServices() {

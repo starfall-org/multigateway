@@ -24,8 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.starfall.multigateway.data.model.LlmProviderInfo
-import org.starfall.multigateway.data.model.ModelConfiguration
-import org.starfall.multigateway.data.model.ProviderType
 
 @Composable
 fun UserInputArea(
@@ -36,7 +34,6 @@ fun UserInputArea(
     providers: List<LlmProviderInfo>,
     selectedProviderId: String,
     onSelectModel: (providerId: String, modelId: String) -> Unit,
-    onSaveModelConfig: (String, String, ModelConfiguration) -> Unit,
     onFetchOllamaModels: (suspend (String) -> List<String>)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -48,7 +45,6 @@ fun UserInputArea(
     var showAddMenu by remember { mutableStateOf(false) }
     var showFilesSheet by remember { mutableStateOf(false) }
 
-    val selectedProvider = providers.find { it.id == selectedProviderId }
     val canSend = !isGenerating && textState.isNotBlank()
 
     Surface(
@@ -146,10 +142,7 @@ fun UserInputArea(
                             .clickable { showModelPicker = true },
                         contentAlignment = Alignment.Center
                     ) {
-                        ModelLogo(
-                            provider = selectedProvider,
-                            modelName = selectedModelName
-                        )
+                        ModelLogo(modelName = selectedModelName)
                     }
 
                     Box(
@@ -236,23 +229,13 @@ fun UserInputArea(
 }
 
 @Composable
-private fun ModelLogo(
-    provider: LlmProviderInfo?,
-    modelName: String
-) {
-    val mark = when (provider?.type) {
-        ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> if (modelName.startsWith("o", ignoreCase = true)) "◉" else "◎"
-        ProviderType.GOOGLE -> "✦"
-        ProviderType.ANTHROPIC -> "A"
-        ProviderType.OLLAMA -> "◌"
-        null -> "AI"
-    }
+private fun ModelLogo(modelName: String) {
     Text(
-        text = mark,
+        text = modelInitial(modelName),
         color = MaterialTheme.colorScheme.onSurface,
         style = MaterialTheme.typography.titleMedium.copy(
-            fontWeight = FontWeight.SemiBold,
-            fontSize = if (mark.length > 1) 11.sp else 22.sp
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp
         ),
         maxLines = 1
     )

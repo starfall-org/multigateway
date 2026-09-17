@@ -15,7 +15,8 @@ data class MessageVersion(
     val timestamp: String = "",
     val files: List<String> = emptyList(),
     val toolActivity: List<ToolActivity> = emptyList(),
-    @SerialName("reasoning_content") val reasoningContent: String? = null
+    @SerialName("reasoning_content") val reasoningContent: String? = null,
+    @SerialName("processing_finished_at") val processingFinishedAt: Long? = null
 )
 
 @Serializable

@@ -18,7 +18,16 @@ data class SystemToolConfig(
 @Serializable
 data class ToolSettings(val system: Map<String, SystemToolConfig> = emptyMap(), val quickMcp: Map<String, Boolean> = emptyMap())
 @Serializable
-data class ToolActivity(val id: String, val name: String, val status: String = "running", val summary: String = "", val files: List<String> = emptyList())
+data class ToolActivity(
+    val id: String,
+    val name: String,
+    val status: String = "running",
+    val summary: String = "",
+    val files: List<String> = emptyList(),
+    val arguments: String = "",
+    val response: String = "",
+    val contentOffset: Int = 0
+)
 data class ToolDefinition(val name: String, val description: String, val schema: JsonObject, val serverId: String? = null, val originalName: String = name)
 sealed interface GenerationEvent {
     data class Text(val text: String): GenerationEvent

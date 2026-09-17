@@ -14,7 +14,6 @@ import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -126,7 +125,6 @@ fun ModelPickerSheet(
                             val config = provider.config.modelConfigs[modelId] ?: ModelConfiguration()
                             val isSelected = provider.id == selectedProviderId && modelId == selectedModelId
                             ModelPickerCard(
-                                provider = provider,
                                 modelId = modelId,
                                 config = config,
                                 isSelected = isSelected,
@@ -182,7 +180,6 @@ fun ModelPickerSheet(
 
 @Composable
 private fun ModelPickerCard(
-    provider: LlmProviderInfo,
     modelId: String,
     config: ModelConfiguration,
     isSelected: Boolean,
@@ -212,7 +209,11 @@ private fun ModelPickerCard(
                 modifier = Modifier.size(52.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    ProviderMark(provider = provider, modelId = modelId)
+                    Text(
+                        text = modelInitial(modelId),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
 
@@ -257,7 +258,6 @@ private fun ModelCapabilityBadges(config: ModelConfiguration) {
                 ModelType.TEXT_GENERATION -> "Chat"
                 else -> config.modelType.displayName
             },
-            icon = Icons.Outlined.SmartToy,
             colors = AssistChipDefaults.assistChipColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -303,14 +303,16 @@ private fun ModelCapabilityBadges(config: ModelConfiguration) {
 @Composable
 private fun ModelBadge(
     label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     colors: ChipColors
 ) {
     AssistChip(
         onClick = {},
         enabled = false,
         label = { Text(label, fontSize = 11.sp) },
-        leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp)) },
+        leadingIcon = icon?.let { imageVector ->
+            { Icon(imageVector, contentDescription = null, modifier = Modifier.size(14.dp)) }
+        },
         colors = colors,
         border = null,
         modifier = Modifier.height(28.dp)
@@ -351,6 +353,13 @@ private fun providerModels(
     )
     .plus(if (provider.id == selectedProviderId && selectedModelId.isNotBlank()) listOf(selectedModelId) else emptyList())
     .distinct()
+
+internal fun modelInitial(modelName: String): String {
+    val source = if ('/' in modelName) modelName.substringAfterLast('/') else modelName
+    return source.trim().firstOrNull()?.uppercaseChar()?.toString()
+        ?: modelName.trim().firstOrNull()?.uppercaseChar()?.toString()
+        ?: "?"
+}
 
 internal fun defaultProviderModels(type: ProviderType): List<String> = when (type) {
     ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> listOf("gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "gpt-4-turbo")

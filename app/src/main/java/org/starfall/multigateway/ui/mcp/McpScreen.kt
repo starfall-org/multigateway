@@ -53,6 +53,7 @@ fun McpScreen(
     var editingServer by remember { mutableStateOf<McpInfo?>(null) }
     var isCreatingNew by remember { mutableStateOf(false) }
     var deletingServerId by remember { mutableStateOf<String?>(null) }
+    var isGridView by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -193,6 +194,7 @@ fun McpScreen(
             }
         )
     }
+}
 }
 
 @Composable
@@ -547,6 +549,7 @@ private fun McpToolsTab(
                 }
             }
         }
+    }
     }
 }
 

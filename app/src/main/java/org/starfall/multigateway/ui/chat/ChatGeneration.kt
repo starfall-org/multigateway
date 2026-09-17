@@ -42,11 +42,21 @@ internal class ChatGeneration(
                     when (chunk) {
                         is GenerationEvent.Text -> { output += chunk.text; update() }
                         is GenerationEvent.Tool -> {
+                            val contentOffset = visibleResponseContent(output).length
                             snapshot = snapshot!!.copy(messages = snapshot!!.messages.map { message ->
                                 if (message.id != messageId) message else message.copy(versions = message.versions.mapIndexed { index, version ->
-                                    if (index != message.activeVersionIndex) version else version.copy(
-                                        toolActivity = version.toolActivity.filterNot { it.id == chunk.activity.id } + chunk.activity
-                                    )
+                                    if (index != message.activeVersionIndex) version else {
+                                        val existingIndex = version.toolActivity.indexOfFirst { it.id == chunk.activity.id }
+                                        val anchoredActivity = if (existingIndex >= 0) {
+                                            chunk.activity.copy(contentOffset = version.toolActivity[existingIndex].contentOffset)
+                                        } else {
+                                            chunk.activity.copy(contentOffset = contentOffset)
+                                        }
+                                        val updatedActivities = version.toolActivity.toMutableList().apply {
+                                            if (existingIndex >= 0) set(existingIndex, anchoredActivity) else add(anchoredActivity)
+                                        }
+                                        version.copy(toolActivity = updatedActivities)
+                                    }
                                 })
                             })
                             publish(snapshot!!)
@@ -66,9 +76,12 @@ internal class ChatGeneration(
                     withContext(NonCancellable) {
                         snapshot = snapshot!!.copy(messages = snapshot!!.messages.map { message ->
                             if (message.id != messageId) message else message.copy(versions = message.versions.mapIndexed { index, version ->
-                                if (index != message.activeVersionIndex) version else version.copy(toolActivity = version.toolActivity.map {
-                                    if (it.status == "running") it.copy(status = "cancelled", summary = "Stopped") else it
-                                })
+                                if (index != message.activeVersionIndex) version else version.copy(
+                                    toolActivity = version.toolActivity.map {
+                                        if (it.status == "running") it.copy(status = "cancelled", summary = "Stopped") else it
+                                    },
+                                    processingFinishedAt = System.currentTimeMillis()
+                                )
                             })
                         })
                         publish(snapshot!!)
@@ -90,12 +103,25 @@ internal class ChatGeneration(
     fun stop() { job?.cancel() }
     suspend fun stopAndJoin() { job?.cancelAndJoin() }
 }
-
-internal fun updateResponse(conversation: Conversation, messageId: String, output: String): Conversation {
+private fun visibleResponseContent(output: String): String {
     val thinking = output.startsWith("<think>")
     val end = output.indexOf("</think>")
-    val reasoning = if (thinking) output.substring(7, if (end >= 0) end else output.length).trim() else null
-    val content = if (thinking) { if (end >= 0) output.substring(end + 8).trimStart() else "" } else output
+    return if (thinking) {
+        if (end >= 0) output.substring(end + 8).trimStart() else ""
+    } else {
+        output
+    }
+}
+
+private fun visibleReasoningContent(output: String): String? {
+    if (!output.startsWith("<think>")) return null
+    val end = output.indexOf("</think>")
+    return output.substring(7, if (end >= 0) end else output.length).trim()
+}
+
+internal fun updateResponse(conversation: Conversation, messageId: String, output: String): Conversation {
+    val reasoning = visibleReasoningContent(output)
+    val content = visibleResponseContent(output)
     return conversation.copy(
         updatedAt = System.currentTimeMillis(),
         messages = conversation.messages.map { message ->

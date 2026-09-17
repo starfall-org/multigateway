@@ -136,7 +136,6 @@ fun MainScreen(
                             onSwitchVersion = { id, idx ->
                                 viewModel.switchMessageVersion(id, idx)
                             },
-                            onSaveModelConfig = configurationViewModel::saveModelConfiguration,
                             onSelectModel = { provId, modelId ->
                                 viewModel.selectModel(provId, modelId)
                             },

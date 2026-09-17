@@ -57,7 +57,18 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                     val function = call.requireObject("function")
                     val name = function.text("name")
                     val tool = allowed.find { it.name == name }
-                    val activity = ToolActivity(UUID.randomUUID().toString(),tool?.let { t -> servers.find { it.id == t.serverId }?.let { "${it.name} / ${t.originalName}" } ?: t.originalName } ?: name)
+                    val rawArguments = when (val raw = function["arguments"]) {
+                        null, JsonNull -> ""
+                        is JsonPrimitive -> raw.content
+                        else -> raw.toString()
+                    }
+                    val activity = ToolActivity(
+                        id = UUID.randomUUID().toString(),
+                        name = tool?.let { t ->
+                            servers.find { it.id == t.serverId }?.let { "${it.name} / ${t.originalName}" } ?: t.originalName
+                        } ?: name,
+                        arguments = rawArguments
+                    )
                     send(GenerationEvent.Tool(activity))
                     var result: JsonObject
                     try {
@@ -78,11 +89,22 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                         val isError = (result["isError"] as? JsonPrimitive)?.booleanOrNull == true
                         val summary = summarizeToolResult(result, http.requireFiles())
                         result = summary.content
-                        send(GenerationEvent.Tool(activity.copy(status=if(isError) "error" else "success",summary=summary.preview,files=summary.files)))
-                    } catch(e: CancellationException) { send(GenerationEvent.Tool(activity.copy(status="cancelled",summary="Stopped"))); throw e }
-                    catch(e: Exception) {
+                        send(GenerationEvent.Tool(activity.copy(
+                            status = if(isError) "error" else "success",
+                            summary = summary.preview,
+                            files = summary.files,
+                            response = result.toString()
+                        )))
+                    } catch(e: CancellationException) {
+                        send(GenerationEvent.Tool(activity.copy(status="cancelled",summary="Stopped")))
+                        throw e
+                    } catch(e: Exception) {
                         result = obj("error" to str(e.message.orEmpty().take(500)))
-                        send(GenerationEvent.Tool(activity.copy(status="error",summary=e.message.orEmpty().take(500))))
+                        send(GenerationEvent.Tool(activity.copy(
+                            status = "error",
+                            summary = e.message.orEmpty().take(500),
+                            response = result.toString()
+                        )))
                     }
                     history += obj("role" to str("tool"),"tool_call_id" to str(call.text("id")),"name" to str(name),"content" to str(result.toString()))
                 }
