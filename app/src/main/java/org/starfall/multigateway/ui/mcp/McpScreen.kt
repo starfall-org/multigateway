@@ -3,6 +3,10 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,6 +40,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,6 +61,7 @@ import org.starfall.multigateway.data.model.ToolDefinition
 import org.starfall.multigateway.data.model.ToolSettings
 import java.util.UUID
 import org.starfall.multigateway.ui.components.ItemOverflowMenu
+import org.starfall.multigateway.ui.components.MorphingCardLayout
 import org.starfall.multigateway.ui.components.longPressReorder
 import org.starfall.multigateway.ui.components.moved
 
@@ -61,6 +69,8 @@ import org.starfall.multigateway.ui.components.moved
 @Composable
 fun McpScreen(
     mcpServers: List<McpInfo>,
+    isGridView: Boolean = false,
+    onToggleGridView: ((Boolean) -> Unit)? = null,
     toolsCache: Map<String, List<ToolDefinition>>,
     toolErrors: Map<String, String>,
     toolsLoading: Set<String>,
@@ -77,7 +87,6 @@ fun McpScreen(
     var newServerId by remember { mutableStateOf(UUID.randomUUID().toString()) }
     var deletingServerId by remember { mutableStateOf<String?>(null) }
     var selectedToolError by remember { mutableStateOf<Pair<String, String>?>(null) }
-    var isGridView by remember { mutableStateOf(false) }
     var orderedServers by remember(mcpServers) { mutableStateOf(mcpServers) }
     val context = LocalContext.current
 
@@ -103,7 +112,7 @@ fun McpScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { isGridView = !isGridView }) {
+                    IconButton(onClick = { onToggleGridView?.invoke(!isGridView) }) {
                         Icon(
                             imageVector = if (isGridView) Icons.Default.List else Icons.Default.GridView,
                             contentDescription = "Toggle Grid/List"
@@ -143,41 +152,32 @@ fun McpScreen(
                         )
                     }
                 }
-            } else if (isGridView) {
+            } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Fixed(if (isGridView) 2 else 1),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     items(orderedServers, key = { it.id }) { server ->
                         val index = orderedServers.indexOfFirst { it.id == server.id }
-                        McpGridCard(
+                        McpUnifiedCard(
                             server = server,
-                            modifier = Modifier.longPressReorder(
-                                index = index, itemCount = orderedServers.size, columns = 2,
-                                onMove = { from, to -> orderedServers = orderedServers.moved(from, to) },
-                                onDrop = { onReorderMcpServers(orderedServers.map { it.id }) }
-                            ),
-                            toolCount = (toolsCache[server.id] ?: server.cachedTools)?.size,
-                            toolError = toolErrors[server.id],
-                            loading = server.id in toolsLoading,
-                            onToolErrorClick = { error -> selectedToolError = server.name to error },
-                            onEdit = { editingServer = server },
-                            onDelete = { deletingServerId = server.id }
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(orderedServers, key = { it.id }) { server ->
-                        val index = orderedServers.indexOfFirst { it.id == server.id }
-                        McpListCard(
-                            server = server,
-                            modifier = Modifier.longPressReorder(
-                                index = index, itemCount = orderedServers.size, columns = 1,
-                                onMove = { from, to -> orderedServers = orderedServers.moved(from, to) },
-                                onDrop = { onReorderMcpServers(orderedServers.map { it.id }) }
-                            ),
+                            isGrid = isGridView,
+                            modifier = Modifier
+                                .animateItem(
+                                    placementSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    )
+                                )
+                                .longPressReorder(
+                                    index = index,
+                                    itemCount = orderedServers.size,
+                                    columns = if (isGridView) 2 else 1,
+                                    onMove = { from, to -> orderedServers = orderedServers.moved(from, to) },
+                                    onDrop = { onReorderMcpServers(orderedServers.map { it.id }) }
+                                ),
                             toolCount = (toolsCache[server.id] ?: server.cachedTools)?.size,
                             toolError = toolErrors[server.id],
                             loading = server.id in toolsLoading,
@@ -273,8 +273,9 @@ fun McpScreen(
 }
 
 @Composable
-fun McpListCard(
+fun McpUnifiedCard(
     server: McpInfo,
+    isGrid: Boolean,
     modifier: Modifier = Modifier,
     toolCount: Int?,
     toolError: String?,
@@ -283,20 +284,32 @@ fun McpListCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val shapeCorner by animateDpAsState(
+        targetValue = if (isGrid) 20.dp else 16.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "mcpShapeCorner"
+    )
+
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(shapeCorner),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        modifier = modifier.fillMaxWidth()
+        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onEdit() }
     ) {
-        Column {
-            Row(
-                modifier = Modifier.padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        MorphingCardLayout(
+            isGrid = isGrid,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            icon = {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
@@ -308,11 +321,24 @@ fun McpListCard(
                         modifier = Modifier.size(22.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
+            },
+            actions = {
+                ItemOverflowMenu(
+                    onEdit = onEdit,
+                    onDelete = onDelete,
+                    deleteColor = MaterialTheme.colorScheme.error
+                )
+            },
+            content = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     Text(
                         text = server.name,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = "Protocol: ${server.protocol}",
@@ -327,151 +353,43 @@ fun McpListCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     when {
+                        toolError != null -> {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f))
+                                    .clickable { onToolErrorClick(toolError) }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Outlined.ErrorOutline,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    "Error · Tap for details",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
                         loading -> Text(
                             "Loading tools…",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                             color = MaterialTheme.colorScheme.primary
                         )
-                        toolError == null && toolCount != null -> Text(
+                        toolCount != null -> Text(
                             "$toolCount tools cached",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                             color = MaterialTheme.colorScheme.outline
                         )
                     }
                 }
-                ItemOverflowMenu(
-                    onEdit = onEdit,
-                    onDelete = onDelete,
-                    deleteColor = MaterialTheme.colorScheme.error
-                )
             }
-            if (toolError != null) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.error.copy(alpha = 0.25f))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onToolErrorClick(toolError) }
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Outlined.ErrorOutline,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "Tool discovery failed · Tap for details",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun McpGridCard(
-    server: McpInfo,
-    modifier: Modifier = Modifier,
-    toolCount: Int?,
-    toolError: String?,
-    loading: Boolean,
-    onToolErrorClick: (String) -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Extension,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                ItemOverflowMenu(
-                    onEdit = onEdit,
-                    onDelete = onDelete,
-                    deleteColor = MaterialTheme.colorScheme.error
-                )
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = server.name,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = server.protocol.name,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = server.url ?: "No endpoint",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                color = MaterialTheme.colorScheme.outline,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            when {
-                loading -> Text(
-                    "Loading tools…",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                toolError == null && toolCount != null -> Text(
-                    "$toolCount tools cached",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
-            }
-            if (toolError != null) {
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f))
-                        .clickable { onToolErrorClick(toolError) }
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Outlined.ErrorOutline,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        "Tool discovery failed",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-        }
+        )
     }
 }
 
@@ -529,28 +447,58 @@ fun AddOrEditMcpDialog(
         scope.launch { onRefreshTools(currentServer()) }
     }
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                    Text(
-                        if (isNew) "Add MCP Server" else "Configure MCP Server",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(
-                        onClick = { onSave(currentServer()) },
-                        enabled = canSave
-                    ) {
-                        Text("Save", fontWeight = FontWeight.SemiBold)
-                    }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        val view = LocalView.current
+        SideEffect {
+            (view.parent as? DialogWindowProvider)?.window?.let { window ->
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                if (android.os.Build.VERSION.SDK_INT >= 29) {
+                    window.isNavigationBarContrastEnforced = false
+                    window.isStatusBarContrastEnforced = false
                 }
+            }
+        }
+
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                if (isNew) "Add MCP Server" else "Configure MCP Server",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = onDismiss) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            }
+                        },
+                        actions = {
+                            TextButton(
+                                onClick = { onSave(currentServer()) },
+                                enabled = canSave
+                            ) {
+                                Text("Save", fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    )
+                }
+            ) { innerPadding ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .imePadding()
+                ) {
 
                 TabRow(selectedTabIndex = selectedTab) {
                     Tab(selectedTab == 0, { selectedTab = 0 }, text = { Text("Basic Settings", fontWeight = FontWeight.SemiBold) })
@@ -595,6 +543,7 @@ fun AddOrEditMcpDialog(
             }
         }
     }
+}
 }
 
 @Composable

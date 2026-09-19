@@ -1,17 +1,24 @@
 package org.starfall.multigateway
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import kotlinx.serialization.json.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.toList
 import okhttp3.mockwebserver.*
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import org.starfall.multigateway.data.model.*
 import org.starfall.multigateway.data.tools.*
 import org.starfall.multigateway.data.service.*
 import java.nio.file.Files
 
+@RunWith(RobolectricTestRunner::class)
 class ToolChatIntegrationTest {
+    private val context: Context get() = ApplicationProvider.getApplicationContext()
+
     @Test fun modelCallsImageToolAndResumesWithStreamedAnswerWithoutBase64InChat() = runBlocking {
         val server=MockWebServer();server.start()
         val root=Files.createTempDirectory("tool-chat-test").toFile()
@@ -42,7 +49,7 @@ class ToolChatIntegrationTest {
             val provider=LlmProviderInfo("p","local",ProviderType.OPENAI,baseUrl=server.url("/v1").toString(),config=ProviderConfiguration(
                 modelIds=listOf("chat","image"),modelConfigs=mapOf("chat" to ModelConfiguration(supportsToolCalls=true),"image" to ModelConfiguration(modelType=ModelType.IMAGE_GENERATION))))
             val files=ToolFiles(root);val http=ToolHttp(files)
-            val engine=ToolChat(http,McpService(http),LlmService())
+            val engine=ToolChat(http,McpService(http),LlmService(context))
             val events=engine.generate(provider,"chat",listOf(StoredMessage("u",ChatRole.USER,listOf(MessageVersion("Draw a tree")))),"",emptyList(),listOf(provider),{emptyMap()},{ToolSettings(system=mapOf("generate_image" to SystemToolConfig(true,"p","image").withImageOptions(buildJsonObject { put("quality","high"); put("output_format","webp") })))}).toList()
             assertEquals(1,mediaCalls);assertEquals(2,rounds)
             val imageBody=Json.parseToJsonElement(imageRequest).jsonObject

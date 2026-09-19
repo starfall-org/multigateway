@@ -1,17 +1,24 @@
 package org.starfall.multigateway
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.toList
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import org.starfall.multigateway.data.model.*
+import org.starfall.multigateway.data.service.AttachmentResolver
 import org.starfall.multigateway.data.service.OfficialLlmSdk
 import java.util.concurrent.TimeUnit
 
+@RunWith(RobolectricTestRunner::class)
 class OfficialLlmSdkTest {
-    private val sdk = OfficialLlmSdk()
+    private val context: Context get() = ApplicationProvider.getApplicationContext()
+    private val sdk by lazy { OfficialLlmSdk(AttachmentResolver(context)) }
     private val messages = listOf(StoredMessage(id = "1", role = ChatRole.USER,
         versions = listOf(MessageVersion(content = "Hello"))))
 

@@ -65,10 +65,24 @@ fun UserInputArea(
     val focusManager = LocalFocusManager.current
     var showModelPicker by remember { mutableStateOf(false) }
     var showQuickActions by remember { mutableStateOf(false) }
-    var showReasoningEffort by remember { mutableStateOf(false) }
     var showConversationSummary by remember { mutableStateOf(false) }
     var showAddMenu by remember { mutableStateOf(false) }
     var showFilesSheet by remember { mutableStateOf(false) }
+
+    val dynamicModelsMap = remember { mutableStateMapOf<String, List<String>>() }
+    LaunchedEffect(providers) {
+        providers
+            .filter { it.type == org.starfall.multigateway.data.model.ProviderType.OLLAMA && it.config.modelIds == null }
+            .forEach { provider ->
+                val remoteModels = onFetchOllamaModels?.invoke(provider.baseUrl).orEmpty()
+                if (remoteModels.isNotEmpty()) dynamicModelsMap[provider.id] = remoteModels
+            }
+    }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.yield()
+        focusManager.clearFocus(force = true)
+    }
 
     LaunchedEffect(editDraft?.revision) {
         editDraft?.let {
@@ -238,6 +252,7 @@ fun UserInputArea(
                                             onEditMessage(draft.messageId, textState, attachments)
                                         } ?: onSendMessage(textState, attachments)
                                         if (submitted) {
+                                            focusManager.clearFocus(force = true)
                                             textState = ""
                                             attachments = emptyList()
                                             if (editDraft != null) onCancelEdit()
@@ -296,7 +311,6 @@ fun UserInputArea(
                 )
             },
             onTakePhoto = { showFilesSheet = true },
-            onOpenReasoningEffort = { showReasoningEffort = true },
             onOpenConversationSummary = { showConversationSummary = true },
             onOpenTools = { showQuickActions = true },
             onDismiss = { showAddMenu = false }
@@ -308,22 +322,16 @@ fun UserInputArea(
             providers = providers,
             selectedProviderId = selectedProviderId,
             selectedModelId = selectedModelName,
+            conversationReasoningEffort = conversationReasoningEffort,
             onSelectModel = onSelectModel,
-            onFetchOllamaModels = onFetchOllamaModels,
+            onSetReasoningEffort = onSetReasoningEffort,
+            dynamicModelsMap = dynamicModelsMap,
             onDismiss = { showModelPicker = false }
         )
     }
 
     if (showQuickActions) {
         QuickActionsSheet(onDismiss = { showQuickActions = false })
-    }
-
-    if (showReasoningEffort) {
-        ReasoningEffortSheet(
-            currentEffort = conversationReasoningEffort,
-            onApply = onSetReasoningEffort,
-            onDismiss = { showReasoningEffort = false }
-        )
     }
 
     if (showConversationSummary) {

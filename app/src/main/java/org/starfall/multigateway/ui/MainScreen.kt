@@ -82,6 +82,7 @@ fun MainScreen(
                     currentConversationId = currentConv?.id,
                     selectedProfile = activeProfile,
                     profiles = profiles,
+                    defaultSystemPrompt = appPrefs.defaultSystemPrompt,
                     onSelectConversation = {
                         viewModel.selectConversation(it)
                         navigate(AppDestination.CHAT)
@@ -97,10 +98,16 @@ fun MainScreen(
                         viewModel.deleteConversation(it)
                     },
                     onSelectProfile = { profile ->
-                        viewModel.selectProfile(profile.id)
+                        viewModel.selectProfile(profile?.id)
+                    },
+                    onUpdateDefaultSystemPrompt = { prompt ->
+                        viewModel.setDefaultSystemPrompt(prompt)
                     },
                     onNavigateToProfiles = {
                         navigate(AppDestination.PROFILES)
+                    },
+                    onNavigateToSettings = {
+                        navigate(AppDestination.SETTINGS)
                     },
                     onOpenMenu = {
                         coroutineScope.launch {
@@ -126,7 +133,7 @@ fun MainScreen(
                                 chatError = chatError,
                                 providers = providers,
                                 selectedProviderId = appPrefs.selectedProviderId,
-                                selectedModelName = appPrefs.selectedModelId.ifBlank { "gpt-4o" },
+                                selectedModelName = appPrefs.selectedModelId,
                                 onSendMessage = { text, files ->
                                     viewModel.sendMessage(text, files)
                                 },
@@ -175,6 +182,8 @@ fun MainScreen(
                     composable(AppDestination.PROFILES.route) {
                         ProfileScreen(
                             profiles = profiles,
+                            isGridView = appPrefs.showProfilesAsGrid,
+                            onToggleGridView = { configurationViewModel.setShowProfilesAsGrid(it) },
                             mcpServers = mcpServers,
                             mcpToolsCache = mcpToolsCache,
                             toolSettings = toolSettings,
@@ -190,6 +199,8 @@ fun MainScreen(
                     composable(AppDestination.PROVIDERS.route) {
                         ProviderScreen(
                             providers = providers,
+                            isGridView = appPrefs.showProvidersAsGrid,
+                            onToggleGridView = { configurationViewModel.setShowProvidersAsGrid(it) },
                             onSaveProvider = { configurationViewModel.saveProvider(it) },
                             onSaveModels = { providerId, models -> configurationViewModel.saveProviderModels(providerId, models) },
                             onDeleteProvider = { configurationViewModel.deleteProvider(it) },
@@ -203,6 +214,8 @@ fun MainScreen(
                     composable(AppDestination.MCP.route) {
                         McpScreen(
                             mcpServers = mcpServers,
+                            isGridView = appPrefs.showMcpAsGrid,
+                            onToggleGridView = { configurationViewModel.setShowMcpAsGrid(it) },
                             toolsCache = mcpToolsCache,
                             toolErrors = mcpToolErrors,
                             toolsLoading = mcpToolsLoading,
@@ -219,6 +232,8 @@ fun MainScreen(
                     composable(AppDestination.SPEECH.route) {
                         SpeechScreen(
                             speechServices = speechServices,
+                            isGridView = appPrefs.showSpeechAsGrid,
+                            onToggleGridView = { configurationViewModel.setShowSpeechAsGrid(it) },
                             providers = providers,
                             selectedSpeechServiceId = appPrefs.selectedSpeechServiceId,
                             onSelectService = viewModel::selectSpeechService,
@@ -282,9 +297,7 @@ fun MainScreen(
                             }
                         }
                         MenuView(
-                            selectedProfile = activeProfile,
                             onNavigateToProfiles = { navigateFromMenu(AppDestination.PROFILES) },
-                            onEditProfile = { navigateFromMenu(AppDestination.PROFILES) },
                             onNavigateToProviders = { navigateFromMenu(AppDestination.PROVIDERS) },
                             onNavigateToMcp = { navigateFromMenu(AppDestination.MCP) },
                             onNavigateToSpeech = { navigateFromMenu(AppDestination.SPEECH) },

@@ -24,7 +24,7 @@
         </provider>
         <activity
             android:name=".MainActivity"
-            android:windowSoftInputMode="adjustResize"
+            android:windowSoftInputMode="stateHidden|adjustResize"
             android:exported="true"
             android:theme="@style/Theme.MultiGateway">
             <intent-filter>

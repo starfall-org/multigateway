@@ -92,7 +92,7 @@ fun AssistantMessageCard(
             )
         }
 
-        if (message.versions.size > 1) {
+        if (!isStreaming && message.versions.size > 1) {
             Row(
                 modifier = Modifier.padding(top = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -135,7 +135,7 @@ fun AssistantMessageCard(
             }
         }
 
-        if (message.content.isNotBlank() || !isStreaming) {
+        if (!isStreaming && message.content.isNotBlank()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -365,31 +365,7 @@ private fun LiveToolBlock(activity: ToolActivity, blockNumber: Int) {
 
 @Composable
 private fun SmoothStreamingMarkdownMessage(content: String) {
-    val visibleLength = remember { Animatable(0f) }
-    LaunchedEffect(content.length) {
-        val target = content.length.toFloat()
-        if (target < visibleLength.value) {
-            visibleLength.snapTo(target)
-        } else if (target > visibleLength.value) {
-            val delta = target - visibleLength.value
-            visibleLength.animateTo(
-                targetValue = target,
-                animationSpec = tween(
-                    durationMillis = (delta * 7f).toInt().coerceIn(36, 180),
-                    easing = LinearEasing
-                )
-            )
-        }
-    }
-    val end = visibleLength.value.toInt().coerceIn(0, content.length)
-    if (end > 0) {
-        Text(
-            text = content.substring(0, end),
-            style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 22.sp),
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.fillMaxWidth().animateContentSize()
-        )
-    }
+    StreamingMarkdownRenderer(content = content)
 }
 
 private data class ProcessingBlock(
@@ -504,100 +480,7 @@ private fun MessageActionButton(
 
 @Composable
 fun FormattedMarkdownMessage(content: String) {
-    val context = LocalContext.current
-    // Render code blocks vs text paragraphs cleanly
-    val blocks = remember(content) { parseMarkdownBlocks(content) }
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        blocks.forEach { block ->
-            when (block) {
-                is ContentBlock.Code -> {
-                    var wrapCode by remember(block.language, block.code) { mutableStateOf(true) }
-                    val codeScrollState = rememberScrollState()
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = block.language.ifEmpty { "code" },
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.outline
-                                )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(
-                                        onClick = { wrapCode = !wrapCode },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Outlined.WrapText,
-                                            contentDescription = if (wrapCode) "Disable line wrapping" else "Enable line wrapping",
-                                            tint = if (wrapCode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                    Spacer(Modifier.width(4.dp))
-                                    IconButton(
-                                        onClick = {
-                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                            clipboard.setPrimaryClip(ClipData.newPlainText("Code", block.code))
-                                            Toast.makeText(context, "Code copied", Toast.LENGTH_SHORT).show()
-                                        },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Outlined.ContentCopy,
-                                            contentDescription = "Copy code",
-                                            tint = MaterialTheme.colorScheme.outline,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                }
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .then(if (wrapCode) Modifier else Modifier.horizontalScroll(codeScrollState))
-                            ) {
-                                Text(
-                                    text = block.code,
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontFamily = FontFamily.Monospace,
-                                        fontSize = 12.sp,
-                                        lineHeight = 16.sp
-                                    ),
-                                    softWrap = wrapCode,
-                                    modifier = Modifier
-                                        .padding(12.dp)
-                                        .then(if (wrapCode) Modifier.fillMaxWidth() else Modifier),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    }
-                }
-                is ContentBlock.Paragraph -> {
-                    Text(
-                        text = block.text,
-                        style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 22.sp),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-        }
-    }
+    MarkdownRenderer(content = content)
 }
 
 sealed class ContentBlock {

@@ -16,11 +16,11 @@ import java.nio.file.Files
 
 class ToolRuntimeTest {
     @Test fun permissionsNeverOverrideDisabledProfileOrIndividualTool() {
-        assertFalse(toolAllowed(null,true,"write"))
-        assertFalse(toolAllowed(McpAccess(false),true,"write"))
-        assertFalse(toolAllowed(McpAccess(true,mapOf("write" to false)),true,"write"))
-        assertFalse(toolAllowed(McpAccess(true),false,"write"))
-        assertTrue(toolAllowed(McpAccess(true),null,"read"))
+        assertFalse(toolAllowed(null, true, true, "write"))
+        assertFalse(toolAllowed(McpAccess(false), true, true, "write"))
+        assertFalse(toolAllowed(McpAccess(true, mapOf("write" to false)), true, true, "write"))
+        assertFalse(toolAllowed(McpAccess(true), false, true, "write"))
+        assertTrue(toolAllowed(McpAccess(true), null, true, "read"))
     }
     @Test fun base64IsStoredAsFileAndMissingFileIsSafe() = runBlocking {
         val root=Files.createTempDirectory("tool-files-test").toFile()

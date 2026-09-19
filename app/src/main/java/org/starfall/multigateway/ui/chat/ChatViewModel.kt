@@ -225,6 +225,12 @@ class ChatViewModel(
         }
     }
 
+    fun setDefaultSystemPrompt(prompt: String) {
+        viewModelScope.launch {
+            prefsRepo.setDefaultSystemPrompt(prompt)
+        }
+    }
+
     fun selectModel(providerId: String, modelId: String) {
         viewModelScope.launch {
             val provider = llmRepo.getProviderById(providerId)

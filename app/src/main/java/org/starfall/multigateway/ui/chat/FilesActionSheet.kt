@@ -24,13 +24,13 @@ fun FilesActionSheet(
     onPickImage: () -> Unit,
     onPickDocument: () -> Unit,
     onTakePhoto: () -> Unit,
-    onOpenReasoningEffort: () -> Unit,
     onOpenConversationSummary: () -> Unit,
     onOpenTools: () -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
         containerColor = MaterialTheme.colorScheme.surface
     ) {
@@ -76,15 +76,6 @@ fun FilesActionSheet(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            AddActionRow(
-                icon = Icons.Outlined.Psychology,
-                title = "Reasoning Effort",
-                subtitle = "Choose how much reasoning the model should use",
-                onClick = {
-                    onOpenReasoningEffort()
-                    onDismiss()
-                }
-            )
             AddActionRow(
                 icon = Icons.Outlined.Summarize,
                 title = "Conversation Summary",

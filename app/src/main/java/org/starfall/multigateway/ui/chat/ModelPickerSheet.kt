@@ -1,21 +1,25 @@
 package org.starfall.multigateway.ui.chat
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.material.icons.outlined.Audiotrack
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,34 +28,38 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import org.starfall.multigateway.data.model.LlmProviderInfo
 import org.starfall.multigateway.data.model.ModelConfiguration
 import org.starfall.multigateway.data.model.ModelType
 import org.starfall.multigateway.data.model.ProviderType
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ModelPickerSheet(
+sealed interface ModelPickerItem {
+    data class Header(val providerId: String, val providerName: String) : ModelPickerItem
+    data class Model(
+        val provider: LlmProviderInfo,
+        val modelId: String,
+        val config: ModelConfiguration,
+        val isSelected: Boolean
+    ) : ModelPickerItem
+}
+
+fun matchesModel(selectedModelId: String, itemModelId: String, itemDisplayName: String): Boolean {
+    if (selectedModelId.isBlank()) return false
+    val s = selectedModelId.trim().lowercase()
+    val m = itemModelId.trim().lowercase()
+    val d = itemDisplayName.trim().lowercase()
+    return m == s || d == s || m.endsWith("/$s") || s.endsWith("/$m") || m.substringAfterLast('/') == s.substringAfterLast('/')
+}
+
+fun computeModelPickerItems(
     providers: List<LlmProviderInfo>,
+    dynamicModelsMap: Map<String, List<String>>,
     selectedProviderId: String,
     selectedModelId: String,
-    onSelectModel: (providerId: String, modelId: String) -> Unit,
-    onFetchOllamaModels: (suspend (String) -> List<String>)? = null,
-    onDismiss: () -> Unit
-) {
-    val dynamicModelsMap = remember { mutableStateMapOf<String, List<String>>() }
-    var query by remember { mutableStateOf("") }
-    var providerFilterId by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(providers) {
-        providers
-            .filter { it.type == ProviderType.OLLAMA && it.config.modelIds == null }
-            .forEach { provider ->
-                val remoteModels = onFetchOllamaModels?.invoke(provider.baseUrl).orEmpty()
-                if (remoteModels.isNotEmpty()) dynamicModelsMap[provider.id] = remoteModels
-            }
-    }
-
+    query: String = "",
+    providerFilterId: String? = null
+): List<ModelPickerItem> {
     val visibleProviders = providers.mapNotNull { provider ->
         if (providerFilterId != null && provider.id != providerFilterId) return@mapNotNull null
         val models = providerModels(provider, dynamicModelsMap, selectedProviderId, selectedModelId)
@@ -65,6 +73,82 @@ fun ModelPickerSheet(
         if (models.isEmpty()) null else provider to models
     }
 
+    val hasExactProviderMatch = visibleProviders.any { (provider, models) ->
+        (selectedProviderId.isNotBlank() && provider.id == selectedProviderId) &&
+                models.any { modelId ->
+                    val config = provider.config.modelConfigs[modelId] ?: ModelConfiguration()
+                    matchesModel(selectedModelId, modelId, config.displayName)
+                }
+    }
+
+    return visibleProviders.flatMap { (provider, models) ->
+        val header = ModelPickerItem.Header(provider.id, provider.name)
+        val modelItems = models.map { modelId ->
+            val config = provider.config.modelConfigs[modelId] ?: ModelConfiguration()
+            val isSelected = if (hasExactProviderMatch) {
+                provider.id == selectedProviderId && matchesModel(selectedModelId, modelId, config.displayName)
+            } else {
+                matchesModel(selectedModelId, modelId, config.displayName)
+            }
+            ModelPickerItem.Model(
+                provider = provider,
+                modelId = modelId,
+                config = config,
+                isSelected = isSelected
+            )
+        }
+        listOf(header) + modelItems
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ModelPickerSheet(
+    providers: List<LlmProviderInfo>,
+    selectedProviderId: String,
+    selectedModelId: String,
+    conversationReasoningEffort: String?,
+    onSelectModel: (providerId: String, modelId: String) -> Unit,
+    onSetReasoningEffort: (String?) -> Unit,
+    dynamicModelsMap: Map<String, List<String>> = emptyMap(),
+    onDismiss: () -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    var providerFilterId by remember { mutableStateOf<String?>(null) }
+
+    val flatItems = remember(providers, dynamicModelsMap, selectedProviderId, selectedModelId, query, providerFilterId) {
+        computeModelPickerItems(
+            providers = providers,
+            dynamicModelsMap = dynamicModelsMap,
+            selectedProviderId = selectedProviderId,
+            selectedModelId = selectedModelId,
+            query = query,
+            providerFilterId = providerFilterId
+        )
+    }
+
+    val targetIndex = remember(flatItems) {
+        flatItems.indexOfFirst {
+            it is ModelPickerItem.Model && it.isSelected
+        }.takeIf { it >= 0 } ?: 0
+    }
+
+    val listState = remember(targetIndex) {
+        LazyListState(firstVisibleItemIndex = targetIndex)
+    }
+
+    LaunchedEffect(targetIndex) {
+        if (targetIndex in flatItems.indices) {
+            listState.scrollToItem(targetIndex)
+        }
+    }
+
+    LaunchedEffect(query, providerFilterId) {
+        if (query.isNotBlank() || providerFilterId != null) {
+            listState.scrollToItem(0)
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -73,7 +157,7 @@ fun ModelPickerSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.88f)
+                .fillMaxHeight()
                 .imePadding()
         ) {
             OutlinedTextField(
@@ -89,13 +173,14 @@ fun ModelPickerSheet(
             )
 
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
                 contentPadding = PaddingValues(start = 20.dp, top = 10.dp, end = 20.dp, bottom = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (visibleProviders.isEmpty()) {
+                if (flatItems.isEmpty()) {
                     item(key = "empty") {
                         Box(
                             modifier = Modifier.fillParentMaxSize(),
@@ -108,34 +193,40 @@ fun ModelPickerSheet(
                             )
                         }
                     }
-                }
-
-                items(visibleProviders, key = { it.first.id }) { (provider, models) ->
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = provider.name,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 2.dp)
-                        )
-
-                        models.forEach { modelId ->
-                            val config = provider.config.modelConfigs[modelId] ?: ModelConfiguration()
-                            val isSelected = provider.id == selectedProviderId && modelId == selectedModelId
-                            ModelPickerCard(
-                                modelId = modelId,
-                                config = config,
-                                isSelected = isSelected,
-                                onClick = {
-                                    onSelectModel(provider.id, modelId)
-                                    onDismiss()
-                                }
-                            )
+                } else {
+                    items(
+                        flatItems,
+                        key = { item ->
+                            when (item) {
+                                is ModelPickerItem.Header -> "header_${item.providerId}"
+                                is ModelPickerItem.Model -> "model_${item.provider.id}_${item.modelId}"
+                            }
+                        }
+                    ) { item ->
+                        when (item) {
+                            is ModelPickerItem.Header -> {
+                                Text(
+                                    text = item.providerName,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(start = 2.dp, end = 2.dp, top = 6.dp)
+                                )
+                            }
+                            is ModelPickerItem.Model -> {
+                                ModelPickerCard(
+                                    modelId = item.modelId,
+                                    config = item.config,
+                                    isSelected = item.isSelected,
+                                    conversationReasoningEffort = conversationReasoningEffort,
+                                    onSetReasoningEffort = onSetReasoningEffort,
+                                    onClick = {
+                                        onSelectModel(item.provider.id, item.modelId)
+                                        onDismiss()
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -186,6 +277,8 @@ private fun ModelPickerCard(
     modelId: String,
     config: ModelConfiguration,
     isSelected: Boolean,
+    conversationReasoningEffort: String?,
+    onSetReasoningEffort: (String?) -> Unit,
     onClick: () -> Unit
 ) {
     Surface(
@@ -199,50 +292,152 @@ private fun ModelPickerCard(
             MaterialTheme.colorScheme.surfaceContainerLow
         },
         border = if (isSelected) {
-            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f))
+            BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f))
         } else null
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                modifier = Modifier.size(52.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = modelInitial(modelId),
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(14.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Text(
-                        text = modelInitial(modelId),
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = config.displayName.ifBlank { modelId },
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    ModelCapabilityBadges(config)
+                }
+
+                if (isSelected) {
+                    Spacer(Modifier.width(10.dp))
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
             }
 
-            Spacer(Modifier.width(14.dp))
+            // Expanded section for currently selected model: Reasoning Effort (only if reasoning is supported/enabled)
+            if (isSelected && config.supportsThinking) {
+                val efforts = listOf<String?>(null, "low", "medium", "high", "xhigh")
+                val labels = listOf("Default", "Low", "Medium", "High", "Extra high")
+                val currentEffortNormalized = conversationReasoningEffort?.lowercase()?.trim()
+                val initialIndex = efforts.indexOfFirst { it == currentEffortNormalized }.takeIf { it >= 0 } ?: 0
+                var sliderValue by remember(conversationReasoningEffort) { mutableFloatStateOf(initialIndex.toFloat()) }
+                val activeIndex = sliderValue.roundToInt().coerceIn(0, efforts.size - 1)
+                val activeLabel = labels[activeIndex]
 
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = config.displayName.ifBlank { modelId },
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                ModelCapabilityBadges(config)
-            }
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                Spacer(modifier = Modifier.height(10.dp))
 
-            if (isSelected) {
-                Spacer(Modifier.width(10.dp))
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Psychology,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Reasoning Effort",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = activeLabel,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Slider(
+                    value = sliderValue,
+                    onValueChange = {
+                        sliderValue = it
+                        val step = it.roundToInt().coerceIn(0, efforts.size - 1)
+                        onSetReasoningEffort(efforts[step])
+                    },
+                    valueRange = 0f..4f,
+                    steps = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                    )
                 )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    labels.forEach { label ->
+                        Text(
+                            text = when (label) {
+                                "Extra high" -> "X-High"
+                                "Medium" -> "Med"
+                                else -> label
+                            },
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }

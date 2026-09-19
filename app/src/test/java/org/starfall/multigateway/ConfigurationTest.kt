@@ -1,5 +1,7 @@
 package org.starfall.multigateway
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.toList
 import kotlinx.serialization.encodeToString
@@ -8,11 +10,15 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import org.starfall.multigateway.data.model.*
 import org.starfall.multigateway.data.service.LlmService
 import java.util.concurrent.TimeUnit
 
+@RunWith(RobolectricTestRunner::class)
 class ConfigurationTest {
+    private val context: Context get() = ApplicationProvider.getApplicationContext()
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val messages = listOf(StoredMessage("u", ChatRole.USER, listOf(MessageVersion(content = "Hello"))))
 
@@ -33,7 +39,7 @@ class ConfigurationTest {
     }
 
     @Test fun modelSwitchAndProviderSwitchUseSeparateSamplingAndRequestSettings() = runBlocking {
-        val service = LlmService()
+        val service = LlmService(context)
         MockWebServer().use { server ->
             val provider = LlmProviderInfo("p1", "First", ProviderType.OPENAI, Authorization(key = "test"),
                 baseUrl = server.url("/v1").toString(), config = ProviderConfiguration(maxTokens = 123,
@@ -59,7 +65,7 @@ class ConfigurationTest {
     private data class Case(val provider: LlmProviderInfo, val model: String, val temperature: Double?, val limit: Int)
 
     @Test fun nonStreamingAndTopKReachNativeApis() = runBlocking {
-        val service = LlmService()
+        val service = LlmService(context)
         val responses = mapOf(
             ProviderType.OPENAI to """{"id":"c","object":"chat.completion","created":1,"model":"custom","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]}""",
             ProviderType.ANTHROPIC to """{"id":"m","type":"message","role":"assistant","model":"custom","content":[{"type":"text","text":"ok"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":1,"output_tokens":1}}""",
@@ -119,7 +125,7 @@ class ConfigurationTest {
             val provider = LlmProviderInfo("p", "P", ProviderType.OPENAI, Authorization(key = "test"),
                 baseUrl = server.url("/v1").toString(), config = ProviderConfiguration(supportStream = false,
                     modelConfigs = mapOf("custom" to ModelConfiguration(supportStream = true))))
-            LlmService().streamContent(provider, "custom", messages).toList()
+            LlmService(context).streamContent(provider, "custom", messages).toList()
             val body = json.parseToJsonElement(server.takeRequest(5, TimeUnit.SECONDS)!!.body.readUtf8()).jsonObject
             assertTrue(body["stream"]!!.jsonPrimitive.boolean)
             assertFalse(provider.config.supportStream)

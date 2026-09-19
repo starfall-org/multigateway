@@ -1,5 +1,6 @@
 package org.starfall.multigateway.ui.drawer
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,12 +32,15 @@ fun ConversationsDrawer(
     currentConversationId: String?,
     selectedProfile: ChatProfile?,
     profiles: List<ChatProfile>,
+    defaultSystemPrompt: String,
     onSelectConversation: (Conversation) -> Unit,
     onNewChat: () -> Unit,
     onRenameConversation: (id: String, newTitle: String) -> Unit,
     onDeleteConversation: (id: String) -> Unit,
-    onSelectProfile: (ChatProfile) -> Unit,
+    onSelectProfile: (ChatProfile?) -> Unit,
+    onUpdateDefaultSystemPrompt: (String) -> Unit,
     onNavigateToProfiles: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onOpenMenu: () -> Unit,
     onCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier
@@ -50,8 +54,11 @@ fun ConversationsDrawer(
     // Dialog state for delete confirmation
     var deletingConvId by remember { mutableStateOf<String?>(null) }
 
-    // Profile picker menu state
+    // Profile picker dropdown state
     var showProfileDropdown by remember { mutableStateOf(false) }
+
+    // Default system prompt dialog state
+    var showSystemPromptDialog by remember { mutableStateOf(false) }
 
     val filteredConversations = remember(conversations, searchQuery) {
         if (searchQuery.isBlank()) conversations
@@ -270,87 +277,64 @@ fun ConversationsDrawer(
                 thickness = 0.5.dp
             )
 
-            // Bottom Footer: Active Profile Card
+            // Bottom Footer: Profile dropdown button + System prompt dialog button + General settings button + Menu button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    border = androidx.compose.foundation.BorderStroke(
+                    border = BorderStroke(
                         width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable(onClick = onOpenMenu)
-                                .padding(start = 12.dp, top = 12.dp, bottom = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                val initials = selectedProfile?.name
-                                    ?.split(" ")
-                                    ?.filter { it.isNotBlank() }
-                                    ?.take(2)
-                                    ?.map { it.first().uppercaseChar() }
-                                    ?.joinToString("") ?: "SG"
-                                Text(
-                                    text = initials,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "ACTIVE PROFILE",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 0.8.sp
-                                    ),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = selectedProfile?.name ?: "Standard Gateway",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-
+                        // Profile Selector Dropdown Button
                         Box {
-                            IconButton(
-                                onClick = { showProfileDropdown = !showProfileDropdown },
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (selectedProfile != null) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                                else MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
                                 modifier = Modifier
-                                    .padding(end = 4.dp)
-                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { showProfileDropdown = true }
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.UnfoldMore,
-                                    contentDescription = "Switch Profile",
-                                    tint = MaterialTheme.colorScheme.outline,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (selectedProfile != null) Icons.Outlined.AccountCircle else Icons.Outlined.PersonOff,
+                                        contentDescription = null,
+                                        tint = if (selectedProfile != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = selectedProfile?.name ?: "None",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.widthIn(max = 95.dp)
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.UnfoldMore,
+                                        contentDescription = "Switch Profile",
+                                        tint = MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
 
                             DropdownMenu(
@@ -358,6 +342,43 @@ fun ConversationsDrawer(
                                 onDismissRequest = { showProfileDropdown = false },
                                 modifier = Modifier.widthIn(min = 220.dp, max = 280.dp)
                             ) {
+                                // "None" option
+                                val isNoneSelected = selectedProfile == null
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = "None (Default Prompt)",
+                                            fontWeight = if (isNoneSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isNoneSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Outlined.PersonOff,
+                                            contentDescription = null,
+                                            tint = if (isNoneSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        if (isNoneSelected) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        onSelectProfile(null)
+                                        showProfileDropdown = false
+                                    }
+                                )
+
+                                if (profiles.isNotEmpty()) {
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                }
+
                                 profiles.forEach { profile ->
                                     val isSelected = profile.id == selectedProfile?.id
                                     DropdownMenuItem(
@@ -365,8 +386,14 @@ fun ConversationsDrawer(
                                             Text(
                                                 text = profile.name,
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (isSelected) MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.onSurface
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Outlined.AccountCircle,
+                                                contentDescription = null,
+                                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                                             )
                                         },
                                         trailingIcon = {
@@ -385,6 +412,7 @@ fun ConversationsDrawer(
                                         }
                                     )
                                 }
+
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                                 DropdownMenuItem(
                                     text = { Text("Manage Profiles...") },
@@ -399,10 +427,96 @@ fun ConversationsDrawer(
                                 )
                             }
                         }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            // Default System Prompt Dialog Button
+                            IconButton(
+                                onClick = { showSystemPromptDialog = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.EditNote,
+                                    contentDescription = "Default System Prompt",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            // General Settings Button
+                            IconButton(
+                                onClick = {
+                                    onNavigateToSettings()
+                                    onCloseDrawer()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Settings,
+                                    contentDescription = "General Settings",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            // Menu Button
+                            IconButton(
+                                onClick = {
+                                    onOpenMenu()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Menu,
+                                    contentDescription = "Menu",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
-        }
+
+    // Default System Prompt Dialog
+    if (showSystemPromptDialog) {
+        var tempPrompt by remember(defaultSystemPrompt) { mutableStateOf(defaultSystemPrompt) }
+        AlertDialog(
+            onDismissRequest = { showSystemPromptDialog = false },
+            title = { Text("Default System Prompt") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "This system prompt is applied when no profile is selected (\"None\").",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    OutlinedTextField(
+                        value = tempPrompt,
+                        onValueChange = { tempPrompt = it },
+                        placeholder = { Text("Enter default system prompt...") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 120.dp, max = 220.dp),
+                        maxLines = 8,
+                        textStyle = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUpdateDefaultSystemPrompt(tempPrompt.trim())
+                        showSystemPromptDialog = false
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSystemPromptDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // Rename Dialog

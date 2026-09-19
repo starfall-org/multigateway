@@ -1,17 +1,24 @@
 package org.starfall.multigateway.ui.speech
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Delete
@@ -23,12 +30,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.starfall.multigateway.data.model.LlmProviderInfo
 import org.starfall.multigateway.data.model.ModelType
 import org.starfall.multigateway.data.model.SpeechService
 import java.util.UUID
 import org.starfall.multigateway.ui.components.ItemOverflowMenu
+import org.starfall.multigateway.ui.components.MorphingCardLayout
 import org.starfall.multigateway.ui.components.longPressReorder
 import org.starfall.multigateway.ui.components.moved
 
@@ -36,6 +46,8 @@ import org.starfall.multigateway.ui.components.moved
 @Composable
 fun SpeechScreen(
     speechServices: List<SpeechService>,
+    isGridView: Boolean = false,
+    onToggleGridView: ((Boolean) -> Unit)? = null,
     providers: List<LlmProviderInfo>,
     selectedSpeechServiceId: String?,
     onSelectService: (String?) -> Unit,
@@ -75,6 +87,12 @@ fun SpeechScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { onToggleGridView?.invoke(!isGridView) }) {
+                        Icon(
+                            imageVector = if (isGridView) Icons.Default.List else Icons.Default.GridView,
+                            contentDescription = if (isGridView) "Switch to List View" else "Switch to Grid View"
+                        )
+                    }
                     IconButton(
                         onClick = {
                             newServiceId = UUID.randomUUID().toString()
@@ -87,12 +105,14 @@ fun SpeechScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(if (isGridView) 2 else 1),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             items(orderedServices, key = { it.id }) { service ->
                 val providerName = when {
@@ -100,13 +120,23 @@ fun SpeechScreen(
                     else -> providers.find { it.id == service.provider }?.name ?: service.provider
                 }
                 val index = orderedServices.indexOfFirst { it.id == service.id }
-                SpeechServiceCard(
+                SpeechServiceUnifiedCard(
                     service = service,
-                    modifier = Modifier.longPressReorder(
-                        index = index, itemCount = orderedServices.size, columns = 1,
-                        onMove = { from, to -> orderedServices = orderedServices.moved(from, to) },
-                        onDrop = { onReorderServices(orderedServices.map { it.id }) }
-                    ),
+                    isGrid = isGridView,
+                    modifier = Modifier
+                        .animateItem(
+                            placementSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        )
+                        .longPressReorder(
+                            index = index,
+                            itemCount = orderedServices.size,
+                            columns = if (isGridView) 2 else 1,
+                            onMove = { from, to -> orderedServices = orderedServices.moved(from, to) },
+                            onDrop = { onReorderServices(orderedServices.map { it.id }) }
+                        ),
                     providerName = providerName,
                     selected = service.id == selectedSpeechServiceId ||
                         (selectedSpeechServiceId == null && service.provider.equals("system", true)),
@@ -184,8 +214,9 @@ fun SpeechScreen(
 }
 
 @Composable
-private fun SpeechServiceCard(
+private fun SpeechServiceUnifiedCard(
     service: SpeechService,
+    isGrid: Boolean,
     modifier: Modifier = Modifier,
     providerName: String,
     selected: Boolean,
@@ -194,87 +225,114 @@ private fun SpeechServiceCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val shapeCorner by animateDpAsState(
+        targetValue = if (isGrid) 20.dp else 16.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "speechShapeCorner"
+    )
+
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(shapeCorner),
         color = if (selected) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
         } else {
             MaterialTheme.colorScheme.surfaceContainerLow
         },
         border = BorderStroke(
-            1.dp,
-            if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            if (selected) 2.dp else 1.5.dp,
+            if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.outlineVariant
         ),
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onSelect)
     ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Outlined.RecordVoiceOver,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            Spacer(Modifier.width(14.dp))
-
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        service.name,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold
-                        )
+        MorphingCardLayout(
+            isGrid = isGrid,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Outlined.RecordVoiceOver,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
                     )
-                    if (selected) {
-                        Spacer(Modifier.width(6.dp))
+                }
+            },
+            actions = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onTest, modifier = Modifier.size(36.dp)) {
                         Icon(
-                            Icons.Default.Check,
-                            contentDescription = "Selected",
+                            Icons.Default.PlayArrow,
+                            contentDescription = "Test voice",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
+                    ItemOverflowMenu(
+                        onEdit = onEdit,
+                        onDelete = onDelete,
+                        deleteColor = MaterialTheme.colorScheme.error
+                    )
                 }
-                Text(
-                    providerName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                val modelLine = service.modelId?.let { "Model: $it · " }.orEmpty()
-                Text(
-                    "${modelLine}Voice: ${service.voice}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
+            },
+            content = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            service.name,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (selected) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        providerName,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    val modelLine = service.modelId?.let { "Model: $it · " }.orEmpty()
+                    Text(
+                        "${modelLine}Voice: ${service.voice}",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = MaterialTheme.colorScheme.outline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-
-            IconButton(onClick = onTest, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    Icons.Default.PlayArrow,
-                    contentDescription = "Test voice",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-            ItemOverflowMenu(
-                onEdit = onEdit,
-                onDelete = onDelete,
-                deleteColor = MaterialTheme.colorScheme.error
-            )
-        }
+        )
     }
 }
 

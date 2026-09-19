@@ -167,9 +167,15 @@ fun SystemToolsScreen(
                 }
                 .map { (id, config) -> Triple(provider, id, config) }
         }
-        ModalBottomSheet(onDismissRequest = { choosing = null }) {
+        ModalBottomSheet(
+            onDismissRequest = { choosing = null },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
             LazyColumn(
-                Modifier.fillMaxWidth().fillMaxHeight(0.75f),
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .navigationBarsPadding(),
                 contentPadding = PaddingValues(16.dp)
             ) {
                 item {
@@ -215,7 +221,7 @@ fun ProfileMcpPermissions(
     }
 
     servers.forEach { server ->
-        val policy = access[server.id] ?: McpAccess()
+        val policy = access[server.id] ?: McpAccess(enabled = true)
         HorizontalDivider()
         ToolSwitch(server.name, policy.enabled) { enabled ->
             onChange(access + (server.id to policy.copy(enabled = enabled)))

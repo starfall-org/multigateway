@@ -29,6 +29,7 @@ data class AppPreferences(
     val showProfilesAsGrid: Boolean = true,
     val showProvidersAsGrid: Boolean = false,
     val showMcpAsGrid: Boolean = false,
+    val showSpeechAsGrid: Boolean = false,
     val mcpPresetsInitialized: Boolean = false
 )
 
@@ -54,6 +55,7 @@ class AppPreferencesRepository(private val context: Context) {
         val SHOW_PROFILES_AS_GRID = booleanPreferencesKey("show_profiles_as_grid")
         val SHOW_PROVIDERS_AS_GRID = booleanPreferencesKey("show_providers_as_grid")
         val SHOW_MCP_AS_GRID = booleanPreferencesKey("show_mcp_as_grid")
+        val SHOW_SPEECH_AS_GRID = booleanPreferencesKey("show_speech_as_grid")
         val MCP_PRESETS_INITIALIZED = booleanPreferencesKey("mcp_presets_initialized")
     }
 
@@ -82,6 +84,7 @@ class AppPreferencesRepository(private val context: Context) {
                 showProfilesAsGrid = preferences[PreferenceKeys.SHOW_PROFILES_AS_GRID] ?: true,
                 showProvidersAsGrid = preferences[PreferenceKeys.SHOW_PROVIDERS_AS_GRID] ?: false,
                 showMcpAsGrid = preferences[PreferenceKeys.SHOW_MCP_AS_GRID] ?: false,
+                showSpeechAsGrid = preferences[PreferenceKeys.SHOW_SPEECH_AS_GRID] ?: false,
                 mcpPresetsInitialized = preferences[PreferenceKeys.MCP_PRESETS_INITIALIZED] ?: false
             )
         }
@@ -136,6 +139,12 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun setColorSchemeName(scheme: String) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.COLOR_SCHEME_NAME] = scheme
+        }
+    }
+
+    suspend fun setDefaultSystemPrompt(prompt: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.DEFAULT_SYSTEM_PROMPT] = prompt
         }
     }
 
@@ -196,6 +205,12 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun setShowMcpAsGrid(isGrid: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.SHOW_MCP_AS_GRID] = isGrid
+        }
+    }
+
+    suspend fun setShowSpeechAsGrid(isGrid: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.SHOW_SPEECH_AS_GRID] = isGrid
         }
     }
 

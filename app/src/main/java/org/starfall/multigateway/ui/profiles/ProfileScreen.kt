@@ -33,10 +33,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import org.starfall.multigateway.data.model.ChatProfile
 import org.starfall.multigateway.data.model.LlmChatConfig
 import java.util.UUID
 import org.starfall.multigateway.ui.components.ItemOverflowMenu
+import org.starfall.multigateway.ui.components.MorphingCardLayout
 import org.starfall.multigateway.ui.components.longPressReorder
 import org.starfall.multigateway.ui.components.moved
 
@@ -44,6 +51,8 @@ import org.starfall.multigateway.ui.components.moved
 @Composable
 fun ProfileScreen(
     profiles: List<ChatProfile>,
+    isGridView: Boolean = false,
+    onToggleGridView: ((Boolean) -> Unit)? = null,
     mcpServers: List<McpInfo>,
     mcpToolsCache: Map<String, List<ToolDefinition>>,
     toolSettings: ToolSettings,
@@ -54,7 +63,6 @@ fun ProfileScreen(
     onReorderProfiles: (List<String>) -> Unit,
     onBack: () -> Unit
 ) {
-    var isGridView by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
     var editingProfile by remember { mutableStateOf<ChatProfile?>(null) }
     var deletingProfileId by remember { mutableStateOf<String?>(null) }
@@ -82,7 +90,7 @@ fun ProfileScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { isGridView = !isGridView }) {
+                    IconButton(onClick = { onToggleGridView?.invoke(!isGridView) }) {
                         Icon(
                             imageVector = if (isGridView) Icons.Default.List else Icons.Default.GridView,
                             contentDescription = "Toggle View"
@@ -106,113 +114,40 @@ fun ProfileScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            if (isGridView) {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 180.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(orderedProfiles, key = { it.id }) { profile ->
-                        val isSelected = profile.id == selectedProfileId
-                        val index = orderedProfiles.indexOfFirst { it.id == profile.id }
-                        ProfileGridCard(
-                            profile = profile,
-                            modifier = Modifier.longPressReorder(
-                                index = index, itemCount = orderedProfiles.size, columns = 2,
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(if (isGridView) 2 else 1),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(orderedProfiles, key = { it.id }) { profile ->
+                    val isSelected = profile.id == selectedProfileId
+                    val index = orderedProfiles.indexOfFirst { it.id == profile.id }
+                    ProfileUnifiedCard(
+                        profile = profile,
+                        isGrid = isGridView,
+                        isSelected = isSelected,
+                        modifier = Modifier
+                            .animateItem(
+                                placementSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )
+                            .longPressReorder(
+                                index = index,
+                                itemCount = orderedProfiles.size,
+                                columns = if (isGridView) 2 else 1,
                                 onMove = { from, to -> orderedProfiles = orderedProfiles.moved(from, to) },
                                 onDrop = { onReorderProfiles(orderedProfiles.map { it.id }) }
                             ),
-                            isSelected = isSelected,
-                            onSelect = { onSelectProfile(profile.id) },
-                            onEdit = {
-                                editingProfile = profile
-                                showDialog = true
-                            },
-                            onDelete = { deletingProfileId = profile.id }
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    // Option: No Profile
-                    item {
-                        val isNoProfileSelected = selectedProfileId == null
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (isNoProfileSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                            else MaterialTheme.colorScheme.surfaceContainerLow,
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                if (isNoProfileSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSelectProfile(null) }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.PersonOff,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.outline,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Standard Gateway",
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Use the default system prompt",
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                        color = MaterialTheme.colorScheme.outline
-                                    )
-                                }
-                                if (isNoProfileSelected) {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = "Selected",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    items(orderedProfiles, key = { it.id }) { profile ->
-                        val isSelected = profile.id == selectedProfileId
-                        val index = orderedProfiles.indexOfFirst { it.id == profile.id }
-                        ProfileListCard(
-                            profile = profile,
-                            modifier = Modifier.longPressReorder(
-                                index = index, itemCount = orderedProfiles.size, columns = 1,
-                                onMove = { from, to -> orderedProfiles = orderedProfiles.moved(from, to) },
-                                onDrop = { onReorderProfiles(orderedProfiles.map { it.id }) }
-                            ),
-                            isSelected = isSelected,
-                            onSelect = { onSelectProfile(profile.id) },
-                            onEdit = {
-                                editingProfile = profile
-                                showDialog = true
-                            },
-                            onDelete = { deletingProfileId = profile.id }
-                        )
-                    }
+                        onSelect = { onSelectProfile(profile.id) },
+                        onEdit = {
+                            editingProfile = profile
+                            showDialog = true
+                        },
+                        onDelete = { deletingProfileId = profile.id }
+                    )
                 }
             }
         }
@@ -258,184 +193,114 @@ fun ProfileScreen(
 }
 
 @Composable
-fun ProfileListCard(
+fun ProfileUnifiedCard(
     profile: ChatProfile,
-    modifier: Modifier = Modifier,
+    isGrid: Boolean,
     isSelected: Boolean,
+    modifier: Modifier = Modifier,
     onSelect: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-        else MaterialTheme.colorScheme.surfaceContainerLow,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    val shapeCorner by animateDpAsState(
+        targetValue = if (isGrid) 20.dp else 16.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onSelect)
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                val initials = profile.name
-                    .split(" ")
-                    .filter { it.isNotBlank() }
-                    .take(2)
-                    .map { it.first().uppercaseChar() }
-                    .joinToString("")
-                Text(
-                    text = initials,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+        label = "profileShapeCorner"
+    )
 
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = profile.name,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    if (isSelected) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                        ) {
-                            Text(
-                                text = "Active",
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
-                Text(
-                    text = profile.config.systemPrompt.ifBlank { "No system prompt" },
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                    color = MaterialTheme.colorScheme.outline,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-            }
-
-            ItemOverflowMenu(
-                onEdit = onEdit,
-                onDelete = onDelete,
-                deleteColor = MaterialTheme.colorScheme.error
-            )
-
-        }
+    val initials = remember(profile.name) {
+        profile.name
+            .split(" ")
+            .filter { it.isNotBlank() }
+            .take(2)
+            .map { it.first().uppercaseChar() }
+            .joinToString("")
     }
-}
 
-@Composable
-fun ProfileGridCard(
-    profile: ChatProfile,
-    modifier: Modifier = Modifier,
-    isSelected: Boolean,
-    onSelect: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(shapeCorner),
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
         else MaterialTheme.colorScheme.surfaceContainerLow,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        border = BorderStroke(
+            if (isSelected) 2.dp else 1.5.dp,
+            if (isSelected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.outlineVariant
         ),
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onSelect)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        MorphingCardLayout(
+            isGrid = isGrid,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            icon = {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
-                    val initials = profile.name
-                        .split(" ")
-                        .filter { it.isNotBlank() }
-                        .take(2)
-                        .map { it.first().uppercaseChar() }
-                        .joinToString("")
                     Text(
                         text = initials,
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-
+            },
+            actions = {
                 ItemOverflowMenu(
                     onEdit = onEdit,
                     onDelete = onDelete,
                     deleteColor = MaterialTheme.colorScheme.error
                 )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = profile.name,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                text = profile.config.systemPrompt.ifBlank { "No system prompt" },
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                color = MaterialTheme.colorScheme.outline,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            if (isSelected) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+            },
+            content = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = profile.name,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (isSelected) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    text = "Active",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
                     Text(
-                        text = "Active",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        text = profile.config.systemPrompt.ifBlank { "No system prompt" },
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = MaterialTheme.colorScheme.outline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
-        }
+        )
     }
 }
 
@@ -449,7 +314,17 @@ fun AddOrEditProfileDialog(
     onSave: (ChatProfile) -> Unit
 ) {
     var name by remember { mutableStateOf(profile?.name ?: "") }
-    var mcpAccess by remember { mutableStateOf(profile?.config?.mcpAccess ?: emptyMap<String, McpAccess>()) }
+    var mcpAccess by remember {
+        mutableStateOf(
+            profile?.config?.mcpAccess ?: mcpServers.associate { server ->
+                val cached = mcpToolsCache[server.id] ?: server.cachedTools.orEmpty()
+                server.id to McpAccess(
+                    enabled = true,
+                    tools = cached.associate { it.originalName to true }
+                )
+            }
+        )
+    }
     var systemPrompt by remember { mutableStateOf(profile?.config?.systemPrompt ?: "") }
 
     AlertDialog(

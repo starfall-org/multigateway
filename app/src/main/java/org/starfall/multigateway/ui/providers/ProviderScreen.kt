@@ -18,10 +18,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,6 +33,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import org.starfall.multigateway.data.model.AuthMethod
 import org.starfall.multigateway.data.model.Authorization
 import org.starfall.multigateway.data.model.LlmProviderInfo
@@ -42,6 +45,7 @@ import org.starfall.multigateway.data.model.withType
 import org.starfall.multigateway.data.model.defaultAuthorization
 import org.starfall.multigateway.data.model.ProviderType
 import org.starfall.multigateway.ui.components.ItemOverflowMenu
+import org.starfall.multigateway.ui.components.MorphingCardLayout
 import org.starfall.multigateway.ui.components.longPressReorder
 import org.starfall.multigateway.ui.components.moved
 
@@ -49,6 +53,8 @@ import org.starfall.multigateway.ui.components.moved
 @Composable
 fun ProviderScreen(
     providers: List<LlmProviderInfo>,
+    isGridView: Boolean = false,
+    onToggleGridView: ((Boolean) -> Unit)? = null,
     onSaveProvider: (LlmProviderInfo) -> Unit,
     onSaveModels: (String, Map<String, ModelConfiguration>) -> Unit,
     onDeleteProvider: (String) -> Unit,
@@ -57,7 +63,7 @@ fun ProviderScreen(
     onFetchModels: (suspend (LlmProviderInfo) -> List<String>)? = null,
     onBack: () -> Unit
 ) {
-    var isGridView by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     var editingProvider by remember { mutableStateOf<LlmProviderInfo?>(null) }
     var isCreatingNew by remember { mutableStateOf(false) }
     var deletingProviderId by remember { mutableStateOf<String?>(null) }
@@ -84,8 +90,13 @@ fun ProviderScreen(
             },
             onSave = { saved ->
                 onSaveProvider(saved)
-                editingProvider = null
+                editingProvider = saved
                 isCreatingNew = false
+                Toast.makeText(
+                    context,
+                    context.getString(org.starfall.multigateway.R.string.provider_saved),
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         )
         return
@@ -113,20 +124,16 @@ fun ProviderScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { isGridView = !isGridView }) {
+                    IconButton(onClick = { onToggleGridView?.invoke(!isGridView) }) {
                         Icon(
-                            imageVector = if (isGridView) Icons.Outlined.ViewList else Icons.Outlined.GridView,
+                            imageVector = if (isGridView) Icons.Default.List else Icons.Default.GridView,
                             contentDescription = if (isGridView) "Switch to List View" else "Switch to Grid View"
                         )
                     }
+                    IconButton(onClick = { isCreatingNew = true }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Provider")
+                    }
                 }
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { isCreatingNew = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Add Provider") }
             )
         }
     ) { padding ->
@@ -153,41 +160,32 @@ fun ProviderScreen(
                         )
                     }
                 }
-            } else if (isGridView) {
+            } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 180.dp),
+                    columns = GridCells.Fixed(if (isGridView) 2 else 1),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(orderedProviders, key = { it.id }) { provider ->
                         val index = orderedProviders.indexOfFirst { it.id == provider.id }
-                        ProviderGridCard(
+                        ProviderUnifiedCard(
                             provider = provider,
-                            modifier = Modifier.longPressReorder(
-                                index = index, itemCount = orderedProviders.size, columns = 2,
-                                onMove = { from, to -> orderedProviders = orderedProviders.moved(from, to) },
-                                onDrop = { onReorderProviders(orderedProviders.map { it.id }) }
-                            ),
-                            onEdit = { editingProvider = provider },
-                            onDelete = { deletingProviderId = provider.id }
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(orderedProviders, key = { it.id }) { provider ->
-                        val index = orderedProviders.indexOfFirst { it.id == provider.id }
-                        ProviderListCard(
-                            provider = provider,
-                            modifier = Modifier.longPressReorder(
-                                index = index, itemCount = orderedProviders.size, columns = 1,
-                                onMove = { from, to -> orderedProviders = orderedProviders.moved(from, to) },
-                                onDrop = { onReorderProviders(orderedProviders.map { it.id }) }
-                            ),
+                            isGrid = isGridView,
+                            modifier = Modifier
+                                .animateItem(
+                                    placementSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    )
+                                )
+                                .longPressReorder(
+                                    index = index,
+                                    itemCount = orderedProviders.size,
+                                    columns = if (isGridView) 2 else 1,
+                                    onMove = { from, to -> orderedProviders = orderedProviders.moved(from, to) },
+                                    onDrop = { onReorderProviders(orderedProviders.map { it.id }) }
+                                ),
                             onEdit = { editingProvider = provider },
                             onDelete = { deletingProviderId = provider.id }
                         )
@@ -224,144 +222,97 @@ fun ProviderScreen(
 }
 
 @Composable
-fun ProviderListCard(
+fun ProviderUnifiedCard(
     provider: LlmProviderInfo,
+    isGrid: Boolean,
     modifier: Modifier = Modifier,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    val shapeCorner by animateDpAsState(
+        targetValue = if (isGrid) 20.dp else 16.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
+        label = "providerCorner"
+    )
+
+    Surface(
+        shape = RoundedCornerShape(shapeCorner),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = modifier
             .fillMaxWidth()
             .clickable { onEdit() }
     ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                modifier = Modifier.size(44.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Outlined.Hub,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = provider.name,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
-                    ) {
-                        Text(
-                            text = provider.type.displayName,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-                Text(
-                    text = provider.baseUrl,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                    color = MaterialTheme.colorScheme.outline,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            ItemOverflowMenu(
-                onEdit = onEdit,
-                onDelete = onDelete,
-                deleteColor = MaterialTheme.colorScheme.error
-            )
-        }
-    }
-}
-
-@Composable
-fun ProviderGridCard(
-    provider: LlmProviderInfo,
-    modifier: Modifier = Modifier,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onEdit() }
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        MorphingCardLayout(
+            isGrid = isGrid,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            icon = {
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                    modifier = Modifier.size(36.dp)
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                    modifier = Modifier.size(42.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Outlined.Hub,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
-
+            },
+            actions = {
                 ItemOverflowMenu(
                     onEdit = onEdit,
                     onDelete = onDelete,
                     deleteColor = MaterialTheme.colorScheme.error
                 )
+            },
+            content = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = provider.name,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                        ) {
+                            Text(
+                                text = provider.type.displayName,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        text = provider.baseUrl,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = MaterialTheme.colorScheme.outline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-
-            Text(
-                text = provider.name,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                text = provider.baseUrl,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                color = MaterialTheme.colorScheme.outline,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        )
     }
 }
 
@@ -458,13 +409,6 @@ fun ProviderEditScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize().imePadding(),
-        floatingActionButton = {
-            if (selectedTab == 1) {
-                FloatingActionButton(onClick = { showModelCatalog = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add models")
-                }
-            }
-        },
         topBar = {
             TopAppBar(
                 title = { Text(if (isNew) "Add Provider" else "Provider Edit") },
@@ -487,6 +431,19 @@ fun ProviderEditScreen(
                                 ))
                             }
                         ) { Text("Save") }
+                    } else {
+                        IconButton(onClick = { configuringModel = "" }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Edit,
+                                contentDescription = "Thêm model thủ công"
+                            )
+                        }
+                        IconButton(onClick = { showModelCatalog = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.FormatListBulleted,
+                                contentDescription = "Mở danh sách model"
+                            )
+                        }
                     }
                 }
             )
@@ -514,83 +471,46 @@ fun ProviderEditScreen(
                     modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Provider Type and Authorization Type in a row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    // Provider Type Dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = typeExpanded,
+                        onExpandedChange = { typeExpanded = !typeExpanded },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        // Provider Type Dropdown
-                        ExposedDropdownMenuBox(
+                        OutlinedTextField(
+                            value = type.displayName,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Provider Type") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+
+                        ExposedDropdownMenu(
                             expanded = typeExpanded,
-                            onExpandedChange = { typeExpanded = !typeExpanded },
-                            modifier = Modifier.weight(1f)
+                            onDismissRequest = { typeExpanded = false }
                         ) {
-                            OutlinedTextField(
-                                value = type.displayName,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Provider Type") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth()
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = typeExpanded,
-                                onDismissRequest = { typeExpanded = false }
-                            ) {
-                                ProviderType.entries.forEach { t ->
-                                    DropdownMenuItem(
-                                        text = { Text(t.displayName) },
-                                        onClick = {
-                                            if (t != type) {
-                                                val updated = initialProvider.copy(
-                                                    name = name,
-                                                    type = type,
-                                                    baseUrl = baseUrl
-                                                ).withType(t)
-                                                name = updated.name
-                                                baseUrl = updated.baseUrl
-                                                type = updated.type
-                                                val defaultAuth = t.defaultAuthorization()
-                                                authMethod = defaultAuth.method
-                                                authName = defaultAuth.key.orEmpty()
-                                                apiKey = defaultAuth.value.orEmpty()
-                                            }
-                                            typeExpanded = false
+                            ProviderType.entries.forEach { t ->
+                                DropdownMenuItem(
+                                    text = { Text(t.displayName) },
+                                    onClick = {
+                                        if (t != type) {
+                                            val updated = initialProvider.copy(
+                                                name = name,
+                                                type = type,
+                                                baseUrl = baseUrl
+                                            ).withType(t)
+                                            name = updated.name
+                                            baseUrl = updated.baseUrl
+                                            type = updated.type
+                                            val defaultAuth = t.defaultAuthorization()
+                                            authMethod = defaultAuth.method
+                                            authName = defaultAuth.key.orEmpty()
+                                            apiKey = defaultAuth.value.orEmpty()
                                         }
-                                    )
-                                }
-                            }
-                        }
-
-                        // Authorization Type Dropdown
-                        ExposedDropdownMenuBox(
-                            expanded = authExpanded,
-                            onExpandedChange = { authExpanded = !authExpanded },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            OutlinedTextField(
-                                value = authMethod.displayName(),
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Authorization") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = authExpanded) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth()
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = authExpanded,
-                                onDismissRequest = { authExpanded = false }
-                            ) {
-                                AuthMethod.entries.forEach { method ->
-                                    DropdownMenuItem(
-                                        text = { Text(method.displayName()) },
-                                        onClick = {
-                                            authMethod = method
-                                            authExpanded = false
-                                        }
-                                    )
-                                }
+                                        typeExpanded = false
+                                    }
+                                )
                             }
                         }
                     }
@@ -647,6 +567,37 @@ fun ProviderEditScreen(
 
                     if (baseUrl.trim().startsWith("http://", true)) {
                         Text("HTTP is unencrypted. API keys, headers and messages can be read on the network. Use HTTPS outside a trusted local network.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    // Authorization Dropdown (positioned directly above API key input)
+                    ExposedDropdownMenuBox(
+                        expanded = authExpanded,
+                        onExpandedChange = { authExpanded = !authExpanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = authMethod.displayName(),
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Authorization") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = authExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = authExpanded,
+                            onDismissRequest = { authExpanded = false }
+                        ) {
+                            AuthMethod.entries.forEach { method ->
+                                DropdownMenuItem(
+                                    text = { Text(method.displayName()) },
+                                    onClick = {
+                                        authMethod = method
+                                        authExpanded = false
+                                    }
+                                )
+                            }
+                        }
                     }
 
                     if (authMethod in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) {
@@ -738,7 +689,35 @@ fun ProviderEditScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (models.isEmpty()) {
-                        item { Text("No models added. Tap + to browse available models.") }
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    "Chưa có model nào trong provider này.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    OutlinedButton(onClick = { configuringModel = "" }) {
+                                        Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Thêm thủ công")
+                                    }
+                                    Button(onClick = { showModelCatalog = true }) {
+                                        Icon(Icons.Outlined.FormatListBulleted, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Mở danh sách model")
+                                    }
+                                }
+                            }
+                        }
                     }
                     items(models, key = { it }) { modelId ->
                         val selectedForDelete = selectedModelForDelete == modelId
@@ -917,7 +896,7 @@ private fun ProviderModelCatalogSheet(
     val visibleModels = (models + selectedModels).distinct().filter { it.contains(query, ignoreCase = true) }
     val allVisibleSelected = visibleModels.isNotEmpty() && visibleModels.all { it in selectedModels }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).imePadding().padding(horizontal = 16.dp)) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight().imePadding().padding(horizontal = 16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,

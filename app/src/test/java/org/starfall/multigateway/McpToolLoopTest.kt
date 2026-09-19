@@ -1,17 +1,24 @@
 package org.starfall.multigateway
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.toList
 import kotlinx.serialization.json.*
 import okhttp3.mockwebserver.*
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import org.starfall.multigateway.data.model.*
 import org.starfall.multigateway.data.service.*
 import org.starfall.multigateway.data.tools.*
 import java.nio.file.Files
 
+@RunWith(RobolectricTestRunner::class)
 class McpToolLoopTest {
+    private val context: Context get() = ApplicationProvider.getApplicationContext()
+
     @Test fun allProviderAdaptersExecuteMcpAndReturnToolResultToModel() = runBlocking {
         for(type in ProviderType.entries) {
             val server=MockWebServer();server.start()
@@ -66,7 +73,7 @@ class McpToolLoopTest {
                 val p=LlmProviderInfo("p","P",type,baseUrl=server.url(if(type==ProviderType.GOOGLE)"/v1beta" else if(type==ProviderType.OLLAMA)"/api" else "/v1").toString(),config=ProviderConfiguration(supportStream=false,modelConfigs=mapOf("chat" to ModelConfiguration(supportsToolCalls=true))))
                 val m=McpInfo("s","MCP",McpProtocol.STREAMABLE_HTTP,server.url("/mcp").toString())
                 val http=ToolHttp(ToolFiles(root))
-                val events=ToolChat(http,McpService(http),LlmService()).generate(p,"chat",listOf(StoredMessage("u",ChatRole.USER,listOf(MessageVersion("Call echo")))),"",listOf(m),listOf(p),{mapOf("s" to McpAccess(true))},{ToolSettings()}).toList()
+                val events=ToolChat(http,McpService(http),LlmService(context)).generate(p,"chat",listOf(StoredMessage("u",ChatRole.USER,listOf(MessageVersion("Call echo")))),"",listOf(m),listOf(p),{mapOf("s" to McpAccess(true))},{ToolSettings()}).toList()
                 assertEquals(type.name,1,calls);assertEquals(type.name,2,rounds)
                 assertEquals(type.name,"done",events.filterIsInstance<GenerationEvent.Text>().joinToString(""){it.text})
                 assertEquals(type.name,"success",events.filterIsInstance<GenerationEvent.Tool>().last().activity.status)

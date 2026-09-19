@@ -170,4 +170,19 @@ class ConfigurationViewModel(
         viewModelScope.launch { speechRepo.reorderServices(ids) }
     }
 
+    fun setShowProfilesAsGrid(isGrid: Boolean) {
+        viewModelScope.launch { prefsRepo.setShowProfilesAsGrid(isGrid) }
+    }
+
+    fun setShowProvidersAsGrid(isGrid: Boolean) {
+        viewModelScope.launch { prefsRepo.setShowProvidersAsGrid(isGrid) }
+    }
+
+    fun setShowMcpAsGrid(isGrid: Boolean) {
+        viewModelScope.launch { prefsRepo.setShowMcpAsGrid(isGrid) }
+    }
+
+    fun setShowSpeechAsGrid(isGrid: Boolean) {
+        viewModelScope.launch { prefsRepo.setShowSpeechAsGrid(isGrid) }
+    }
 }

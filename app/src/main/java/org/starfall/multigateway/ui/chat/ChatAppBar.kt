@@ -98,8 +98,8 @@ fun ChatAppBar(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Outlined.Settings,
-                        contentDescription = "Open settings",
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Open menu",
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(22.dp)
                     )

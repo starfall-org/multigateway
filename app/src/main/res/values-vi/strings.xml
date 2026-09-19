@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MultiGateway</string>
+    <string name="thinking">Đang suy nghĩ</string>
+    <string name="thinking_streaming">Đang suy nghĩ...</string>
+    <string name="generating">Đang tạo phản hồi...</string>
+    <string name="chat_input_placeholder">Nhập tin nhắn...</string>
+    <string name="thought_process">Quá trình suy nghĩ</string>
+    <string name="collapse">Thu gọn</string>
+    <string name="expand">Mở rộng</string>
+    <string name="processed">Đã xử lý</string>
+    <string name="processed_in">Đã xử lý trong %1$s</string>
+    <string name="reasoning_completed">Đã hoàn thành suy nghĩ</string>
+    <string name="reasoning_completed_in">Đã hoàn thành suy nghĩ trong %1$s</string>
+    <string name="tool_executed">Đã thực thi công cụ</string>
+    <string name="tool_executed_in">Đã thực thi công cụ trong %1$s</string>
+    <string name="provider_saved">Đã lưu cấu hình</string>
+</resources>

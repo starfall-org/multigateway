@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import org.starfall.multigateway.data.model.ChatProfile
 import org.starfall.multigateway.data.model.ChatRole
@@ -61,6 +62,7 @@ fun ChatScreen(
     val listState = key(conversation?.id) { rememberLazyListState() }
     var followBottom by remember(conversation?.id) { mutableStateOf(true) }
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
     val messages = conversation?.messages ?: emptyList()
 
@@ -110,6 +112,14 @@ fun ChatScreen(
     }
     LaunchedEffect(chatError) {
         chatError?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
+    }
+    LaunchedEffect(conversation?.id) {
+        focusManager.clearFocus(force = true)
+    }
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
+            focusManager.clearFocus()
+        }
     }
 
     val topBarClearance = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 80.dp

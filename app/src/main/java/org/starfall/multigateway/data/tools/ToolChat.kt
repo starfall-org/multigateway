@@ -35,7 +35,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
         val tools = mutableListOf<ToolDefinition>()
         try {
             servers
-                .filter { access()[it.id]?.enabled == true && settings().quickMcp[it.id] != false }
+                .filter { (access()[it.id]?.enabled ?: true) && settings().quickMcp[it.id] != false }
                 .forEach { server ->
                     val activity = ToolActivity(UUID.randomUUID().toString(), "${server.name}: connect")
                     send(GenerationEvent.Tool(activity))

@@ -63,28 +63,32 @@ class DefaultDataInitializer(
             name = "OpenAI",
             type = ProviderType.OPENAI,
             baseUrl = "https://api.openai.com/v1",
-            auth = ProviderType.OPENAI.defaultAuthorization()
+            auth = ProviderType.OPENAI.defaultAuthorization(),
+            config = ProviderConfiguration(modelIds = emptyList())
         )
         val google = LlmProviderInfo(
             id = "google",
             name = "Google Gemini",
             type = ProviderType.GOOGLE,
             baseUrl = "https://generativelanguage.googleapis.com/v1beta",
-            auth = ProviderType.GOOGLE.defaultAuthorization()
+            auth = ProviderType.GOOGLE.defaultAuthorization(),
+            config = ProviderConfiguration(modelIds = emptyList())
         )
         val anthropic = LlmProviderInfo(
             id = "anthropic",
             name = "Anthropic",
             type = ProviderType.ANTHROPIC,
             baseUrl = "https://api.anthropic.com/v1",
-            auth = ProviderType.ANTHROPIC.defaultAuthorization()
+            auth = ProviderType.ANTHROPIC.defaultAuthorization(),
+            config = ProviderConfiguration(modelIds = emptyList())
         )
         val ollama = LlmProviderInfo(
             id = "ollama",
             name = "Ollama",
             type = ProviderType.OLLAMA,
             baseUrl = "https://ollama.com/api",
-            auth = ProviderType.OLLAMA.defaultAuthorization()
+            auth = ProviderType.OLLAMA.defaultAuthorization(),
+            config = ProviderConfiguration(modelIds = emptyList())
         )
 
         llmRepo.saveProvider(openAi)
@@ -92,7 +96,7 @@ class DefaultDataInitializer(
         llmRepo.saveProvider(anthropic)
         llmRepo.saveProvider(ollama)
 
-        prefsRepo.setSelectedModel("ollama", "llama3.2:latest")
+        prefsRepo.setSelectedModel("ollama", "")
     }
 
     private suspend fun initDefaultMcpServers() {
