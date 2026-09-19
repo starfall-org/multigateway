@@ -162,6 +162,14 @@ internal class ChatGeneration(
         return true
     }
 
+    fun updateConversation(transform: (Conversation) -> Conversation) {
+        val current = snapshot ?: return
+        val updated = transform(current)
+        snapshot = updated
+        publish(updated)
+        scope.launch { save(updated) }
+    }
+
     fun stop() { job?.cancel() }
     suspend fun stopAndJoin() { job?.cancelAndJoin() }
 }

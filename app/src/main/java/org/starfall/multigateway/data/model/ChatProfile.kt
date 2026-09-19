@@ -15,5 +15,6 @@ data class ChatProfile(
     val id: String,
     val name: String,
     val icon: String? = null,
-    val config: LlmChatConfig = LlmChatConfig()
+    val config: LlmChatConfig = LlmChatConfig(),
+    val sortOrder: Int = Int.MAX_VALUE
 )

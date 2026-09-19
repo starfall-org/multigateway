@@ -18,7 +18,7 @@ import org.starfall.multigateway.data.local.db.entities.*
         McpServerEntity::class,
         SpeechServiceEntity::class
     ],
-    version = 2,
+    version = 5,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,6 +33,29 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS speech_services (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, provider TEXT NOT NULL, voice TEXT NOT NULL, speed REAL NOT NULL, pitch REAL NOT NULL, apiKey TEXT NOT NULL)")
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE speech_services ADD COLUMN modelId TEXT")
+                db.execSQL("ALTER TABLE mcp_servers ADD COLUMN cachedToolsJson TEXT")
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf("chat_profiles", "llm_providers", "mcp_servers", "speech_services").forEach { table ->
+                    db.execSQL("ALTER TABLE $table ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("UPDATE $table SET sortOrder = rowid")
+                }
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE conversations ADD COLUMN summaryJson TEXT")
+                db.execSQL("ALTER TABLE conversations ADD COLUMN reasoningEffort TEXT")
             }
         }
 
@@ -65,7 +88,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "multigateway_db"
-                ).addMigrations(MIGRATION_1_2).addCallback(object : Callback() {
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).addCallback(object : Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) { encryptLegacySecrets(db) }
                 }).build()
                 INSTANCE = instance

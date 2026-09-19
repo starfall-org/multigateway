@@ -4,11 +4,16 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 enum class ProviderType(val displayName: String, val defaultName: String, val defaultBaseUrl: String) {
-    @SerialName("openai") OPENAI("Chat Completions", "OpenAI", "https://api.openai.com/v1"),
-    @SerialName("openai_responses") OPENAI_RESPONSES("OpenAI Responses", "OpenAI Responses", "https://api.openai.com/v1"),
-    @SerialName("google") GOOGLE("Google", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta"),
-    @SerialName("anthropic") ANTHROPIC("Anthropic", "Anthropic", "https://api.anthropic.com/v1"),
-    @SerialName("ollama") OLLAMA("Ollama", "Ollama", "https://ollama.com/api");
+    @SerialName("openai")
+    OPENAI("Chat Completions", "OpenAI", "https://api.openai.com/v1"),
+    @SerialName("openai_responses")
+    OPENAI_RESPONSES("OpenAI Responses", "OpenAI Responses", "https://api.openai.com/v1"),
+    @SerialName("google")
+    GOOGLE("Google", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta"),
+    @SerialName("anthropic")
+    ANTHROPIC("Anthropic", "Anthropic", "https://api.anthropic.com/v1"),
+    @SerialName("ollama")
+    OLLAMA("Ollama", "Ollama", "https://ollama.com/api");
 
     val isOpenAi: Boolean get() = this == OPENAI || this == OPENAI_RESPONSES
 }
@@ -21,10 +26,14 @@ fun LlmProviderInfo.withType(newType: ProviderType): LlmProviderInfo = copy(
 )
 
 enum class AuthMethod {
-    @SerialName("query_param") QUERY_PARAM,
-    @SerialName("bearer_token") BEARER_TOKEN,
-    @SerialName("custom_header") CUSTOM_HEADER,
-    @SerialName("other") OTHER
+    @SerialName("query_param")
+    QUERY_PARAM,
+    @SerialName("bearer_token")
+    BEARER_TOKEN,
+    @SerialName("custom_header")
+    CUSTOM_HEADER,
+    @SerialName("other")
+    OTHER
 }
 
 @Serializable
@@ -40,8 +49,10 @@ data class Authorization(
 fun ProviderType.defaultAuthorization(): Authorization = when (this) {
     ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES, ProviderType.ANTHROPIC ->
         Authorization(method = AuthMethod.BEARER_TOKEN, value = "")
+
     ProviderType.GOOGLE ->
         Authorization(method = AuthMethod.QUERY_PARAM, key = "key", value = "")
+
     ProviderType.OLLAMA ->
         Authorization(method = AuthMethod.OTHER, value = "")
 }
@@ -69,7 +80,8 @@ data class LlmProviderInfo(
     val auth: Authorization = Authorization(),
     val icon: String? = null,
     val baseUrl: String,
-    val config: ProviderConfiguration = ProviderConfiguration()
+    val config: ProviderConfiguration = ProviderConfiguration(),
+    val sortOrder: Int = Int.MAX_VALUE
 )
 
 @Serializable

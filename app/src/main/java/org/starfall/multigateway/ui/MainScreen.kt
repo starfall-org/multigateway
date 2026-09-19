@@ -52,11 +52,15 @@ fun MainScreen(
     val isGenerating: Boolean by viewModel.isGenerating.collectAsStateWithLifecycle()
     val generatingConversationId by viewModel.generatingConversationId.collectAsStateWithLifecycle()
     val chatError by viewModel.chatError.collectAsStateWithLifecycle()
+    val summaryProgress by viewModel.summaryProgress.collectAsStateWithLifecycle()
     val appPrefs: AppPreferences by settingsViewModel.preferences.collectAsStateWithLifecycle()
     val profiles: List<ChatProfile> by viewModel.profiles.collectAsStateWithLifecycle()
     val providers: List<LlmProviderInfo> by viewModel.providers.collectAsStateWithLifecycle()
     val mcpServers: List<McpInfo> by viewModel.mcpServers.collectAsStateWithLifecycle()
     val speechServices: List<SpeechService> by configurationViewModel.speechServices.collectAsStateWithLifecycle()
+    val mcpToolsCache by configurationViewModel.mcpToolsCache.collectAsStateWithLifecycle()
+    val mcpToolErrors by configurationViewModel.mcpToolErrors.collectAsStateWithLifecycle()
+    val mcpToolsLoading by configurationViewModel.mcpToolsLoading.collectAsStateWithLifecycle()
 
     val toolSettings by viewModel.toolSettings.collectAsStateWithLifecycle()
 
@@ -138,8 +142,8 @@ fun MainScreen(
                                 onRegenerate = { id ->
                                     viewModel.regenerateMessage(id)
                                 },
-                                onEditMessage = { id, content ->
-                                    viewModel.editMessage(id, content)
+                                onEditMessage = { id, content, files ->
+                                    viewModel.editMessage(id, content, files)
                                 },
                                 onDeleteMessage = { id ->
                                     viewModel.deleteMessage(id)
@@ -153,6 +157,11 @@ fun MainScreen(
                                 onSelectModel = { provId, modelId ->
                                     viewModel.selectModel(provId, modelId)
                                 },
+                                summaryProgress = summaryProgress,
+                                onSetReasoningEffort = viewModel::setConversationReasoningEffort,
+                                onStartConversationSummary = viewModel::startConversationSummary,
+                                onSummaryRoleChange = viewModel::setSummaryRole,
+                                onDeleteSummary = viewModel::deleteConversationSummary,
                                 onReadMessage = { text ->
                                     viewModel.speakText(text)
                                 },
@@ -167,11 +176,13 @@ fun MainScreen(
                         ProfileScreen(
                             profiles = profiles,
                             mcpServers = mcpServers,
-                            discoverTools = { configurationViewModel.discoverTools(it) },
+                            mcpToolsCache = mcpToolsCache,
+                            toolSettings = toolSettings,
                             selectedProfileId = appPrefs.selectedProfileId,
                             onSelectProfile = { viewModel.selectProfile(it) },
                             onSaveProfile = { configurationViewModel.saveProfile(it) },
                             onDeleteProfile = { configurationViewModel.deleteProfile(it) },
+                            onReorderProfiles = configurationViewModel::reorderProfiles,
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -182,6 +193,7 @@ fun MainScreen(
                             onSaveProvider = { configurationViewModel.saveProvider(it) },
                             onSaveModels = { providerId, models -> configurationViewModel.saveProviderModels(providerId, models) },
                             onDeleteProvider = { configurationViewModel.deleteProvider(it) },
+                            onReorderProviders = configurationViewModel::reorderProviders,
                             onTestConnection = { prov, modelId -> configurationViewModel.testConnection(prov, modelId) },
                             onFetchModels = { provider -> configurationViewModel.fetchProviderModels(provider) },
                             onBack = { navController.popBackStack() }
@@ -191,9 +203,15 @@ fun MainScreen(
                     composable(AppDestination.MCP.route) {
                         McpScreen(
                             mcpServers = mcpServers,
+                            toolsCache = mcpToolsCache,
+                            toolErrors = mcpToolErrors,
+                            toolsLoading = mcpToolsLoading,
+                            toolSettings = toolSettings,
+                            onSetToolEnabled = viewModel::setMcpToolEnabled,
                             onSaveMcpServer = { configurationViewModel.saveMcpServer(it) },
                             onDeleteMcpServer = { configurationViewModel.deleteMcpServer(it) },
-                            onDiscoverTools = { configurationViewModel.discoverTools(it) },
+                            onReorderMcpServers = configurationViewModel::reorderMcpServers,
+                            onRefreshTools = { configurationViewModel.refreshMcpTools(it) },
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -201,11 +219,13 @@ fun MainScreen(
                     composable(AppDestination.SPEECH.route) {
                         SpeechScreen(
                             speechServices = speechServices,
+                            providers = providers,
+                            selectedSpeechServiceId = appPrefs.selectedSpeechServiceId,
+                            onSelectService = viewModel::selectSpeechService,
                             onSaveService = { configurationViewModel.saveSpeechService(it) },
                             onDeleteService = { configurationViewModel.deleteSpeechService(it) },
-                            onTestVoice = { text, speed, pitch ->
-                                viewModel.testVoice(text, speed, pitch)
-                            },
+                            onReorderServices = configurationViewModel::reorderSpeechServices,
+                            onTestVoice = viewModel::testVoice,
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -256,16 +276,21 @@ fun MainScreen(
                     }
 
                     composable(AppDestination.MENU.route) {
+                        fun navigateFromMenu(destination: AppDestination) {
+                            navController.navigate(destination.route) {
+                                launchSingleTop = true
+                            }
+                        }
                         MenuView(
                             selectedProfile = activeProfile,
-                            onNavigateToProfiles = { navigate(AppDestination.PROFILES) },
-                            onEditProfile = { navigate(AppDestination.PROFILES) },
-                            onNavigateToProviders = { navigate(AppDestination.PROVIDERS) },
-                            onNavigateToMcp = { navigate(AppDestination.MCP) },
-                            onNavigateToSpeech = { navigate(AppDestination.SPEECH) },
-                            onNavigateToSystemTools = { navigate(AppDestination.SYSTEM_TOOLS) },
-                            onNavigateToStorage = { navigate(AppDestination.STORAGE) },
-                            onNavigateToSettings = { navigate(AppDestination.SETTINGS) },
+                            onNavigateToProfiles = { navigateFromMenu(AppDestination.PROFILES) },
+                            onEditProfile = { navigateFromMenu(AppDestination.PROFILES) },
+                            onNavigateToProviders = { navigateFromMenu(AppDestination.PROVIDERS) },
+                            onNavigateToMcp = { navigateFromMenu(AppDestination.MCP) },
+                            onNavigateToSpeech = { navigateFromMenu(AppDestination.SPEECH) },
+                            onNavigateToSystemTools = { navigateFromMenu(AppDestination.SYSTEM_TOOLS) },
+                            onNavigateToStorage = { navigateFromMenu(AppDestination.STORAGE) },
+                            onNavigateToSettings = { navigateFromMenu(AppDestination.SETTINGS) },
                             onCloseMenu = { navController.popBackStack() },
                             modifier = Modifier.fillMaxSize()
                         )

@@ -20,7 +20,47 @@ class ConfigurationViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppPreferences())
     val speechServices = speechRepo.allServices
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    suspend fun discoverTools(server: McpInfo) = mcpRepo.discoverTools(server)
+
+    private val _mcpToolsCache = MutableStateFlow<Map<String, List<ToolDefinition>>>(emptyMap())
+    val mcpToolsCache: StateFlow<Map<String, List<ToolDefinition>>> = _mcpToolsCache.asStateFlow()
+
+    private val _mcpToolErrors = MutableStateFlow<Map<String, String>>(emptyMap())
+    val mcpToolErrors: StateFlow<Map<String, String>> = _mcpToolErrors.asStateFlow()
+
+    private val _mcpToolsLoading = MutableStateFlow<Set<String>>(emptySet())
+    val mcpToolsLoading: StateFlow<Set<String>> = _mcpToolsLoading.asStateFlow()
+
+    suspend fun discoverTools(server: McpInfo): List<ToolDefinition> =
+        _mcpToolsCache.value[server.id]
+            ?: server.cachedTools
+            ?: refreshMcpTools(server).getOrThrow()
+
+    suspend fun refreshMcpTools(server: McpInfo): Result<List<ToolDefinition>> {
+        _mcpToolsLoading.update { it + server.id }
+        return try {
+            val tools = mcpRepo.discoverTools(server)
+            mcpRepo.saveCachedTools(server.id, tools)
+            _mcpToolsCache.update { it + (server.id to tools) }
+            _mcpToolErrors.update { it - server.id }
+            Result.success(tools)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (error: Throwable) {
+            val fullError = error.stackTraceToString().takeIf { it.isNotBlank() }
+                ?: error.localizedMessage
+                ?: "Unable to load tools"
+            _mcpToolErrors.update { it + (server.id to fullError) }
+            Result.failure(error)
+        } finally {
+            _mcpToolsLoading.update { it - server.id }
+        }
+    }
+
+    fun clearMcpToolsState(serverId: String) {
+        _mcpToolsCache.update { it - serverId }
+        _mcpToolErrors.update { it - serverId }
+        _mcpToolsLoading.update { it - serverId }
+    }
 
     fun saveProfile(profile: ChatProfile) {
         viewModelScope.launch {
@@ -92,15 +132,16 @@ class ConfigurationViewModel(
     fun saveMcpServer(server: McpInfo) {
         viewModelScope.launch {
             mcpRepo.saveServer(server)
+            refreshMcpTools(server)
         }
     }
 
     fun deleteMcpServer(serverId: String) {
         viewModelScope.launch {
             mcpRepo.deleteServer(serverId)
+            clearMcpToolsState(serverId)
         }
     }
-
     fun saveSpeechService(service: SpeechService) {
         viewModelScope.launch {
             speechRepo.saveService(service)
@@ -111,6 +152,22 @@ class ConfigurationViewModel(
         viewModelScope.launch {
             speechRepo.deleteService(serviceId)
         }
+    }
+
+    fun reorderProfiles(ids: List<String>) {
+        viewModelScope.launch { profileRepo.reorderProfiles(ids) }
+    }
+
+    fun reorderProviders(ids: List<String>) {
+        viewModelScope.launch { llmRepo.reorderProviders(ids) }
+    }
+
+    fun reorderMcpServers(ids: List<String>) {
+        viewModelScope.launch { mcpRepo.reorderServers(ids) }
+    }
+
+    fun reorderSpeechServices(ids: List<String>) {
+        viewModelScope.launch { speechRepo.reorderServices(ids) }
     }
 
 }

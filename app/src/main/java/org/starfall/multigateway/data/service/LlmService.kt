@@ -1,5 +1,6 @@
 package org.starfall.multigateway.data.service
 
+import android.content.Context
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -11,10 +12,12 @@ import io.ktor.utils.io.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
 import org.starfall.multigateway.data.model.*
+import java.util.Base64
 
-class LlmService {
+class LlmService(context: Context) {
 
-    private val sdk = OfficialLlmSdk()
+    private val attachments = AttachmentResolver(context)
+    private val sdk = OfficialLlmSdk(attachments)
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -196,45 +199,85 @@ class LlmService {
         }
     }
 
+    private fun filterAttachmentsForProvider(
+        provider: LlmProviderInfo,
+        modelConfig: ModelConfiguration,
+        messages: List<StoredMessage>
+    ): List<StoredMessage> = messages.map { message ->
+        if (message.files.isEmpty()) return@map message
+        val allowedFiles = message.files.filter { reference ->
+            val meta = attachments.metadata(reference) ?: return@filter false
+            when (provider.type) {
+                ProviderType.GOOGLE -> when {
+                    meta.isImage -> modelConfig.supportsVision
+                    meta.isVideo -> modelConfig.supportsVideoInput
+                    else -> true
+                }
+                ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> when {
+                    meta.isImage -> modelConfig.supportsVision
+                    else -> true
+                }
+                ProviderType.ANTHROPIC -> when {
+                    meta.isImage -> modelConfig.supportsVision
+                    meta.isPdf || meta.isText -> true
+                    else -> false
+                }
+                ProviderType.OLLAMA -> meta.isImage && modelConfig.supportsVision
+            }
+        }
+        if (allowedFiles == message.files) return@map message
+        val versions = message.versions.toMutableList()
+        if (versions.isNotEmpty()) {
+            val index = message.activeVersionIndex.coerceIn(0, versions.lastIndex)
+            versions[index] = versions[index].copy(files = allowedFiles)
+        }
+        message.copy(versions = versions)
+    }
+
     fun streamEvents(
         provider: LlmProviderInfo,
         modelName: String,
         messages: List<StoredMessage>,
-        systemPrompt: String = ""
+        systemPrompt: String = "",
+        maxOutputTokens: Int? = null
     ): Flow<GenerationEvent> = flow {
         val modelConfig = provider.config.modelConfigs[modelName] ?: ModelConfiguration()
         val requestProvider = provider.copy(config = provider.config.copy(supportStream = provider.streamEnabledFor(modelName)))
+        val requestMessages = filterAttachmentsForProvider(requestProvider, modelConfig, messages)
         val temperature = modelConfig.temperature
         val topP = modelConfig.topP
         val topK = modelConfig.topK
-        val maxTokens = provider.config.maxTokens
+        val maxTokens = maxOutputTokens
+            ?.coerceAtLeast(1)
+            ?.let { minOf(it, provider.config.maxTokens) }
+            ?: provider.config.maxTokens
         when (provider.type) {
             ProviderType.OPENAI -> emitAll(
                 sdk.streamOpenAi(
-                    requestProvider, modelName, messages, systemPrompt,
+                    requestProvider, modelName, requestMessages, systemPrompt,
                     temperature, topP, maxTokens, modelConfig.reasoningEffort, modelConfig.sendThinkingContent
                 )
             )
             ProviderType.OPENAI_RESPONSES -> emitAll(
                 sdk.streamResponses(
-                    requestProvider, modelName, messages, systemPrompt,
+                    requestProvider, modelName, requestMessages, systemPrompt,
                     temperature, topP, maxTokens, modelConfig.reasoningEffort, modelConfig.sendThinkingContent
                 )
             )
             ProviderType.ANTHROPIC -> emitAll(
                 sdk.streamAnthropic(
-                    requestProvider, modelName, messages, systemPrompt,
+                    requestProvider, modelName, requestMessages, systemPrompt,
                     temperature, topP, maxTokens, topK, modelConfig.sendThinkingContent
                 )
             )
             ProviderType.GOOGLE -> emitAll(
                 sdk.streamGoogle(
-                    requestProvider, modelName, messages, systemPrompt,
+                    requestProvider, modelName, requestMessages, systemPrompt,
                     temperature, topP, maxTokens, topK, modelConfig.sendThinkingContent
                 )
             )
             ProviderType.OLLAMA -> streamOllama(
-                requestProvider, modelName, messages, systemPrompt,
+                requestProvider, modelName, requestMessages, systemPrompt,
                 temperature, topP, maxTokens, topK
             ).collect { emit(GenerationEvent.Text(it)) }
         }
@@ -244,8 +287,9 @@ class LlmService {
         provider: LlmProviderInfo,
         modelName: String,
         messages: List<StoredMessage>,
-        systemPrompt: String = ""
-    ): Flow<String> = streamEvents(provider, modelName, messages, systemPrompt)
+        systemPrompt: String = "",
+        maxOutputTokens: Int? = null
+    ): Flow<String> = streamEvents(provider, modelName, messages, systemPrompt, maxOutputTokens)
         .transform { event ->
             if (event is GenerationEvent.Text) emit(event.text)
         }
@@ -273,6 +317,14 @@ class LlmService {
             ollamaMessages.add(buildJsonObject {
                 put("role", if (message.role == ChatRole.MODEL) "assistant" else "user")
                 put("content", message.content)
+                val images = message.files.mapNotNull { reference ->
+                    val meta = attachments.metadata(reference) ?: return@mapNotNull null
+                    if (!meta.isImage) return@mapNotNull null
+                    attachments.readBytes(reference)?.let { Base64.getEncoder().encodeToString(it) }
+                }
+                if (images.isNotEmpty()) {
+                    put("images", JsonArray(images.map(::JsonPrimitive)))
+                }
             })
         }
 

@@ -8,7 +8,8 @@ import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.Summarize
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,6 +24,8 @@ fun FilesActionSheet(
     onPickImage: () -> Unit,
     onPickDocument: () -> Unit,
     onTakePhoto: () -> Unit,
+    onOpenReasoningEffort: () -> Unit,
+    onOpenConversationSummary: () -> Unit,
     onOpenTools: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -74,20 +77,20 @@ fun FilesActionSheet(
             Spacer(modifier = Modifier.height(28.dp))
 
             AddActionRow(
-                icon = Icons.Outlined.Image,
-                title = "Image",
-                subtitle = "Create and edit images",
+                icon = Icons.Outlined.Psychology,
+                title = "Reasoning Effort",
+                subtitle = "Choose how much reasoning the model should use",
                 onClick = {
-                    onOpenTools()
+                    onOpenReasoningEffort()
                     onDismiss()
                 }
             )
             AddActionRow(
-                icon = Icons.Outlined.Videocam,
-                title = "Video",
-                subtitle = "Create video",
+                icon = Icons.Outlined.Summarize,
+                title = "Conversation Summary",
+                subtitle = "Compress earlier context into a summary",
                 onClick = {
-                    onOpenTools()
+                    onOpenConversationSummary()
                     onDismiss()
                 }
             )

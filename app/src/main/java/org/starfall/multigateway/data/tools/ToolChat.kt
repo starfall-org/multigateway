@@ -9,6 +9,18 @@ import java.util.UUID
 
 /** Native structured tool calls, bounded rounds, no executable text extracted from answers. */
 class ToolChat(private val http: ToolHttp, private val mcp: McpService, private val llm: LlmService) {
+    suspend fun completeText(
+        provider: LlmProviderInfo,
+        model: String,
+        messages: List<StoredMessage>,
+        prompt: String,
+        maxOutputTokens: Int? = null
+    ): String {
+        val output = StringBuilder()
+        llm.streamContent(provider, model, messages, prompt, maxOutputTokens).collect { output.append(it) }
+        return output.toString()
+    }
+
     fun generate(
         provider: LlmProviderInfo,
         model: String,
@@ -31,7 +43,12 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                         val session = mcp.session(server)
                         sessions[server.id] = session
                         tools += session.tools().filter {
-                            toolAllowed(access()[server.id], settings().quickMcp[server.id], it.originalName)
+                            toolAllowed(
+                                access()[server.id],
+                                settings().quickMcp[server.id],
+                                globalMcpToolEnabled(settings(), server.id, it.originalName),
+                                it.originalName
+                            )
                         }
                         send(GenerationEvent.Tool(activity.copy(status = "success", summary = "Tools ready")))
                     } catch (e: CancellationException) {
@@ -103,7 +120,12 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                         val config = settings().system[tool.name]
                         config?.enabled == true && systemMediaToolAvailable(tool.name, config, providers)
                     } else {
-                        toolAllowed(access()[tool.serverId], settings().quickMcp[tool.serverId], tool.originalName)
+                        toolAllowed(
+                            access()[tool.serverId],
+                            settings().quickMcp[tool.serverId],
+                            globalMcpToolEnabled(settings(), tool.serverId, tool.originalName),
+                            tool.originalName
+                        )
                     }
                 }
 
@@ -165,6 +187,7 @@ class ToolChat(private val http: ToolHttp, private val mcp: McpService, private 
                                 toolAllowed(
                                     access()[tool.serverId],
                                     settings().quickMcp[tool.serverId],
+                                    globalMcpToolEnabled(settings(), tool.serverId, tool.originalName),
                                     tool.originalName
                                 )
                             ) { "MCP tool disabled" }

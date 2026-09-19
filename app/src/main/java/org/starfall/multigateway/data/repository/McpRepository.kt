@@ -34,8 +34,17 @@ class McpRepository(private val db: AppDatabase, private val service: McpService
         dao.insertOrUpdate(modelToEntity(server))
     }
 
+    suspend fun saveCachedTools(serverId: String, tools: List<ToolDefinition>) {
+        val server = getById(serverId) ?: return
+        saveServer(server.copy(cachedTools = tools))
+    }
+
     suspend fun deleteServer(id: String) {
         dao.deleteById(id)
+    }
+
+    suspend fun reorderServers(ids: List<String>) {
+        ids.forEachIndexed { index, id -> dao.updateSortOrder(id, index) }
     }
 
     private fun entityToModel(entity: McpServerEntity): McpInfo {
@@ -59,7 +68,11 @@ class McpRepository(private val db: AppDatabase, private val service: McpService
             // Preserve obsolete server records for editing, but never treat a saved command as a URL.
             url = entity.url?.let(SecretCipher::decrypt).takeIf { savedProtocol != null },
             headers = persisted.headers,
-            auth = persisted.auth
+            auth = persisted.auth,
+            cachedTools = entity.cachedToolsJson?.let { raw ->
+                runCatching { json.decodeFromString<List<ToolDefinition>>(raw) }.getOrNull()
+            },
+            sortOrder = entity.sortOrder
         )
     }
 
@@ -71,7 +84,9 @@ class McpRepository(private val db: AppDatabase, private val service: McpService
             url = server.url?.let(SecretCipher::encrypt),
             headersJson = SecretCipher.encrypt(
                 json.encodeToString(McpPersistedHttpConfig(server.headers, server.auth))
-            )
+            ),
+            cachedToolsJson = server.cachedTools?.let { json.encodeToString(it) },
+            sortOrder = server.sortOrder
         )
     }
 }

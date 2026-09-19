@@ -1,4 +1,7 @@
 package org.starfall.multigateway.ui.mcp
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -13,21 +16,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,26 +45,41 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.*
 import org.starfall.multigateway.data.model.McpAuthMethod
 import org.starfall.multigateway.data.model.McpAuthorization
 import org.starfall.multigateway.data.model.McpInfo
 import org.starfall.multigateway.data.model.McpProtocol
 import org.starfall.multigateway.data.model.ToolDefinition
+import org.starfall.multigateway.data.model.ToolSettings
 import java.util.UUID
+import org.starfall.multigateway.ui.components.ItemOverflowMenu
+import org.starfall.multigateway.ui.components.longPressReorder
+import org.starfall.multigateway.ui.components.moved
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun McpScreen(
     mcpServers: List<McpInfo>,
+    toolsCache: Map<String, List<ToolDefinition>>,
+    toolErrors: Map<String, String>,
+    toolsLoading: Set<String>,
+    toolSettings: ToolSettings,
+    onSetToolEnabled: (String, String, Boolean) -> Unit,
     onSaveMcpServer: (McpInfo) -> Unit,
     onDeleteMcpServer: (String) -> Unit,
-    onDiscoverTools: suspend (McpInfo) -> List<ToolDefinition>,
+    onReorderMcpServers: (List<String>) -> Unit,
+    onRefreshTools: suspend (McpInfo) -> Result<List<ToolDefinition>>,
     onBack: () -> Unit
 ) {
     var editingServer by remember { mutableStateOf<McpInfo?>(null) }
     var isCreatingNew by remember { mutableStateOf(false) }
+    var newServerId by remember { mutableStateOf(UUID.randomUUID().toString()) }
     var deletingServerId by remember { mutableStateOf<String?>(null) }
+    var selectedToolError by remember { mutableStateOf<Pair<String, String>?>(null) }
     var isGridView by remember { mutableStateOf(false) }
+    var orderedServers by remember(mcpServers) { mutableStateOf(mcpServers) }
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -86,7 +109,10 @@ fun McpScreen(
                             contentDescription = "Toggle Grid/List"
                         )
                     }
-                    IconButton(onClick = { isCreatingNew = true }) {
+                    IconButton(onClick = {
+                        newServerId = UUID.randomUUID().toString()
+                        isCreatingNew = true
+                    }) {
                         Icon(Icons.Default.Add, contentDescription = "Add Server")
                     }
                 }
@@ -100,10 +126,7 @@ fun McpScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             if (mcpServers.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = Icons.Outlined.Extension,
@@ -111,14 +134,10 @@ fun McpScreen(
                             tint = MaterialTheme.colorScheme.outline,
                             modifier = Modifier.size(48.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(Modifier.height(12.dp))
+                        Text("No MCP Servers", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            text = "No MCP Servers",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Tap + to connect Model Context Protocol servers",
+                            "Tap + to connect Model Context Protocol servers",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -130,9 +149,19 @@ fun McpScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(mcpServers, key = { it.id }) { server ->
+                    items(orderedServers, key = { it.id }) { server ->
+                        val index = orderedServers.indexOfFirst { it.id == server.id }
                         McpGridCard(
                             server = server,
+                            modifier = Modifier.longPressReorder(
+                                index = index, itemCount = orderedServers.size, columns = 2,
+                                onMove = { from, to -> orderedServers = orderedServers.moved(from, to) },
+                                onDrop = { onReorderMcpServers(orderedServers.map { it.id }) }
+                            ),
+                            toolCount = (toolsCache[server.id] ?: server.cachedTools)?.size,
+                            toolError = toolErrors[server.id],
+                            loading = server.id in toolsLoading,
+                            onToolErrorClick = { error -> selectedToolError = server.name to error },
                             onEdit = { editingServer = server },
                             onDelete = { deletingServerId = server.id }
                         )
@@ -140,9 +169,19 @@ fun McpScreen(
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(mcpServers, key = { it.id }) { server ->
+                    items(orderedServers, key = { it.id }) { server ->
+                        val index = orderedServers.indexOfFirst { it.id == server.id }
                         McpListCard(
                             server = server,
+                            modifier = Modifier.longPressReorder(
+                                index = index, itemCount = orderedServers.size, columns = 1,
+                                onMove = { from, to -> orderedServers = orderedServers.moved(from, to) },
+                                onDrop = { onReorderMcpServers(orderedServers.map { it.id }) }
+                            ),
+                            toolCount = (toolsCache[server.id] ?: server.cachedTools)?.size,
+                            toolError = toolErrors[server.id],
+                            loading = server.id in toolsLoading,
+                            onToolErrorClick = { error -> selectedToolError = server.name to error },
                             onEdit = { editingServer = server },
                             onDelete = { deletingServerId = server.id }
                         )
@@ -150,9 +189,11 @@ fun McpScreen(
                 }
             }
         }
+    }
+
     if (editingServer != null || isCreatingNew) {
         val target = editingServer ?: McpInfo(
-            id = UUID.randomUUID().toString(),
+            id = newServerId,
             name = "",
             protocol = McpProtocol.STREAMABLE_HTTP,
             url = null,
@@ -162,7 +203,12 @@ fun McpScreen(
         AddOrEditMcpDialog(
             initialServer = target,
             isNew = isCreatingNew,
-            onDiscoverTools = onDiscoverTools,
+            onRefreshTools = onRefreshTools,
+            cachedTools = toolsCache[target.id] ?: target.cachedTools,
+            cachedError = toolErrors[target.id],
+            cachedLoading = target.id in toolsLoading,
+            toolSettings = toolSettings,
+            onSetToolEnabled = onSetToolEnabled,
             onDismiss = {
                 editingServer = null
                 isCreatingNew = false
@@ -174,6 +220,7 @@ fun McpScreen(
             }
         )
     }
+
     if (deletingServerId != null) {
         AlertDialog(
             onDismissRequest = { deletingServerId = null },
@@ -182,83 +229,143 @@ fun McpScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        deletingServerId?.let { onDeleteMcpServer(it) }
+                        deletingServerId?.let(onDeleteMcpServer)
                         deletingServerId = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
-                }
+                ) { Text("Delete") }
             },
             dismissButton = {
-                TextButton(onClick = { deletingServerId = null }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { deletingServerId = null }) { Text("Cancel") }
             }
         )
     }
-}
+
+    selectedToolError?.let { (serverName, error) ->
+        AlertDialog(
+            onDismissRequest = { selectedToolError = null },
+            title = { Text("Tool discovery error · $serverName") },
+            text = {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    SelectionContainer {
+                        Text(error, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("MCP tool discovery error", error))
+                    }
+                ) { Text("Copy") }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedToolError = null }) { Text("Close") }
+            }
+        )
+    }
 }
 
 @Composable
 fun McpListCard(
     server: McpInfo,
+    modifier: Modifier = Modifier,
+    toolCount: Int?,
+    toolError: String?,
+    loading: Boolean,
+    onToolErrorClick: (String) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        modifier = Modifier.fillMaxWidth()
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        modifier = modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
+        Column {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Extension,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = server.name,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Protocol: ${server.protocol}",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = server.url ?: "No endpoint",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                    color = MaterialTheme.colorScheme.outline,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Row {
-                IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Outlined.Edit, contentDescription = "Edit", modifier = Modifier.size(18.dp))
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Extension,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
-                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = server.name,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                    )
+                    Text(
+                        text = "Protocol: ${server.protocol}",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = server.url ?: "No endpoint",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = MaterialTheme.colorScheme.outline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    when {
+                        loading -> Text(
+                            "Loading tools…",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        toolError == null && toolCount != null -> Text(
+                            "$toolCount tools cached",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+                ItemOverflowMenu(
+                    onEdit = onEdit,
+                    onDelete = onDelete,
+                    deleteColor = MaterialTheme.colorScheme.error
+                )
+            }
+            if (toolError != null) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.error.copy(alpha = 0.25f))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onToolErrorClick(toolError) }
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Outlined.ErrorOutline,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Tool discovery failed · Tap for details",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
@@ -268,14 +375,19 @@ fun McpListCard(
 @Composable
 fun McpGridCard(
     server: McpInfo,
+    modifier: Modifier = Modifier,
+    toolCount: Int?,
+    toolError: String?,
+    loading: Boolean,
+    onToolErrorClick: (String) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        modifier = Modifier.fillMaxWidth()
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
@@ -297,31 +409,24 @@ fun McpGridCard(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                Row {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Outlined.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp))
-                    }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-                    }
-                }
+                ItemOverflowMenu(
+                    onEdit = onEdit,
+                    onDelete = onDelete,
+                    deleteColor = MaterialTheme.colorScheme.error
+                )
             }
-
             Spacer(modifier = Modifier.height(10.dp))
-
             Text(
                 text = server.name,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-
             Text(
                 text = server.protocol.name,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary
             )
-
             Text(
                 text = server.url ?: "No endpoint",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
@@ -329,6 +434,43 @@ fun McpGridCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            when {
+                loading -> Text(
+                    "Loading tools…",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                toolError == null && toolCount != null -> Text(
+                    "$toolCount tools cached",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+            if (toolError != null) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f))
+                        .clickable { onToolErrorClick(toolError) }
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Outlined.ErrorOutline,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "Tool discovery failed",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
         }
     }
 }
@@ -338,7 +480,12 @@ fun McpGridCard(
 fun AddOrEditMcpDialog(
     initialServer: McpInfo,
     isNew: Boolean,
-    onDiscoverTools: suspend (McpInfo) -> List<ToolDefinition>,
+    onRefreshTools: suspend (McpInfo) -> Result<List<ToolDefinition>>,
+    cachedTools: List<ToolDefinition>?,
+    cachedError: String?,
+    cachedLoading: Boolean,
+    toolSettings: ToolSettings,
+    onSetToolEnabled: (String, String, Boolean) -> Unit,
     onDismiss: () -> Unit,
     onSave: (McpInfo) -> Unit
 ) {
@@ -350,16 +497,14 @@ fun AddOrEditMcpDialog(
     var authKey by remember(initialServer.id) { mutableStateOf(initialServer.auth.key.orEmpty()) }
     var authValue by remember(initialServer.id) { mutableStateOf(initialServer.auth.value.orEmpty()) }
     var selectedTab by remember(initialServer.id) { mutableStateOf(0) }
-    var tools by remember(initialServer.id) { mutableStateOf<List<ToolDefinition>?>(null) }
-    var toolsLoading by remember(initialServer.id) { mutableStateOf(false) }
-    var toolsError by remember(initialServer.id) { mutableStateOf<String?>(null) }
-    var toolRefresh by remember(initialServer.id) { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
 
     fun currentAuth() = McpAuthorization(
         method = authMethod,
         key = if (authMethod in listOf(McpAuthMethod.CUSTOM_HEADER, McpAuthMethod.QUERY_PARAM)) authKey.trim() else null,
         value = if (authMethod == McpAuthMethod.NONE) null else authValue.trim()
     )
+
     fun currentServer(): McpInfo = initialServer.copy(
         name = name.trim(),
         protocol = protocol,
@@ -370,6 +515,7 @@ fun AddOrEditMcpDialog(
             .ifEmpty { null },
         auth = currentAuth()
     )
+
     val authValid = authMethod !in listOf(McpAuthMethod.CUSTOM_HEADER, McpAuthMethod.QUERY_PARAM) ||
         (authKey.isNotBlank() && !authKey.contains(':') && authKey.none { it <= ' ' || it.code >= 127 })
     val canSave = name.isNotBlank() && url.isNotBlank() && authValid && headers.all {
@@ -378,26 +524,9 @@ fun AddOrEditMcpDialog(
             !it.second.any { ch -> ch == '\r' || ch == '\n' }
     }
 
-    LaunchedEffect(selectedTab, toolRefresh) {
-        if (selectedTab != 1) return@LaunchedEffect
-        if (!canSave) {
-            tools = null
-            toolsError = null
-            toolsLoading = false
-            return@LaunchedEffect
-        }
-        toolsLoading = true
-        toolsError = null
-        try {
-            tools = onDiscoverTools(currentServer())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            tools = null
-            toolsError = e.localizedMessage ?: "Unable to load tools"
-        } finally {
-            toolsLoading = false
-        }
+    fun refreshTools() {
+        if (!canSave || cachedLoading) return
+        scope.launch { onRefreshTools(currentServer()) }
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -415,11 +544,19 @@ fun AddOrEditMcpDialog(
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                         modifier = Modifier.weight(1f)
                     )
+                    TextButton(
+                        onClick = { onSave(currentServer()) },
+                        enabled = canSave
+                    ) {
+                        Text("Save", fontWeight = FontWeight.SemiBold)
+                    }
                 }
+
                 TabRow(selectedTabIndex = selectedTab) {
                     Tab(selectedTab == 0, { selectedTab = 0 }, text = { Text("Basic Settings", fontWeight = FontWeight.SemiBold) })
                     Tab(selectedTab == 1, { selectedTab = 1 }, text = { Text("Tools", fontWeight = FontWeight.SemiBold) })
                 }
+
                 if (selectedTab == 0) {
                     McpBasicSettings(
                         name = name,
@@ -444,23 +581,22 @@ fun AddOrEditMcpDialog(
                     )
                 } else {
                     McpToolsTab(
-                        tools, toolsLoading, toolsError, canSave, { toolRefresh++ },
+                        serverId = initialServer.id,
+                        tools = cachedTools,
+                        loading = cachedLoading,
+                        error = cachedError,
+                        ready = canSave,
+                        toolSettings = toolSettings,
+                        onSetToolEnabled = onSetToolEnabled,
+                        onRefresh = ::refreshTools,
                         modifier = Modifier.weight(1f)
                     )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = { onSave(currentServer()) }, enabled = canSave) {
-                        Text("Save", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    }
                 }
             }
         }
     }
 }
+
 @Composable
 private fun McpBasicSettings(
     name: String,
@@ -629,62 +765,217 @@ private fun McpBasicSettings(
 
 @Composable
 private fun McpToolsTab(
+    serverId: String,
     tools: List<ToolDefinition>?,
     loading: Boolean,
     error: String?,
     ready: Boolean,
+    toolSettings: ToolSettings,
+    onSetToolEnabled: (String, String, Boolean) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-    Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
                 Text("Available tools", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Tools exposed by this MCP server", style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    if (tools == null) "No cached tool list" else "${tools.size} cached tools",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            TextButton(onClick = onRefresh, enabled = ready && !loading) { Text("Refresh") }
+            TextButton(onClick = onRefresh, enabled = ready && !loading) {
+                Text(if (loading) "Refreshing..." else "Refresh")
+            }
         }
+
+        if (loading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+
+        if (!ready) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "Enter a server name and URL in Basic Settings first.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(24.dp)
+                )
+            }
+            return@Column
+        }
+
+        if (error != null) {
+            Text(
+                text = error.lineSequence().firstOrNull().orEmpty(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+
         when {
-            !ready -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Enter a server name and URL in Basic Settings first.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(24.dp))
+            tools == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "No cached tools yet. Tap Refresh to request the tool list.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(24.dp)
+                )
             }
-            loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-                    Text(error, color = MaterialTheme.colorScheme.error)
-                    Spacer(Modifier.height(8.dp))
-                    TextButton(onClick = onRefresh) { Text("Retry") }
-                }
-            }
-            tools.isNullOrEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No tools reported by this server.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            tools.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "This server reported no tools.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(tools, key = { it.name }) { tool ->
-                    ListItem(
-                        headlineContent = { Text(tool.name, fontWeight = FontWeight.Medium) },
-                        supportingContent = {
-                            if (tool.description.isNotBlank()) Text(tool.description, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                        },
-                        leadingContent = { Icon(Icons.Outlined.Extension, contentDescription = null) }
+                    McpToolItem(
+                        tool = tool,
+                        enabled = toolSettings.mcpTools[serverId]?.get(tool.originalName) != false,
+                        onEnabledChange = { onSetToolEnabled(serverId, tool.originalName, it) }
                     )
-                    HorizontalDivider()
                 }
             }
         }
     }
-    }
 }
 
+@Composable
+private fun McpToolItem(
+    tool: ToolDefinition,
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit
+) {
+    var expanded by remember(tool.name) { mutableStateOf(false) }
+    val properties = tool.schema["properties"] as? JsonObject ?: JsonObject(emptyMap())
+    val required = (tool.schema["required"] as? JsonArray)
+        ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+        ?.toSet()
+        .orEmpty()
+
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded }
+    ) {
+        Column {
+            ListItem(
+                headlineContent = {
+                    Text(tool.originalName, fontWeight = FontWeight.Medium)
+                },
+                supportingContent = {
+                    if (tool.description.isNotBlank()) {
+                        Text(
+                            tool.description,
+                            maxLines = if (expanded) Int.MAX_VALUE else 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                },
+                leadingContent = {
+                    Icon(Icons.Outlined.Extension, contentDescription = null)
+                },
+                trailingContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Switch(
+                            checked = enabled,
+                            onCheckedChange = onEnabledChange
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            if (expanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                            contentDescription = if (expanded) "Collapse tool details" else "Expand tool details"
+                        )
+                    }
+                }
+            )
+
+            if (expanded) {
+                HorizontalDivider()
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (tool.description.isNotBlank()) {
+                        Text("Description", style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            tool.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Text("Parameters", style = MaterialTheme.typography.labelLarge)
+
+                    if (properties.isEmpty()) {
+                        Text(
+                            "No parameters.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        properties.forEach { (name, rawSchema) ->
+                            val schema = rawSchema as? JsonObject ?: JsonObject(emptyMap())
+                            val type = schema["type"]?.jsonPrimitive?.contentOrNull
+                                ?: if (schema["enum"] is JsonArray) "enum" else "any"
+                            val description = schema["description"]?.jsonPrimitive?.contentOrNull
+                            val enumValues = (schema["enum"] as? JsonArray)
+                                ?.joinToString(", ") { value ->
+                                    (value as? JsonPrimitive)?.contentOrNull ?: value.toString()
+                                }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        type,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    if (name in required) {
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            "required",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                                if (!description.isNullOrBlank()) {
+                                    Text(
+                                        description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (!enumValues.isNullOrBlank()) {
+                                    Text(
+                                        "Allowed: $enumValues",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 @Composable
 private fun McpDivider() {
     HorizontalDivider()

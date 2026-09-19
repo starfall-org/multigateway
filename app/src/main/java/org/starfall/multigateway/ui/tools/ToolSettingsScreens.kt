@@ -29,49 +29,170 @@ fun ToolSwitch(label: String, checked: Boolean, enabled: Boolean = true, onChang
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SystemToolsScreen(providers: List<LlmProviderInfo>, settings: ToolSettings, onSave: (String,SystemToolConfig)->Unit, onBack:()->Unit) {
+fun SystemToolsScreen(
+    providers: List<LlmProviderInfo>,
+    settings: ToolSettings,
+    onSave: (String, SystemToolConfig) -> Unit,
+    onBack: () -> Unit
+) {
     var choosing by remember { mutableStateOf<String?>(null) }
     var editingImage by remember { mutableStateOf(false) }
     val imageConfig = settings.system["generate_image"] ?: SystemToolConfig()
     val imageProvider = providers.find { it.id == imageConfig.providerId }
+
     if (editingImage && imageProvider != null) {
-        ImageToolSettingsScreen(imageProvider, imageConfig, onSave = { options ->
-            onSave("generate_image", imageConfig.withImageOptions(options))
-            editingImage = false
-        }, onBack = { editingImage = false })
+        ImageToolSettingsScreen(
+            imageProvider,
+            imageConfig,
+            onSave = { options ->
+                onSave("generate_image", imageConfig.withImageOptions(options))
+                editingImage = false
+            },
+            onBack = { editingImage = false }
+        )
         return
     }
-    BackHandler(onBack=onBack)
-    Scaffold(topBar={ TopAppBar(title={Text("Default Models")},navigationIcon={IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")}}) }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            items(listOf("generate_image","generate_video")) { name ->
-                val config=settings.system[name] ?: SystemToolConfig()
-                val provider=providers.find { it.id==config.providerId }
-                val model=provider?.config?.modelConfigs?.get(config.modelId)
-                val available = systemMediaToolAvailable(name, config, providers)
-                Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
-                    ToolSwitch(if(name=="generate_image") "Create image" else "Create video",config.enabled,enabled=available) { onSave(name,config.copy(enabled=it)) }
-                    Text(if(model==null) "Select a model" else "${provider.name} / ${model.displayName.ifBlank { config.modelId }}",style=MaterialTheme.typography.bodyMedium)
-                    TextButton(onClick={choosing=name}) { Text("Choose model") }
-                    if (name == "generate_image") {
-                        TextButton(enabled = provider != null && model?.modelType == ModelType.IMAGE_GENERATION,
-                            onClick = { editingImage = true }) { Text("Image settings") }
+
+    BackHandler(onBack = onBack)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Default Models") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
-                } }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Text("Media tools", style = MaterialTheme.typography.titleMedium)
+            }
+            items(listOf("generate_image", "generate_video")) { name ->
+                val config = settings.system[name] ?: SystemToolConfig()
+                val provider = providers.find { it.id == config.providerId }
+                val model = provider?.config?.modelConfigs?.get(config.modelId)
+                val available = systemMediaToolAvailable(name, config, providers)
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        ToolSwitch(
+                            if (name == "generate_image") "Create image" else "Create video",
+                            config.enabled,
+                            enabled = available
+                        ) { onSave(name, config.copy(enabled = it)) }
+                        Text(
+                            if (model == null) "Select a model"
+                            else "${provider.name} / ${model.displayName.ifBlank { config.modelId }}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        TextButton(onClick = { choosing = name }) { Text("Choose model") }
+                        if (name == "generate_image") {
+                            TextButton(
+                                enabled = provider != null && model?.modelType == ModelType.IMAGE_GENERATION,
+                                onClick = { editingImage = true }
+                            ) { Text("Image settings") }
+                        }
+                    }
+                }
+            }
+
+            item {
+                HorizontalDivider()
+                Spacer(Modifier.height(4.dp))
+                Text("Conversation helpers", style = MaterialTheme.typography.titleMedium)
+            }
+            items(listOf("title_generation", "chat_summary")) { name ->
+                val config = settings.system[name] ?: SystemToolConfig()
+                val provider = providers.find { it.id == config.providerId }
+                val model = provider?.config?.modelConfigs?.get(config.modelId)
+                val title = if (name == "title_generation") "Title Generation" else "Chat Summary"
+                val description = if (name == "title_generation")
+                    "Model used to generate conversation titles."
+                else
+                    "Model used to summarize long conversations."
+                val defaultPrompt = if (name == "title_generation")
+                    DEFAULT_TITLE_GENERATION_PROMPT
+                else
+                    DEFAULT_CHAT_SUMMARY_PROMPT
+
+                Card(Modifier.fillMaxWidth()) {
+                    Column(
+                        Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(title, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            if (model == null) "Select a text model"
+                            else "${provider.name} / ${model.displayName.ifBlank { config.modelId }}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        TextButton(onClick = { choosing = name }) { Text("Choose model") }
+                        OutlinedTextField(
+                            value = config.prompt,
+                            onValueChange = { onSave(name, config.copy(prompt = it)) },
+                            label = { Text("Instruction prompt") },
+                            placeholder = { Text(defaultPrompt) },
+                            supportingText = { Text("Leave blank to use the default instruction.") },
+                            minLines = 3,
+                            maxLines = 8,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
             }
         }
     }
+
     choosing?.let { name ->
-        val type=if(name=="generate_image") ModelType.IMAGE_GENERATION else ModelType.VIDEO_GENERATION
-        val choices=providers.flatMap { p -> p.config.modelConfigs.filter { (id,c) -> c.modelType==type && p.config.modelIds?.contains(id)!=false }.map { (id,c) -> Triple(p,id,c) } }
-        ModalBottomSheet(onDismissRequest={choosing=null}) {
-            LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.75f),contentPadding=PaddingValues(16.dp)) {
-                item { Text("Choose ${type.displayName}",style=MaterialTheme.typography.titleLarge) }
-                if(choices.isEmpty()) item { Text("Add a model with this type in Providers first.") }
-                items(choices) { (p,id,c) ->
-                    val supported=p.type.isOpenAi || p.type==ProviderType.GOOGLE
-                    TextButton(enabled=supported,onClick={onSave(name,(settings.system[name]?:SystemToolConfig()).copy(providerId=p.id,modelId=id));choosing=null}) {
-                        Text("${p.name} / ${c.displayName.ifBlank { id }}${if(!supported) " (media API unsupported)" else ""}")
+        val type = when (name) {
+            "generate_image" -> ModelType.IMAGE_GENERATION
+            "generate_video" -> ModelType.VIDEO_GENERATION
+            else -> ModelType.TEXT_GENERATION
+        }
+        val choices = providers.flatMap { provider ->
+            provider.config.modelConfigs
+                .filter { (id, config) ->
+                    config.modelType == type && provider.config.modelIds?.contains(id) != false
+                }
+                .map { (id, config) -> Triple(provider, id, config) }
+        }
+        ModalBottomSheet(onDismissRequest = { choosing = null }) {
+            LazyColumn(
+                Modifier.fillMaxWidth().fillMaxHeight(0.75f),
+                contentPadding = PaddingValues(16.dp)
+            ) {
+                item {
+                    Text("Choose ${type.displayName}", style = MaterialTheme.typography.titleLarge)
+                }
+                if (choices.isEmpty()) {
+                    item { Text("Add a model with this type in Providers first.") }
+                }
+                items(choices) { (provider, id, config) ->
+                    val mediaTask = name == "generate_image" || name == "generate_video"
+                    val supported = !mediaTask || provider.type.isOpenAi || provider.type == ProviderType.GOOGLE
+                    TextButton(
+                        enabled = supported,
+                        onClick = {
+                            val current = settings.system[name] ?: SystemToolConfig()
+                            onSave(name, current.copy(providerId = provider.id, modelId = id))
+                            choosing = null
+                        }
+                    ) {
+                        Text(
+                            "${provider.name} / ${config.displayName.ifBlank { id }}" +
+                                if (!supported) " (media API unsupported)" else ""
+                        )
                     }
                 }
             }
@@ -80,33 +201,61 @@ fun SystemToolsScreen(providers: List<LlmProviderInfo>, settings: ToolSettings, 
 }
 
 @Composable
-fun ProfileMcpPermissions(servers: List<McpInfo>, access: Map<String,McpAccess>, discover: suspend (McpInfo)->List<ToolDefinition>, onChange:(Map<String,McpAccess>)->Unit) {
-    val scope=rememberCoroutineScope()
-    val catalogs=remember { mutableStateMapOf<String,List<ToolDefinition>>() }
-    val errors=remember { mutableStateMapOf<String,String>() }
-    val loading=remember { mutableStateMapOf<String,Boolean>() }
-    Text("MCP permissions",style=MaterialTheme.typography.titleMedium)
-    if(servers.isEmpty()) Text("Add servers in MCP Manage first.")
+fun ProfileMcpPermissions(
+    servers: List<McpInfo>,
+    access: Map<String, McpAccess>,
+    toolsCache: Map<String, List<ToolDefinition>>,
+    settings: ToolSettings,
+    onChange: (Map<String, McpAccess>) -> Unit
+) {
+    Text("MCP permissions", style = MaterialTheme.typography.titleMedium)
+    if (servers.isEmpty()) {
+        Text("Add servers in MCP Manage first.")
+        return
+    }
+
     servers.forEach { server ->
-        val policy=access[server.id] ?: McpAccess()
+        val policy = access[server.id] ?: McpAccess()
         HorizontalDivider()
-        ToolSwitch(server.name,policy.enabled) { onChange(access+(server.id to policy.copy(enabled=it))) }
-        if(policy.enabled) {
-            TextButton(enabled=loading[server.id]!=true,onClick={
-                scope.launch {
-                    loading[server.id]=true; errors.remove(server.id)
-                    try { catalogs[server.id]=discover(server) }
-                    catch(e:CancellationException){throw e}
-                    catch(e:Exception){errors[server.id]=e.message.orEmpty().take(300)}
-                    finally{loading[server.id]=false}
+        ToolSwitch(server.name, policy.enabled) { enabled ->
+            onChange(access + (server.id to policy.copy(enabled = enabled)))
+        }
+
+        if (policy.enabled) {
+            val cached = toolsCache[server.id] ?: server.cachedTools
+            when {
+                cached == null -> {
+                    Text(
+                        "Tool list is not cached. Save or refresh this server in MCP Manage first.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            }) { Text(if(loading[server.id]==true) "Loading tools…" else "Load / refresh tools") }
-            errors[server.id]?.let { Text(it,color=MaterialTheme.colorScheme.error) }
-            catalogs[server.id]?.let { tools ->
-                if(tools.isEmpty()) Text("No tools available.")
-                tools.forEach { tool ->
-                    ToolSwitch(tool.originalName,policy.tools[tool.originalName]!=false) {
-                        onChange(access+(server.id to policy.copy(tools=policy.tools+(tool.originalName to it))))
+                else -> {
+                    val globallyEnabled = cached.filter { tool ->
+                        settings.mcpTools[server.id]?.get(tool.originalName) != false
+                    }
+                    if (globallyEnabled.isEmpty()) {
+                        Text(
+                            "No globally enabled tools available.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        globallyEnabled.forEach { tool ->
+                            ToolSwitch(
+                                label = tool.originalName,
+                                checked = policy.tools[tool.originalName] != false
+                            ) { enabled ->
+                                onChange(
+                                    access + (
+                                        server.id to policy.copy(
+                                            tools = policy.tools + (tool.originalName to enabled)
+                                        )
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             }

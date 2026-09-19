@@ -28,15 +28,21 @@ class SpeechRepository(private val db: AppDatabase) {
         dao.deleteById(id)
     }
 
+    suspend fun reorderServices(ids: List<String>) {
+        ids.forEachIndexed { index, id -> dao.updateSortOrder(id, index) }
+    }
+
     private fun entityToModel(entity: SpeechServiceEntity): SpeechService {
         return SpeechService(
             id = entity.id,
             name = entity.name,
             provider = entity.provider,
+            modelId = entity.modelId,
             voice = entity.voice,
             speed = entity.speed,
             pitch = entity.pitch,
-            apiKey = SecretCipher.decrypt(entity.apiKey)
+            apiKey = SecretCipher.decrypt(entity.apiKey),
+            sortOrder = entity.sortOrder
         )
     }
 
@@ -45,10 +51,12 @@ class SpeechRepository(private val db: AppDatabase) {
             id = service.id,
             name = service.name,
             provider = service.provider,
+            modelId = service.modelId,
             voice = service.voice,
             speed = service.speed,
             pitch = service.pitch,
-            apiKey = SecretCipher.encrypt(service.apiKey)
+            apiKey = SecretCipher.encrypt(service.apiKey),
+            sortOrder = service.sortOrder
         )
     }
 }

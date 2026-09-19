@@ -57,9 +57,10 @@ fun ModelPickerSheet(
         val models = providerModels(provider, dynamicModelsMap, selectedProviderId, selectedModelId)
             .filter { modelId ->
                 query.isBlank() ||
-                    modelId.contains(query, ignoreCase = true) ||
-                    provider.config.modelConfigs[modelId]?.displayName.orEmpty().contains(query, ignoreCase = true) ||
-                    provider.name.contains(query, ignoreCase = true)
+                        modelId.contains(query, ignoreCase = true) ||
+                        provider.config.modelConfigs[modelId]?.displayName.orEmpty()
+                            .contains(query, ignoreCase = true) ||
+                        provider.name.contains(query, ignoreCase = true)
             }
         if (models.isEmpty()) null else provider to models
     }
@@ -350,7 +351,12 @@ private fun ProviderMark(
     compact: Boolean = false
 ) {
     val mark = when (provider.type) {
-        ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> if (modelId.startsWith("o", ignoreCase = true)) "◉" else "◎"
+        ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> if (modelId.startsWith(
+                "o",
+                ignoreCase = true
+            )
+        ) "◉" else "◎"
+
         ProviderType.GOOGLE -> "✦"
         ProviderType.ANTHROPIC -> "A"
         ProviderType.OLLAMA -> "◌"
@@ -372,9 +378,10 @@ private fun providerModels(
     selectedProviderId: String,
     selectedModelId: String
 ): List<String> = (
-    provider.config.modelIds
-        ?: ((dynamicModelsMap[provider.id] ?: defaultProviderModels(provider.type)) + provider.config.modelConfigs.keys)
-    )
+        provider.config.modelIds
+            ?: ((dynamicModelsMap[provider.id]
+                ?: defaultProviderModels(provider.type)) + provider.config.modelConfigs.keys)
+        )
     .plus(if (provider.id == selectedProviderId && selectedModelId.isNotBlank()) listOf(selectedModelId) else emptyList())
     .distinct()
 
@@ -386,8 +393,8 @@ internal fun modelInitial(modelName: String): String {
 }
 
 internal fun defaultProviderModels(type: ProviderType): List<String> = when (type) {
-    ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> listOf("gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "gpt-4-turbo")
-    ProviderType.GOOGLE -> listOf("gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash-exp")
-    ProviderType.ANTHROPIC -> listOf("claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229")
+    ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> emptyList()
+    ProviderType.GOOGLE -> emptyList()
+    ProviderType.ANTHROPIC -> emptyList()
     ProviderType.OLLAMA -> emptyList()
 }

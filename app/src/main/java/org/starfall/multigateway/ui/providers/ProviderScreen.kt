@@ -41,6 +41,9 @@ import org.starfall.multigateway.data.model.LlmProviderInfo
 import org.starfall.multigateway.data.model.withType
 import org.starfall.multigateway.data.model.defaultAuthorization
 import org.starfall.multigateway.data.model.ProviderType
+import org.starfall.multigateway.ui.components.ItemOverflowMenu
+import org.starfall.multigateway.ui.components.longPressReorder
+import org.starfall.multigateway.ui.components.moved
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +52,7 @@ fun ProviderScreen(
     onSaveProvider: (LlmProviderInfo) -> Unit,
     onSaveModels: (String, Map<String, ModelConfiguration>) -> Unit,
     onDeleteProvider: (String) -> Unit,
+    onReorderProviders: (List<String>) -> Unit,
     onTestConnection: (suspend (LlmProviderInfo, String) -> Result<String>)? = null,
     onFetchModels: (suspend (LlmProviderInfo) -> List<String>)? = null,
     onBack: () -> Unit
@@ -57,14 +61,15 @@ fun ProviderScreen(
     var editingProvider by remember { mutableStateOf<LlmProviderInfo?>(null) }
     var isCreatingNew by remember { mutableStateOf(false) }
     var deletingProviderId by remember { mutableStateOf<String?>(null) }
+    var orderedProviders by remember(providers) { mutableStateOf(providers) }
 
     if (editingProvider != null || isCreatingNew) {
         val targetProvider = editingProvider ?: remember { LlmProviderInfo(
             id = "custom_${System.currentTimeMillis()}",
-            name = "Ollama",
-            type = ProviderType.OLLAMA,
-            baseUrl = "https://ollama.com/api",
-            auth = ProviderType.OLLAMA.defaultAuthorization()
+            name = "OpenAI",
+            type = ProviderType.OPENAI,
+            baseUrl = "https://api.openai.com/v1",
+            auth = ProviderType.OPENAI.defaultAuthorization()
         ) }
 
         ProviderEditScreen(
@@ -155,9 +160,15 @@ fun ProviderScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(providers, key = { it.id }) { provider ->
+                    items(orderedProviders, key = { it.id }) { provider ->
+                        val index = orderedProviders.indexOfFirst { it.id == provider.id }
                         ProviderGridCard(
                             provider = provider,
+                            modifier = Modifier.longPressReorder(
+                                index = index, itemCount = orderedProviders.size, columns = 2,
+                                onMove = { from, to -> orderedProviders = orderedProviders.moved(from, to) },
+                                onDrop = { onReorderProviders(orderedProviders.map { it.id }) }
+                            ),
                             onEdit = { editingProvider = provider },
                             onDelete = { deletingProviderId = provider.id }
                         )
@@ -168,9 +179,15 @@ fun ProviderScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(providers, key = { it.id }) { provider ->
+                    items(orderedProviders, key = { it.id }) { provider ->
+                        val index = orderedProviders.indexOfFirst { it.id == provider.id }
                         ProviderListCard(
                             provider = provider,
+                            modifier = Modifier.longPressReorder(
+                                index = index, itemCount = orderedProviders.size, columns = 1,
+                                onMove = { from, to -> orderedProviders = orderedProviders.moved(from, to) },
+                                onDrop = { onReorderProviders(orderedProviders.map { it.id }) }
+                            ),
                             onEdit = { editingProvider = provider },
                             onDelete = { deletingProviderId = provider.id }
                         )
@@ -209,6 +226,7 @@ fun ProviderScreen(
 @Composable
 fun ProviderListCard(
     provider: LlmProviderInfo,
+    modifier: Modifier = Modifier,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -219,7 +237,7 @@ fun ProviderListCard(
             1.dp,
             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
         ),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { onEdit() }
     ) {
@@ -275,23 +293,11 @@ fun ProviderListCard(
                 )
             }
 
-            IconButton(onClick = onEdit) {
-                Icon(
-                    imageVector = Icons.Outlined.Settings,
-                    contentDescription = "Configure",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Outlined.DeleteOutline,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            ItemOverflowMenu(
+                onEdit = onEdit,
+                onDelete = onDelete,
+                deleteColor = MaterialTheme.colorScheme.error
+            )
         }
     }
 }
@@ -299,13 +305,14 @@ fun ProviderListCard(
 @Composable
 fun ProviderGridCard(
     provider: LlmProviderInfo,
+    modifier: Modifier = Modifier,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { onEdit() }
     ) {
@@ -333,14 +340,11 @@ fun ProviderGridCard(
                     }
                 }
 
-                Row {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Outlined.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp))
-                    }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-                    }
-                }
+                ItemOverflowMenu(
+                    onEdit = onEdit,
+                    onDelete = onDelete,
+                    deleteColor = MaterialTheme.colorScheme.error
+                )
             }
 
             Text(
@@ -359,6 +363,13 @@ fun ProviderGridCard(
             )
         }
     }
+}
+
+fun AuthMethod.displayName(): String = when (this) {
+    AuthMethod.BEARER_TOKEN -> "Bearer Token"
+    AuthMethod.QUERY_PARAM -> "Query Parameter"
+    AuthMethod.CUSTOM_HEADER -> "Custom Header"
+    AuthMethod.OTHER -> "Other"
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -389,6 +400,7 @@ fun ProviderEditScreen(
     val testingModels = remember { mutableStateMapOf<String, Boolean>() }
     val modelTestResults = remember { mutableStateMapOf<String, Result<String>>() }
     var typeExpanded by remember { mutableStateOf(false) }
+    var authExpanded by remember { mutableStateOf(false) }
     var supportStream by remember { mutableStateOf(initialProvider.config.supportStream) }
     val headerRows = remember {
         mutableStateListOf<Pair<String, String>>().apply {
@@ -502,45 +514,83 @@ fun ProviderEditScreen(
                     modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Provider Type Dropdown
-                    ExposedDropdownMenuBox(
-                        expanded = typeExpanded,
-                        onExpandedChange = { typeExpanded = !typeExpanded }
+                    // Provider Type and Authorization Type in a row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        OutlinedTextField(
-                            value = type.displayName,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Provider Type") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth()
-                        )
-
-                        ExposedDropdownMenu(
+                        // Provider Type Dropdown
+                        ExposedDropdownMenuBox(
                             expanded = typeExpanded,
-                            onDismissRequest = { typeExpanded = false }
+                            onExpandedChange = { typeExpanded = !typeExpanded },
+                            modifier = Modifier.weight(1f)
                         ) {
-                            ProviderType.values().forEach { t ->
-                                DropdownMenuItem(
-                                    text = { Text(t.displayName) },
-                                    onClick = {
-                                        if (t != type) {
-                                            val updated = initialProvider.copy(
-                                                name = name,
-                                                type = type,
-                                                baseUrl = baseUrl
-                                            ).withType(t)
-                                            name = updated.name
-                                            baseUrl = updated.baseUrl
-                                            type = updated.type
-                                            val defaultAuth = t.defaultAuthorization()
-                                            authMethod = defaultAuth.method
-                                            authName = defaultAuth.key.orEmpty()
-                                            apiKey = defaultAuth.value.orEmpty()
+                            OutlinedTextField(
+                                value = type.displayName,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Provider Type") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = typeExpanded,
+                                onDismissRequest = { typeExpanded = false }
+                            ) {
+                                ProviderType.entries.forEach { t ->
+                                    DropdownMenuItem(
+                                        text = { Text(t.displayName) },
+                                        onClick = {
+                                            if (t != type) {
+                                                val updated = initialProvider.copy(
+                                                    name = name,
+                                                    type = type,
+                                                    baseUrl = baseUrl
+                                                ).withType(t)
+                                                name = updated.name
+                                                baseUrl = updated.baseUrl
+                                                type = updated.type
+                                                val defaultAuth = t.defaultAuthorization()
+                                                authMethod = defaultAuth.method
+                                                authName = defaultAuth.key.orEmpty()
+                                                apiKey = defaultAuth.value.orEmpty()
+                                            }
+                                            typeExpanded = false
                                         }
-                                        typeExpanded = false
-                                    }
-                                )
+                                    )
+                                }
+                            }
+                        }
+
+                        // Authorization Type Dropdown
+                        ExposedDropdownMenuBox(
+                            expanded = authExpanded,
+                            onExpandedChange = { authExpanded = !authExpanded },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            OutlinedTextField(
+                                value = authMethod.displayName(),
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Authorization") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = authExpanded) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = authExpanded,
+                                onDismissRequest = { authExpanded = false }
+                            ) {
+                                AuthMethod.entries.forEach { method ->
+                                    DropdownMenuItem(
+                                        text = { Text(method.displayName()) },
+                                        onClick = {
+                                            authMethod = method
+                                            authExpanded = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -563,26 +613,42 @@ fun ProviderEditScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    if (type == ProviderType.OLLAMA) {
-                        SuggestionChip(
-                            onClick = { baseUrl = "https://ollama.com/api" },
-                            label = { Text("Default: https://ollama.com/api", fontSize = 11.sp) },
-                            icon = { Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.size(14.dp)) }
-                        )
+                    // Default URL suggestions for each provider type
+                    when (type) {
+                        ProviderType.OLLAMA -> {
+                            SuggestionChip(
+                                onClick = { baseUrl = "https://ollama.com/api" },
+                                label = { Text("Default: https://ollama.com/api", fontSize = 11.sp) },
+                                icon = { Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.size(14.dp)) }
+                            )
+                        }
+                        ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES -> {
+                            SuggestionChip(
+                                onClick = { baseUrl = "https://api.openai.com/v1" },
+                                label = { Text("Default: https://api.openai.com/v1", fontSize = 11.sp) },
+                                icon = { Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.size(14.dp)) }
+                            )
+                        }
+                        ProviderType.GOOGLE -> {
+                            SuggestionChip(
+                                onClick = { baseUrl = "https://generativelanguage.googleapis.com/v1beta" },
+                                label = { Text("Default: https://generativelanguage.googleapis.com/v1beta", fontSize = 11.sp) },
+                                icon = { Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.size(14.dp)) }
+                            )
+                        }
+                        ProviderType.ANTHROPIC -> {
+                            SuggestionChip(
+                                onClick = { baseUrl = "https://api.anthropic.com/v1" },
+                                label = { Text("Default: https://api.anthropic.com/v1", fontSize = 11.sp) },
+                                icon = { Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.size(14.dp)) }
+                            )
+                        }
                     }
 
                     if (baseUrl.trim().startsWith("http://", true)) {
                         Text("HTTP is unencrypted. API keys, headers and messages can be read on the network. Use HTTPS outside a trusted local network.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
-                    var authExpanded by remember { mutableStateOf(false) }
-                    Box {
-                        OutlinedButton(onClick = { authExpanded = true }) { Text("Authorization: ${authMethod.name}") }
-                        DropdownMenu(expanded = authExpanded, onDismissRequest = { authExpanded = false }) {
-                            AuthMethod.entries.forEach { method ->
-                                DropdownMenuItem(text = { Text(method.name) }, onClick = { authMethod = method; authExpanded = false })
-                            }
-                        }
-                    }
+
                     if (authMethod in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) {
                         OutlinedTextField(authName, { authName = it }, label = { Text(if (authMethod == AuthMethod.CUSTOM_HEADER) "Header name" else "Query parameter name") },
                             isError = !authValid, singleLine = true, modifier = Modifier.fillMaxWidth())

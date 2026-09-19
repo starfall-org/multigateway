@@ -13,7 +13,9 @@ data class ConversationEntity(
     val tokenCount: Int?,
     val providerId: String,
     val modelId: String,
-    val profileId: String?
+    val profileId: String?,
+    val summaryJson: String?,
+    val reasoningEffort: String?
 )
 
 @Entity(tableName = "chat_profiles")
@@ -23,7 +25,8 @@ data class ChatProfileEntity(
     val icon: String?,
     val configJson: String,
     val activeMcpJson: String,
-    val activeModelToolsJson: String
+    val activeModelToolsJson: String,
+    val sortOrder: Int
 )
 
 @Entity(tableName = "llm_providers")
@@ -34,7 +37,8 @@ data class LlmProviderEntity(
     val baseUrl: String,
     val authJson: String,
     val configJson: String,
-    val icon: String?
+    val icon: String?,
+    val sortOrder: Int
 )
 
 @Entity(tableName = "llm_models")
@@ -49,7 +53,9 @@ data class McpServerEntity(
     val name: String,
     val protocol: String,
     val url: String?,
-    val headersJson: String?
+    val headersJson: String?,
+    val cachedToolsJson: String?,
+    val sortOrder: Int
 )
 
 @Entity(tableName = "speech_services")
@@ -57,8 +63,10 @@ data class SpeechServiceEntity(
     @PrimaryKey val id: String,
     val name: String,
     val provider: String,
+    val modelId: String?,
     val voice: String,
     val speed: Float,
     val pitch: Float,
-    val apiKey: String
+    val apiKey: String,
+    val sortOrder: Int
 )

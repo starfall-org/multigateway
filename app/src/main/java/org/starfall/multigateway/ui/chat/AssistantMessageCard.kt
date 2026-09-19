@@ -10,6 +10,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -393,8 +394,7 @@ private fun SmoothStreamingMarkdownMessage(content: String) {
 
 private data class ProcessingBlock(
     val offset: Int,
-    val reasoning: String? = null,
-    val activities: List<ToolActivity> = emptyList()
+    val items: List<ProcessingDropdownItem>
 )
 
 @Composable
@@ -416,7 +416,8 @@ private fun CompletedAssistantContent(
     }
 
     var cursor = 0
-    blocks.forEachIndexed { index, block ->
+    var nextItemNumber = 1
+    blocks.forEach { block ->
         val offset = block.offset.coerceIn(cursor, content.length)
         if (offset > cursor) {
             val textBefore = content.substring(cursor, offset)
@@ -427,12 +428,12 @@ private fun CompletedAssistantContent(
         }
 
         ProcessingDropdown(
-            reasoning = block.reasoning,
-            activities = block.activities,
+            items = block.items,
             durationMillis = processingDurationMillis.takeIf { blocks.size == 1 },
-            blockNumber = index + 1,
+            startNumber = nextItemNumber,
             modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
         )
+        nextItemNumber += block.items.size
         cursor = offset
     }
 
@@ -444,19 +445,45 @@ private fun CompletedAssistantContent(
     }
 }
 
-private fun buildProcessingBlocks(version: MessageVersion): List<ProcessingBlock> =
-    buildProcessingTimeline(version).map { item ->
-        when (item) {
-            is ProcessingTimelineItem.Thinking -> ProcessingBlock(
-                offset = item.contentOffset,
-                reasoning = item.reasoning
-            )
-            is ProcessingTimelineItem.Tool -> ProcessingBlock(
-                offset = item.contentOffset,
-                activities = listOf(item.activity)
-            )
-        }
+private fun buildProcessingBlocks(version: MessageVersion): List<ProcessingBlock> {
+    val timeline = buildProcessingTimeline(version)
+    if (timeline.isEmpty()) return emptyList()
+
+    fun ProcessingTimelineItem.toDropdownItem(): ProcessingDropdownItem = when (this) {
+        is ProcessingTimelineItem.Thinking -> ProcessingDropdownItem.Thinking(reasoning)
+        is ProcessingTimelineItem.Tool -> ProcessingDropdownItem.Tool(activity)
     }
+
+    val content = version.content
+    val blocks = mutableListOf<ProcessingBlock>()
+    var groupOffset = timeline.first().contentOffset.coerceIn(0, content.length)
+    var previousOffset = groupOffset
+    var groupItems = mutableListOf(timeline.first().toDropdownItem())
+
+    timeline.drop(1).forEach { item ->
+        val itemOffset = item.contentOffset.coerceIn(previousOffset, content.length)
+        val hasVisibleContentBetween = itemOffset > previousOffset &&
+            content.substring(previousOffset, itemOffset).isNotBlank()
+
+        if (hasVisibleContentBetween) {
+            blocks += ProcessingBlock(
+                offset = groupOffset,
+                items = groupItems.toList()
+            )
+            groupOffset = itemOffset
+            groupItems = mutableListOf()
+        }
+
+        groupItems += item.toDropdownItem()
+        previousOffset = itemOffset
+    }
+
+    blocks += ProcessingBlock(
+        offset = groupOffset,
+        items = groupItems.toList()
+    )
+    return blocks
+}
 
 @Composable
 private fun MessageActionButton(
@@ -488,6 +515,8 @@ fun FormattedMarkdownMessage(content: String) {
         blocks.forEach { block ->
             when (block) {
                 is ContentBlock.Code -> {
+                    var wrapCode by remember(block.language, block.code) { mutableStateOf(true) }
+                    val codeScrollState = rememberScrollState()
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -507,32 +536,55 @@ fun FormattedMarkdownMessage(content: String) {
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.outline
                                 )
-                                IconButton(
-                                    onClick = {
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        clipboard.setPrimaryClip(ClipData.newPlainText("Code", block.code))
-                                        Toast.makeText(context, "Code copied", Toast.LENGTH_SHORT).show()
-                                    },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.ContentCopy,
-                                        contentDescription = "Copy code",
-                                        tint = MaterialTheme.colorScheme.outline,
-                                        modifier = Modifier.size(14.dp)
-                                    )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = { wrapCode = !wrapCode },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Outlined.WrapText,
+                                            contentDescription = if (wrapCode) "Disable line wrapping" else "Enable line wrapping",
+                                            tint = if (wrapCode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Spacer(Modifier.width(4.dp))
+                                    IconButton(
+                                        onClick = {
+                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                            clipboard.setPrimaryClip(ClipData.newPlainText("Code", block.code))
+                                            Toast.makeText(context, "Code copied", Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Outlined.ContentCopy,
+                                            contentDescription = "Copy code",
+                                            tint = MaterialTheme.colorScheme.outline,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
                                 }
                             }
-                            Text(
-                                text = block.code,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 12.sp,
-                                    lineHeight = 16.sp
-                                ),
-                                modifier = Modifier.padding(12.dp),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(if (wrapCode) Modifier else Modifier.horizontalScroll(codeScrollState))
+                            ) {
+                                Text(
+                                    text = block.code,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        lineHeight = 16.sp
+                                    ),
+                                    softWrap = wrapCode,
+                                    modifier = Modifier
+                                        .padding(12.dp)
+                                        .then(if (wrapCode) Modifier.fillMaxWidth() else Modifier),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }

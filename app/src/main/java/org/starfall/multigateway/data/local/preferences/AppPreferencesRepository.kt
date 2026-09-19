@@ -13,6 +13,7 @@ data class AppPreferences(
     val selectedProfileId: String? = null,
     val selectedProviderId: String = "",
     val selectedModelId: String = "",
+    val selectedSpeechServiceId: String? = null,
     val themeMode: String = "SYSTEM", // SYSTEM, LIGHT, DARK
     val useAmoled: Boolean = false,
     val useDynamicColor: Boolean = true,
@@ -37,6 +38,7 @@ class AppPreferencesRepository(private val context: Context) {
         val SELECTED_PROFILE_ID = stringPreferencesKey("selected_profile_id")
         val SELECTED_PROVIDER_ID = stringPreferencesKey("selected_provider_id")
         val SELECTED_MODEL_ID = stringPreferencesKey("selected_model_id")
+        val SELECTED_SPEECH_SERVICE_ID = stringPreferencesKey("selected_speech_service_id")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val USE_AMOLED = booleanPreferencesKey("use_amoled")
         val USE_DYNAMIC_COLOR = booleanPreferencesKey("use_dynamic_color")
@@ -64,6 +66,7 @@ class AppPreferencesRepository(private val context: Context) {
                 selectedProfileId = if (profileId.isNullOrEmpty()) null else profileId,
                 selectedProviderId = preferences[PreferenceKeys.SELECTED_PROVIDER_ID] ?: "",
                 selectedModelId = preferences[PreferenceKeys.SELECTED_MODEL_ID] ?: "",
+                selectedSpeechServiceId = preferences[PreferenceKeys.SELECTED_SPEECH_SERVICE_ID],
                 themeMode = if (legacyAmoled) "DARK" else storedThemeMode,
                 useAmoled = preferences[PreferenceKeys.USE_AMOLED] ?: legacyAmoled,
                 useDynamicColor = preferences[PreferenceKeys.USE_DYNAMIC_COLOR] ?: true,
@@ -97,6 +100,13 @@ class AppPreferencesRepository(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.SELECTED_PROVIDER_ID] = providerId
             preferences[PreferenceKeys.SELECTED_MODEL_ID] = modelId
+        }
+    }
+
+    suspend fun setSelectedSpeechServiceId(serviceId: String?) {
+        context.dataStore.edit { preferences ->
+            if (serviceId.isNullOrBlank()) preferences.remove(PreferenceKeys.SELECTED_SPEECH_SERVICE_ID)
+            else preferences[PreferenceKeys.SELECTED_SPEECH_SERVICE_ID] = serviceId
         }
     }
 

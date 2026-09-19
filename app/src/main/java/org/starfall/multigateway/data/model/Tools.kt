@@ -11,6 +11,7 @@ data class SystemToolConfig(
     val enabled: Boolean = false,
     val providerId: String = "",
     val modelId: String = "",
+    val prompt: String = "",
     val imageOptionsByModel: Map<String, JsonObject> = emptyMap()
 ) {
     val imageOptions: JsonObject
@@ -23,7 +24,8 @@ data class SystemToolConfig(
 @Serializable
 data class ToolSettings(
     val system: Map<String, SystemToolConfig> = emptyMap(),
-    val quickMcp: Map<String, Boolean> = emptyMap()
+    val quickMcp: Map<String, Boolean> = emptyMap(),
+    val mcpTools: Map<String, Map<String, Boolean>> = emptyMap()
 )
 
 @Serializable
@@ -39,6 +41,7 @@ data class ToolActivity(
     val reasoningOffset: Int? = null
 )
 
+@Serializable
 data class ToolDefinition(
     val name: String,
     val description: String,
@@ -70,5 +73,16 @@ sealed interface GenerationEvent {
     data class Tool(val activity: ToolActivity) : GenerationEvent
 }
 
-fun toolAllowed(access: McpAccess?, quick: Boolean?, name: String): Boolean =
-    access?.enabled == true && quick != false && access.tools[name] != false
+fun globalMcpToolEnabled(settings: ToolSettings, serverId: String, name: String): Boolean =
+    settings.mcpTools[serverId]?.get(name) != false
+
+fun toolAllowed(
+    access: McpAccess?,
+    quick: Boolean?,
+    globalEnabled: Boolean,
+    name: String
+): Boolean =
+    access?.enabled == true && quick != false && globalEnabled && access.tools[name] != false
+
+const val DEFAULT_TITLE_GENERATION_PROMPT = "Generate a concise title for this conversation. Return only the title, without quotation marks or extra commentary. Keep it under 8 words."
+const val DEFAULT_CHAT_SUMMARY_PROMPT = "Summarize the conversation faithfully for use as future context. Preserve user goals, decisions, constraints, important facts, code or technical details, unresolved issues, and commitments. Remove repetition and incidental chatter. Do not invent information."

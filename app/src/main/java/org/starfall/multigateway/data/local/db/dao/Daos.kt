@@ -24,7 +24,7 @@ interface ConversationDao {
 
 @Dao
 interface ChatProfileDao {
-    @Query("SELECT * FROM chat_profiles")
+    @Query("SELECT * FROM chat_profiles ORDER BY sortOrder ASC, id ASC")
     fun getAllProfiles(): Flow<List<ChatProfileEntity>>
 
     @Query("SELECT * FROM chat_profiles WHERE id = :id")
@@ -33,13 +33,16 @@ interface ChatProfileDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(profile: ChatProfileEntity)
 
+    @Query("UPDATE chat_profiles SET sortOrder = :sortOrder WHERE id = :id")
+    suspend fun updateSortOrder(id: String, sortOrder: Int)
+
     @Query("DELETE FROM chat_profiles WHERE id = :id")
     suspend fun deleteById(id: String)
 }
 
 @Dao
 interface LlmProviderDao {
-    @Query("SELECT * FROM llm_providers")
+    @Query("SELECT * FROM llm_providers ORDER BY sortOrder ASC, id ASC")
     fun getAllProviders(): Flow<List<LlmProviderEntity>>
 
     @Query("SELECT * FROM llm_providers WHERE id = :id")
@@ -47,6 +50,9 @@ interface LlmProviderDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(provider: LlmProviderEntity)
+
+    @Query("UPDATE llm_providers SET sortOrder = :sortOrder WHERE id = :id")
+    suspend fun updateSortOrder(id: String, sortOrder: Int)
 
     @Query("DELETE FROM llm_providers WHERE id = :id")
     suspend fun deleteById(id: String)
@@ -66,7 +72,7 @@ interface LlmModelsDao {
 
 @Dao
 interface McpServerDao {
-    @Query("SELECT * FROM mcp_servers")
+    @Query("SELECT * FROM mcp_servers ORDER BY sortOrder ASC, id ASC")
     fun getAllServers(): Flow<List<McpServerEntity>>
 
     @Query("SELECT * FROM mcp_servers WHERE id = :id")
@@ -75,13 +81,16 @@ interface McpServerDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(server: McpServerEntity)
 
+    @Query("UPDATE mcp_servers SET sortOrder = :sortOrder WHERE id = :id")
+    suspend fun updateSortOrder(id: String, sortOrder: Int)
+
     @Query("DELETE FROM mcp_servers WHERE id = :id")
     suspend fun deleteById(id: String)
 }
 
 @Dao
 interface SpeechServiceDao {
-    @Query("SELECT * FROM speech_services")
+    @Query("SELECT * FROM speech_services ORDER BY sortOrder ASC, id ASC")
     fun getAllSpeechServices(): Flow<List<SpeechServiceEntity>>
 
     @Query("SELECT * FROM speech_services WHERE id = :id")
@@ -89,6 +98,9 @@ interface SpeechServiceDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(service: SpeechServiceEntity)
+
+    @Query("UPDATE speech_services SET sortOrder = :sortOrder WHERE id = :id")
+    suspend fun updateSortOrder(id: String, sortOrder: Int)
 
     @Query("DELETE FROM speech_services WHERE id = :id")
     suspend fun deleteById(id: String)

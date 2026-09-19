@@ -92,22 +92,36 @@ fun ReasoningDropdown(
     }
 }
 
+internal sealed interface ProcessingDropdownItem {
+    data class Thinking(val reasoning: String) : ProcessingDropdownItem
+    data class Tool(val activity: org.starfall.multigateway.data.model.ToolActivity) : ProcessingDropdownItem
+}
+
 @Composable
-fun ProcessingDropdown(
-    reasoning: String?,
-    activities: List<org.starfall.multigateway.data.model.ToolActivity>,
+internal fun ProcessingDropdown(
+    items: List<ProcessingDropdownItem>,
     durationMillis: Long?,
-    blockNumber: Int,
+    startNumber: Int,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val visibleActivities = activities.filterNot { it.name.endsWith(": connect") }
-    if (reasoning.isNullOrBlank() && visibleActivities.isEmpty()) return
+    val visibleItems = items.filterNot {
+        it is ProcessingDropdownItem.Tool && it.activity.name.endsWith(": connect")
+    }
+    if (visibleItems.isEmpty()) return
 
-    val processingLabel = if (durationMillis != null) {
-        stringResource(R.string.processed_in, formatProcessingDuration(durationMillis))
-    } else {
-        stringResource(R.string.processed)
+    val onlyThinking = visibleItems.all { it is ProcessingDropdownItem.Thinking }
+    val onlyTools = visibleItems.all { it is ProcessingDropdownItem.Tool }
+    val processingLabel = when {
+        onlyThinking && durationMillis != null ->
+            stringResource(R.string.reasoning_completed_in, formatProcessingDuration(durationMillis))
+        onlyThinking -> stringResource(R.string.reasoning_completed)
+        onlyTools && durationMillis != null ->
+            stringResource(R.string.tool_executed_in, formatProcessingDuration(durationMillis))
+        onlyTools -> stringResource(R.string.tool_executed)
+        durationMillis != null ->
+            stringResource(R.string.processed_in, formatProcessingDuration(durationMillis))
+        else -> stringResource(R.string.processed)
     }
 
     Column(
@@ -123,7 +137,7 @@ fun ProcessingDropdown(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = stringResource(R.string.processing_block_label, blockNumber, processingLabel),
+                text = processingLabel,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.outline
             )
@@ -145,21 +159,42 @@ fun ProcessingDropdown(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                if (!reasoning.isNullOrBlank()) {
-                    var thinkingExpanded by remember(reasoning) { mutableStateOf(false) }
-                    CollapsibleThinkingText(
-                        reasoning = reasoning,
-                        expanded = thinkingExpanded,
-                        onToggle = { thinkingExpanded = !thinkingExpanded },
-                        modifier = Modifier.padding(start = 16.dp, end = 8.dp, bottom = 2.dp)
-                    )
+                visibleItems.forEachIndexed { index, item ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = "${startNumber + index}.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier
+                                .width(28.dp)
+                                .padding(top = 1.dp)
+                        )
+
+                        Box(modifier = Modifier.weight(1f)) {
+                            when (item) {
+                                is ProcessingDropdownItem.Thinking -> {
+                                    var thinkingExpanded by remember(item.reasoning) { mutableStateOf(false) }
+                                    CollapsibleThinkingText(
+                                        reasoning = item.reasoning,
+                                        expanded = thinkingExpanded,
+                                        onToggle = { thinkingExpanded = !thinkingExpanded },
+                                        modifier = Modifier.padding(end = 8.dp, bottom = 2.dp)
+                                    )
+                                }
+                                is ProcessingDropdownItem.Tool -> {
+                                    ToolActivityCards(listOf(item.activity))
+                                }
+                            }
+                        }
+                    }
                 }
-                ToolActivityCards(visibleActivities)
             }
         }
     }
 }
-
 @Composable
 private fun CollapsibleThinkingText(
     reasoning: String,

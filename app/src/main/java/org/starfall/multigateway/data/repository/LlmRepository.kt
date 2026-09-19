@@ -35,6 +35,10 @@ class LlmRepository(private val db: AppDatabase, private val service: LlmService
         providerDao.deleteById(id)
     }
 
+    suspend fun reorderProviders(ids: List<String>) {
+        ids.forEachIndexed { index, id -> providerDao.updateSortOrder(id, index) }
+    }
+
     suspend fun getModelsForProvider(providerId: String): LlmProviderModels? {
         val entity = modelsDao.getModelsForProvider(providerId) ?: return null
         val models: List<LlmModel> = try {
@@ -79,7 +83,8 @@ class LlmRepository(private val db: AppDatabase, private val service: LlmService
             auth = auth,
             icon = entity.icon,
             baseUrl = SecretCipher.decrypt(entity.baseUrl),
-            config = config
+            config = config,
+            sortOrder = entity.sortOrder
         )
     }
 
@@ -91,7 +96,8 @@ class LlmRepository(private val db: AppDatabase, private val service: LlmService
             baseUrl = SecretCipher.encrypt(provider.baseUrl),
             authJson = SecretCipher.encrypt(json.encodeToString(provider.auth)),
             configJson = SecretCipher.encrypt(json.encodeToString(provider.config)),
-            icon = provider.icon
+            icon = provider.icon,
+            sortOrder = provider.sortOrder
         )
     }
 }

@@ -3,6 +3,7 @@ package org.starfall.multigateway.ui.profiles
 import org.starfall.multigateway.data.model.McpInfo
 import org.starfall.multigateway.data.model.McpAccess
 import org.starfall.multigateway.data.model.ToolDefinition
+import org.starfall.multigateway.data.model.ToolSettings
 import org.starfall.multigateway.ui.tools.ProfileMcpPermissions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -35,23 +36,29 @@ import androidx.compose.ui.unit.sp
 import org.starfall.multigateway.data.model.ChatProfile
 import org.starfall.multigateway.data.model.LlmChatConfig
 import java.util.UUID
+import org.starfall.multigateway.ui.components.ItemOverflowMenu
+import org.starfall.multigateway.ui.components.longPressReorder
+import org.starfall.multigateway.ui.components.moved
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     profiles: List<ChatProfile>,
     mcpServers: List<McpInfo>,
-    discoverTools: suspend (McpInfo) -> List<ToolDefinition>,
+    mcpToolsCache: Map<String, List<ToolDefinition>>,
+    toolSettings: ToolSettings,
     selectedProfileId: String?,
     onSelectProfile: (String?) -> Unit,
     onSaveProfile: (ChatProfile) -> Unit,
     onDeleteProfile: (String) -> Unit,
+    onReorderProfiles: (List<String>) -> Unit,
     onBack: () -> Unit
 ) {
     var isGridView by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
     var editingProfile by remember { mutableStateOf<ChatProfile?>(null) }
     var deletingProfileId by remember { mutableStateOf<String?>(null) }
+    var orderedProfiles by remember(profiles) { mutableStateOf(profiles) }
 
     Scaffold(
         topBar = {
@@ -105,10 +112,16 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(profiles, key = { it.id }) { profile ->
+                    items(orderedProfiles, key = { it.id }) { profile ->
                         val isSelected = profile.id == selectedProfileId
+                        val index = orderedProfiles.indexOfFirst { it.id == profile.id }
                         ProfileGridCard(
                             profile = profile,
+                            modifier = Modifier.longPressReorder(
+                                index = index, itemCount = orderedProfiles.size, columns = 2,
+                                onMove = { from, to -> orderedProfiles = orderedProfiles.moved(from, to) },
+                                onDrop = { onReorderProfiles(orderedProfiles.map { it.id }) }
+                            ),
                             isSelected = isSelected,
                             onSelect = { onSelectProfile(profile.id) },
                             onEdit = {
@@ -181,10 +194,16 @@ fun ProfileScreen(
                         }
                     }
 
-                    items(profiles, key = { it.id }) { profile ->
+                    items(orderedProfiles, key = { it.id }) { profile ->
                         val isSelected = profile.id == selectedProfileId
+                        val index = orderedProfiles.indexOfFirst { it.id == profile.id }
                         ProfileListCard(
                             profile = profile,
+                            modifier = Modifier.longPressReorder(
+                                index = index, itemCount = orderedProfiles.size, columns = 1,
+                                onMove = { from, to -> orderedProfiles = orderedProfiles.moved(from, to) },
+                                onDrop = { onReorderProfiles(orderedProfiles.map { it.id }) }
+                            ),
                             isSelected = isSelected,
                             onSelect = { onSelectProfile(profile.id) },
                             onEdit = {
@@ -203,7 +222,8 @@ fun ProfileScreen(
         AddOrEditProfileDialog(
             profile = editingProfile,
             mcpServers = mcpServers,
-            discoverTools = discoverTools,
+            mcpToolsCache = mcpToolsCache,
+            toolSettings = toolSettings,
             onDismiss = { showDialog = false },
             onSave = {
                 onSaveProfile(it)
@@ -240,6 +260,7 @@ fun ProfileScreen(
 @Composable
 fun ProfileListCard(
     profile: ChatProfile,
+    modifier: Modifier = Modifier,
     isSelected: Boolean,
     onSelect: () -> Unit,
     onEdit: () -> Unit,
@@ -254,7 +275,7 @@ fun ProfileListCard(
             if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
             else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
         ),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onSelect)
     ) {
@@ -318,24 +339,12 @@ fun ProfileListCard(
 
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
-                    Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = "Edit",
-                        tint = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
-                    Icon(
-                        imageVector = Icons.Outlined.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
+            ItemOverflowMenu(
+                onEdit = onEdit,
+                onDelete = onDelete,
+                deleteColor = MaterialTheme.colorScheme.error
+            )
+
         }
     }
 }
@@ -343,6 +352,7 @@ fun ProfileListCard(
 @Composable
 fun ProfileGridCard(
     profile: ChatProfile,
+    modifier: Modifier = Modifier,
     isSelected: Boolean,
     onSelect: () -> Unit,
     onEdit: () -> Unit,
@@ -357,7 +367,7 @@ fun ProfileGridCard(
             if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
             else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
         ),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onSelect)
     ) {
@@ -387,14 +397,11 @@ fun ProfileGridCard(
                     )
                 }
 
-                Row {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Outlined.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp))
-                    }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-                    }
-                }
+                ItemOverflowMenu(
+                    onEdit = onEdit,
+                    onDelete = onDelete,
+                    deleteColor = MaterialTheme.colorScheme.error
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -436,7 +443,8 @@ fun ProfileGridCard(
 fun AddOrEditProfileDialog(
     profile: ChatProfile?,
     mcpServers: List<McpInfo>,
-    discoverTools: suspend (McpInfo) -> List<ToolDefinition>,
+    mcpToolsCache: Map<String, List<ToolDefinition>>,
+    toolSettings: ToolSettings,
     onDismiss: () -> Unit,
     onSave: (ChatProfile) -> Unit
 ) {
@@ -468,7 +476,12 @@ fun AddOrEditProfileDialog(
                     minLines = 2,
                     maxLines = 4
                 )
-                ProfileMcpPermissions(mcpServers, mcpAccess, discoverTools) { mcpAccess = it }
+                ProfileMcpPermissions(
+                    servers = mcpServers,
+                    access = mcpAccess,
+                    toolsCache = mcpToolsCache,
+                    settings = toolSettings
+                ) { mcpAccess = it }
             }
         },
         confirmButton = {

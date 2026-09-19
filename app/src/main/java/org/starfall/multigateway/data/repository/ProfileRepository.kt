@@ -28,6 +28,10 @@ class ProfileRepository(private val db: AppDatabase) {
         dao.deleteById(id)
     }
 
+    suspend fun reorderProfiles(ids: List<String>) {
+        ids.forEachIndexed { index, id -> dao.updateSortOrder(id, index) }
+    }
+
     private fun entityToModel(entity: ChatProfileEntity): ChatProfile {
         val config: LlmChatConfig = try {
             json.decodeFromString(entity.configJson)
@@ -38,7 +42,8 @@ class ProfileRepository(private val db: AppDatabase) {
             id = entity.id,
             name = entity.name,
             icon = entity.icon,
-            config = config
+            config = config,
+            sortOrder = entity.sortOrder
         )
     }
 
@@ -49,7 +54,8 @@ class ProfileRepository(private val db: AppDatabase) {
             icon = profile.icon,
             configJson = json.encodeToString(profile.config),
             activeMcpJson = "[]",
-            activeModelToolsJson = "[]"
+            activeModelToolsJson = "[]",
+            sortOrder = profile.sortOrder
         )
     }
 }

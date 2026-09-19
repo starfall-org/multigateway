@@ -10,5 +10,8 @@
     <string name="expand">Expand</string>
     <string name="processed">Processed</string>
     <string name="processed_in">Processed in %1$s</string>
-    <string name="processing_block_label">%1$d. %2$s</string>
+    <string name="reasoning_completed">Reasoning completed</string>
+    <string name="reasoning_completed_in">Reasoning completed in %1$s</string>
+    <string name="tool_executed">Tool executed</string>
+    <string name="tool_executed_in">Tool executed in %1$s</string>
 </resources>

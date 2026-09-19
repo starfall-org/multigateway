@@ -50,7 +50,11 @@ class ConversationRepository(private val db: AppDatabase) {
             tokenCount = entity.tokenCount,
             providerId = entity.providerId,
             modelId = entity.modelId,
-            profileId = entity.profileId
+            profileId = entity.profileId,
+            summary = entity.summaryJson?.let { raw ->
+                runCatching { json.decodeFromString<ConversationSummary>(raw) }.getOrNull()
+            },
+            reasoningEffort = entity.reasoningEffort
         )
     }
 
@@ -64,7 +68,9 @@ class ConversationRepository(private val db: AppDatabase) {
             tokenCount = conversation.tokenCount,
             providerId = conversation.providerId,
             modelId = conversation.modelId,
-            profileId = conversation.profileId
+            profileId = conversation.profileId,
+            summaryJson = conversation.summary?.let { json.encodeToString(it) },
+            reasoningEffort = conversation.reasoningEffort
         )
     }
 }

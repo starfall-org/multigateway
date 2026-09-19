@@ -49,6 +49,31 @@ data class StoredMessage(
 }
 
 @Serializable
+enum class SummaryRole { SYSTEM, ASSISTANT, USER }
+
+@Serializable
+data class ConversationSummary(
+    val id: String,
+    val content: String,
+    @SerialName("through_message_id") val throughMessageId: String,
+    val role: SummaryRole = SummaryRole.SYSTEM,
+    @SerialName("created_at") val createdAt: Long = System.currentTimeMillis()
+)
+
+data class ConversationSummaryRequest(
+    val targetTokens: Int,
+    val chunked: Boolean = false,
+    val tokensPerChunk: Int = 20_000
+)
+
+data class ConversationSummaryProgress(
+    val conversationId: String,
+    val throughMessageId: String,
+    val label: String,
+    val progress: Float
+)
+
+@Serializable
 data class Conversation(
     val id: String,
     val title: String,
@@ -58,5 +83,7 @@ data class Conversation(
     @SerialName("token_count") val tokenCount: Int? = null,
     @SerialName("provider_id") val providerId: String = "",
     @SerialName("model_id") val modelId: String = "",
-    @SerialName("profile_id") val profileId: String? = null
+    @SerialName("profile_id") val profileId: String? = null,
+    val summary: ConversationSummary? = null,
+    @SerialName("reasoning_effort") val reasoningEffort: String? = null
 )

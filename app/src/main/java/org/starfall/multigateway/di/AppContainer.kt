@@ -16,7 +16,7 @@ import org.starfall.multigateway.ui.settings.SettingsViewModel
 class AppContainer(context: Context) {
     private val appContext = context.applicationContext
     private val database = AppDatabase.getInstance(appContext)
-    private val llmService = LlmService()
+    private val llmService = LlmService(appContext)
     val toolFiles = ToolFiles(appContext)
     private val toolHttp = ToolHttp(toolFiles)
     private val mcpService = McpService(toolHttp)
@@ -31,8 +31,19 @@ class AppContainer(context: Context) {
 
     val viewModelFactory = viewModelFactory {
         initializer {
-            ChatViewModel(conversations, profiles, providers, mcp, preferences,
-                ToolChat(toolHttp, mcpService, llmService), toolSettings, TtsHelper(appContext))
+            ChatViewModel(
+                conversations,
+                profiles,
+                providers,
+                mcp,
+                preferences,
+                ToolChat(toolHttp, mcpService, llmService),
+                toolSettings,
+                speech,
+                TtsHelper(appContext),
+                SpeechSynthesisService(),
+                SpeechAudioPlayer(appContext)
+            )
         }
         initializer { ConfigurationViewModel(profiles, providers, mcp, speech, preferences) }
         initializer { SettingsViewModel(preferences) }

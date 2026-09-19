@@ -1,6 +1,8 @@
 package org.starfall.multigateway.ui.speech
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +11,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -20,22 +24,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import org.starfall.multigateway.data.model.LlmProviderInfo
+import org.starfall.multigateway.data.model.ModelType
 import org.starfall.multigateway.data.model.SpeechService
 import java.util.UUID
+import org.starfall.multigateway.ui.components.ItemOverflowMenu
+import org.starfall.multigateway.ui.components.longPressReorder
+import org.starfall.multigateway.ui.components.moved
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpeechScreen(
     speechServices: List<SpeechService>,
+    providers: List<LlmProviderInfo>,
+    selectedSpeechServiceId: String?,
+    onSelectService: (String?) -> Unit,
     onSaveService: (SpeechService) -> Unit,
     onDeleteService: (String) -> Unit,
-    onTestVoice: (text: String, speed: Float, pitch: Float) -> Unit,
+    onReorderServices: (List<String>) -> Unit,
+    onTestVoice: (SpeechService, String) -> Unit,
     onBack: () -> Unit
 ) {
     var editingService by remember { mutableStateOf<SpeechService?>(null) }
     var isCreatingNew by remember { mutableStateOf(false) }
+    var newServiceId by remember { mutableStateOf(UUID.randomUUID().toString()) }
     var deletingServiceId by remember { mutableStateOf<String?>(null) }
+    var orderedServices by remember(speechServices) { mutableStateOf(speechServices) }
 
     Scaffold(
         topBar = {
@@ -43,11 +57,13 @@ fun SpeechScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Speech Services",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+                            "Speech Services",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.SemiBold
+                            )
                         )
                         Text(
-                            text = "Manage text-to-speech services",
+                            "Use Android TTS or TTS models from Providers",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -59,40 +75,62 @@ fun SpeechScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { isCreatingNew = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Voice")
+                    IconButton(
+                        onClick = {
+                            newServiceId = UUID.randomUUID().toString()
+                            isCreatingNew = true
+                        }
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Add speech service")
                     }
                 }
             )
         }
     ) { padding ->
-        Box(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(speechServices, key = { it.id }) { service ->
-                    SpeechServiceCard(
-                        service = service,
-                        onTest = {
-                            onTestVoice("Hello! This is a preview of the ${service.name} voice.", service.speed, service.pitch)
-                        },
-                        onEdit = { editingService = service },
-                        onDelete = { deletingServiceId = service.id }
-                    )
+            items(orderedServices, key = { it.id }) { service ->
+                val providerName = when {
+                    service.provider.equals("system", ignoreCase = true) -> "Android System TTS"
+                    else -> providers.find { it.id == service.provider }?.name ?: service.provider
                 }
+                val index = orderedServices.indexOfFirst { it.id == service.id }
+                SpeechServiceCard(
+                    service = service,
+                    modifier = Modifier.longPressReorder(
+                        index = index, itemCount = orderedServices.size, columns = 1,
+                        onMove = { from, to -> orderedServices = orderedServices.moved(from, to) },
+                        onDrop = { onReorderServices(orderedServices.map { it.id }) }
+                    ),
+                    providerName = providerName,
+                    selected = service.id == selectedSpeechServiceId ||
+                        (selectedSpeechServiceId == null && service.provider.equals("system", true)),
+                    onSelect = { onSelectService(service.id) },
+                    onTest = {
+                        onTestVoice(
+                            service,
+                            "Hello! This is a preview of the ${service.name} voice."
+                        )
+                    },
+                    onEdit = { editingService = service },
+                    onDelete = { deletingServiceId = service.id }
+                )
             }
         }
     }
 
     if (editingService != null || isCreatingNew) {
         val target = editingService ?: SpeechService(
-            id = UUID.randomUUID().toString(),
+            id = newServiceId,
             name = "Custom TTS",
-            provider = "System",
-            voice = "default",
+            provider = "system",
+            modelId = null,
+            voice = "Default",
             speed = 1.0f,
             pitch = 1.0f
         )
@@ -100,6 +138,7 @@ fun SpeechScreen(
         AddOrEditSpeechDialog(
             initialService = target,
             isNew = isCreatingNew,
+            providers = providers,
             onTest = onTestVoice,
             onDismiss = {
                 editingService = null
@@ -107,24 +146,30 @@ fun SpeechScreen(
             },
             onSave = { saved ->
                 onSaveService(saved)
+                if (selectedSpeechServiceId == null && !saved.provider.equals("system", true)) {
+                    onSelectService(saved.id)
+                }
                 editingService = null
                 isCreatingNew = false
             }
         )
     }
 
-    if (deletingServiceId != null) {
+    deletingServiceId?.let { id ->
         AlertDialog(
             onDismissRequest = { deletingServiceId = null },
             title = { Text("Delete Speech Service") },
-            text = { Text("Are you sure you want to remove this TTS voice configuration?") },
+            text = { Text("Are you sure you want to remove this TTS configuration?") },
             confirmButton = {
                 Button(
                     onClick = {
-                        deletingServiceId?.let { onDeleteService(it) }
+                        onDeleteService(id)
+                        if (selectedSpeechServiceId == id) onSelectService(null)
                         deletingServiceId = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
                     Text("Delete")
                 }
@@ -139,17 +184,31 @@ fun SpeechScreen(
 }
 
 @Composable
-fun SpeechServiceCard(
+private fun SpeechServiceCard(
     service: SpeechService,
+    modifier: Modifier = Modifier,
+    providerName: String,
+    selected: Boolean,
+    onSelect: () -> Unit,
     onTest: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        modifier = Modifier.fillMaxWidth()
+        color = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
+        border = BorderStroke(
+            1.dp,
+            if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSelect)
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -163,135 +222,261 @@ fun SpeechServiceCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.RecordVoiceOver,
+                    Icons.Outlined.RecordVoiceOver,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(22.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(Modifier.width(14.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        service.name,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                    if (selected) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Selected",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
                 Text(
-                    text = service.name,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Provider: ${service.provider} • Voice: ${service.voice}",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                    providerName,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
+                val modelLine = service.modelId?.let { "Model: $it · " }.orEmpty()
                 Text(
-                    text = "Speed: ${service.speed}x • Pitch: ${service.pitch}x",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                    "${modelLine}Voice: ${service.voice}",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onTest, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Test voice",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Outlined.Edit, contentDescription = "Edit", modifier = Modifier.size(18.dp))
-                }
-                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Outlined.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                }
+            IconButton(onClick = onTest, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    Icons.Default.PlayArrow,
+                    contentDescription = "Test voice",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
+            ItemOverflowMenu(
+                onEdit = onEdit,
+                onDelete = onDelete,
+                deleteColor = MaterialTheme.colorScheme.error
+            )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddOrEditSpeechDialog(
+private fun AddOrEditSpeechDialog(
     initialService: SpeechService,
     isNew: Boolean,
-    onTest: (String, Float, Pitch: Float) -> Unit,
+    providers: List<LlmProviderInfo>,
+    onTest: (SpeechService, String) -> Unit,
     onDismiss: () -> Unit,
     onSave: (SpeechService) -> Unit
 ) {
-    var name by remember { mutableStateOf(initialService.name) }
-    var provider by remember { mutableStateOf(initialService.provider) }
-    var voice by remember { mutableStateOf(initialService.voice) }
-    var speed by remember { mutableFloatStateOf(initialService.speed) }
-    var pitch by remember { mutableFloatStateOf(initialService.pitch) }
+    val ttsModelsByProvider = remember(providers) {
+        providers.associate { provider ->
+            provider.id to provider.config.modelConfigs
+                .filterValues { it.modelType == ModelType.TEXT_TO_SPEECH }
+                .keys
+                .toList()
+        }.filterValues { it.isNotEmpty() }
+    }
+
+    var name by remember(initialService.id) { mutableStateOf(initialService.name) }
+    var providerId by remember(initialService.id) {
+        mutableStateOf(
+            initialService.provider.takeIf {
+                it.equals("system", true) || it in ttsModelsByProvider
+            } ?: "system"
+        )
+    }
+    var modelId by remember(initialService.id) {
+        mutableStateOf(initialService.modelId)
+    }
+    var voice by remember(initialService.id) { mutableStateOf(initialService.voice) }
+    var speed by remember(initialService.id) { mutableFloatStateOf(initialService.speed) }
+    var pitch by remember(initialService.id) { mutableFloatStateOf(initialService.pitch) }
+    var providerExpanded by remember { mutableStateOf(false) }
+    var modelExpanded by remember { mutableStateOf(false) }
+
+    val availableModels = ttsModelsByProvider[providerId].orEmpty()
+    LaunchedEffect(providerId) {
+        if (!providerId.equals("system", true) && modelId !in availableModels) {
+            modelId = availableModels.firstOrNull()
+        }
+        if (providerId.equals("system", true)) modelId = null
+    }
+
+    fun currentService() = initialService.copy(
+        name = name.trim(),
+        provider = providerId,
+        modelId = modelId,
+        voice = voice.trim().ifEmpty {
+            if (providerId.equals("system", true)) "Default" else "alloy"
+        },
+        speed = speed,
+        pitch = pitch
+    )
+
+    val canSave = name.isNotBlank() &&
+        (providerId.equals("system", true) || !modelId.isNullOrBlank())
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isNew) "Add Speech Service" else "Edit Voice Config") },
+        title = { Text(if (isNew) "Add Speech Service" else "Edit Speech Service") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Service Name") },
+                    label = { Text("Service name") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Box {
+                    OutlinedButton(
+                        onClick = { providerExpanded = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            if (providerId.equals("system", true)) {
+                                "Android System TTS"
+                            } else {
+                                providers.find { it.id == providerId }?.name ?: providerId
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
+                    }
+                    DropdownMenu(
+                        expanded = providerExpanded,
+                        onDismissRequest = { providerExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Android System TTS") },
+                            onClick = {
+                                providerId = "system"
+                                providerExpanded = false
+                            }
+                        )
+                        providers.filter { it.id in ttsModelsByProvider }.forEach { provider ->
+                            DropdownMenuItem(
+                                text = { Text(provider.name) },
+                                onClick = {
+                                    providerId = provider.id
+                                    providerExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                if (!providerId.equals("system", true)) {
+                    Box {
+                        OutlinedButton(
+                            onClick = { modelExpanded = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(modelId ?: "Select TTS model", modifier = Modifier.weight(1f))
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
+                        }
+                        DropdownMenu(
+                            expanded = modelExpanded,
+                            onDismissRequest = { modelExpanded = false }
+                        ) {
+                            availableModels.forEach { id ->
+                                val displayName = providers
+                                    .find { it.id == providerId }
+                                    ?.config
+                                    ?.modelConfigs
+                                    ?.get(id)
+                                    ?.displayName
+                                    ?.takeIf { it.isNotBlank() }
+                                DropdownMenuItem(
+                                    text = { Text(displayName ?: id) },
+                                    onClick = {
+                                        modelId = id
+                                        modelExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                } else if (ttsModelsByProvider.isEmpty()) {
+                    Text(
+                        "No Provider models are marked as Text to speech yet. Configure a model type in Providers to use it here.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 OutlinedTextField(
                     value = voice,
                     onValueChange = { voice = it },
-                    label = { Text("Voice Identifier (e.g. en-US-default)") },
+                    label = {
+                        Text(
+                            if (providerId.equals("system", true)) {
+                                "Voice"
+                            } else {
+                                "Voice ID (for example: alloy)"
+                            }
+                        )
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Text(
-                    text = "Speed Rate: ${String.format("%.1f", speed)}x",
-                    style = MaterialTheme.typography.labelMedium
-                )
+                Text("Speed: ${String.format("%.1f", speed)}x")
                 Slider(
                     value = speed,
                     onValueChange = { speed = it },
                     valueRange = 0.5f..2.0f
                 )
 
-                Text(
-                    text = "Pitch: ${String.format("%.1f", pitch)}x",
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Slider(
-                    value = pitch,
-                    onValueChange = { pitch = it },
-                    valueRange = 0.5f..2.0f
-                )
+                if (providerId.equals("system", true)) {
+                    Text("Pitch: ${String.format("%.1f", pitch)}x")
+                    Slider(
+                        value = pitch,
+                        onValueChange = { pitch = it },
+                        valueRange = 0.5f..2.0f
+                    )
+                }
 
                 OutlinedButton(
                     onClick = {
-                        onTest("Testing speech voice output. Quality is optimal.", speed, pitch)
+                        onTest(currentService(), "Testing speech voice output.")
                     },
+                    enabled = canSave,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Test Voice Preview")
+                    Icon(Icons.Default.PlayArrow, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Test Voice")
                 }
             }
         },
         confirmButton = {
             Button(
-                onClick = {
-                    if (name.isNotBlank()) {
-                        val updated = initialService.copy(
-                            name = name.trim(),
-                            provider = provider.trim(),
-                            voice = voice.trim(),
-                            speed = speed,
-                            pitch = pitch
-                        )
-                        onSave(updated)
-                    }
-                }
+                onClick = { onSave(currentService()) },
+                enabled = canSave
             ) {
                 Text("Save")
             }

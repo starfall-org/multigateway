@@ -1,6 +1,7 @@
 package org.starfall.multigateway.ui.settings
 
-import android.widget.Toast
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,16 +23,24 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import androidx.core.content.pm.PackageInfoCompat
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import java.net.HttpURLConnection
+import java.net.URL
 import org.starfall.multigateway.data.local.preferences.AppPreferences
 
 enum class SettingsCategory(val title: String, val subtitle: String, val icon: ImageVector) {
     APPEARANCE("Appearance", "Theme, color palette & dynamic color", Icons.Outlined.Palette),
     PREFERENCES("Preferences", "Behavior, vibrations & display", Icons.Outlined.Tune),
     USER_DATA("Data & Storage", "Manage conversations, backup & wipe data", Icons.Outlined.Storage),
-    UPDATE("Software Update", "Version v1.0.0, check latest updates", Icons.Outlined.SystemUpdateAlt),
-    ABOUT("About MultiGateway", "Open source credits, licenses & info", Icons.Outlined.Info)
+    UPDATE("Software Update", "Check the latest GitHub release", Icons.Outlined.SystemUpdateAlt),
+    ABOUT("About MultiGateway", "Version, repository, license & app info", Icons.Outlined.Info)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -525,11 +534,79 @@ fun DataStatItem(label: String, count: String) {
     }
 }
 
+private data class GitHubReleaseInfo(
+    val tagName: String,
+    val title: String,
+    val pageUrl: String,
+    val apkUrl: String?
+)
+
+private suspend fun fetchLatestGitHubRelease(): GitHubReleaseInfo = withContext(Dispatchers.IO) {
+    val connection = (URL("https://api.github.com/repos/starfall-org/multigateway/releases/latest").openConnection() as HttpURLConnection).apply {
+        requestMethod = "GET"
+        connectTimeout = 10_000
+        readTimeout = 15_000
+        setRequestProperty("Accept", "application/vnd.github+json")
+        setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+        setRequestProperty("User-Agent", "MultiGateway-Android")
+    }
+    try {
+        val code = connection.responseCode
+        if (code !in 200..299) error("GitHub returned HTTP $code")
+        val root = Json.parseToJsonElement(connection.inputStream.bufferedReader().use { it.readText() }).jsonObject
+        val tag = root["tag_name"]?.jsonPrimitive?.content.orEmpty()
+        val title = root["name"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: tag
+        val page = root["html_url"]?.jsonPrimitive?.content.orEmpty()
+        val assets = root["assets"]?.jsonArray.orEmpty()
+        val apkAsset = assets
+            .mapNotNull { it.jsonObject }
+            .filter { it["name"]?.jsonPrimitive?.content?.endsWith(".apk", ignoreCase = true) == true }
+            .sortedByDescending { it["name"]?.jsonPrimitive?.content?.contains("universal", ignoreCase = true) == true }
+            .firstOrNull()
+        val apkUrl = apkAsset?.get("browser_download_url")?.jsonPrimitive?.content
+        GitHubReleaseInfo(tag, title, page, apkUrl)
+    } finally {
+        connection.disconnect()
+    }
+}
+
+private fun compareVersions(current: String, latestTag: String): Int {
+    fun parts(value: String): List<Int> = value
+        .removePrefix("v")
+        .split('.')
+        .map { part -> part.takeWhile { it.isDigit() }.toIntOrNull() ?: 0 }
+    val a = parts(current)
+    val b = parts(latestTag)
+    val size = maxOf(a.size, b.size)
+    repeat(size) { index ->
+        val av = a.getOrElse(index) { 0 }
+        val bv = b.getOrElse(index) { 0 }
+        if (av != bv) return av.compareTo(bv)
+    }
+    return 0
+}
+
 @Composable
 fun UpdateSettingsView() {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    var isChecking by remember { mutableStateOf(false) }
+    val packageInfo = remember(context) { context.packageManager.getPackageInfo(context.packageName, 0) }
+    val currentVersion = packageInfo.versionName.orEmpty()
+    val currentBuild = PackageInfoCompat.getLongVersionCode(packageInfo)
+    var isChecking by remember { mutableStateOf(true) }
+    var latestRelease by remember { mutableStateOf<GitHubReleaseInfo?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var refreshKey by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(refreshKey) {
+        isChecking = true
+        errorMessage = null
+        runCatching { fetchLatestGitHubRelease() }
+            .onSuccess { latestRelease = it }
+            .onFailure { errorMessage = it.localizedMessage ?: "Unable to check GitHub releases" }
+        isChecking = false
+    }
+
+    val updateAvailable = latestRelease?.let { compareVersions(currentVersion, it.tagName) < 0 } == true
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Surface(
@@ -537,32 +614,55 @@ fun UpdateSettingsView() {
             color = MaterialTheme.colorScheme.surfaceContainerLow,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Version Information", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("MultiGateway Android: v1.0.0 (Release)", style = MaterialTheme.typography.bodyLarge)
-                Text("Engine: Jetpack Compose M3 + Room DB + Ktor", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Current version", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+                Text("MultiGateway $currentVersion ($currentBuild)", style = MaterialTheme.typography.bodyLarge)
+                Text("Package: ${context.packageName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
         }
 
-        Button(
-            onClick = {
-                isChecking = true
-                coroutineScope.launch {
-                    delay(1200)
-                    isChecking = false
-                    Toast.makeText(context, "MultiGateway is up to date (v1.0.0)", Toast.LENGTH_SHORT).show()
-                }
-            },
-            enabled = !isChecking,
-            modifier = Modifier.fillMaxWidth()
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (latestRelease != null) Modifier.clickable {
+                        val release = latestRelease ?: return@clickable
+                        val target = release.apkUrl ?: release.pageUrl
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target)))
+                    } else Modifier
+                )
         ) {
-            if (isChecking) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Checking...")
-            } else {
-                Text("Check for Updates")
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Latest GitHub Release", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+                when {
+                    isChecking -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(10.dp))
+                            Text("Checking GitHub Releases...")
+                        }
+                    }
+                    errorMessage != null -> {
+                        Text(errorMessage.orEmpty(), color = MaterialTheme.colorScheme.error)
+                        TextButton(onClick = { refreshKey++ }) { Text("Try again") }
+                    }
+                    latestRelease != null -> {
+                        Text(latestRelease?.title.orEmpty(), style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            if (updateAvailable) "New version available: ${latestRelease?.tagName}"
+                            else "You are up to date (${latestRelease?.tagName})",
+                            color = if (updateAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                        )
+                        Text(
+                            if (latestRelease?.apkUrl != null) "Tap to download the latest APK in your browser"
+                            else "Tap to open the latest release in your browser",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
             }
         }
     }
@@ -570,36 +670,45 @@ fun UpdateSettingsView() {
 
 @Composable
 fun AboutSettingsView() {
+    val context = LocalContext.current
+    val packageInfo = remember(context) { context.packageManager.getPackageInfo(context.packageName, 0) }
+    val versionName = packageInfo.versionName.orEmpty()
+    val versionCode = PackageInfoCompat.getLongVersionCode(packageInfo)
+    val targetSdk = context.applicationInfo.targetSdkVersion
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("MultiGateway", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.primary)
                 Text("Universal AI Gateway for Android", style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "A versatile open-source client for interacting with multiple LLM providers (OpenAI, Anthropic, Gemini, Ollama) and extensible Model Context Protocol (MCP) servers.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
+                Text("Version $versionName ($versionCode)", style = MaterialTheme.typography.bodyMedium)
+                Text("Target Android SDK $targetSdk", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Text("Package: ${context.packageName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
         }
 
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/starfall-org/multigateway"))
+                    )
+                }
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Developer & Community", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Organization: Starfall", style = MaterialTheme.typography.bodyMedium)
-                Text("Repository: github.com/starfall-org/multigateway", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                Text("License: MIT Open Source", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Project", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+                Text("Repository: github.com/starfall-org/multigateway", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                Text("License: MIT", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Text("Tap to open the repository", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
         }
     }
 }
+

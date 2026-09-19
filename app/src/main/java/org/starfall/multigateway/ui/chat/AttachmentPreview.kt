@@ -1,0 +1,201 @@
+package org.starfall.multigateway.ui.chat
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
+import android.net.Uri
+import android.os.Build
+import android.provider.OpenableColumns
+import android.util.Size
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.InsertDriveFile
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+
+private data class AttachmentPreviewData(
+    val name: String,
+    val mimeType: String,
+    val bitmap: Bitmap? = null,
+    val durationMs: Long? = null
+)
+
+@Composable
+fun AttachmentStrip(
+    references: List<String>,
+    removable: Boolean,
+    onRemove: (String) -> Unit = {},
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
+) {
+    if (references.isEmpty()) return
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = if (compact) 6.dp else 0.dp)
+    ) {
+        items(references, key = { it }) { reference ->
+            AttachmentTile(
+                reference = reference,
+                removable = removable,
+                onRemove = { onRemove(reference) },
+                compact = compact
+            )
+        }
+    }
+}
+
+@Composable
+private fun AttachmentTile(
+    reference: String,
+    removable: Boolean,
+    onRemove: () -> Unit,
+    compact: Boolean
+) {
+    val context = LocalContext.current
+    val data by produceState<AttachmentPreviewData?>(initialValue = null, reference) {
+        value = withContext(Dispatchers.IO) { loadPreview(context, reference) }
+    }
+    val width = if (compact) 116.dp else 132.dp
+    val height = if (compact) 72.dp else 92.dp
+    val shape = RoundedCornerShape(if (compact) 26.dp else 18.dp)
+
+    Box(
+        modifier = Modifier
+            .width(width)
+            .height(height)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+    ) {
+        val preview = data
+        if (preview?.bitmap != null) {
+            Image(
+                bitmap = preview.bitmap.asImageBitmap(),
+                contentDescription = preview.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Outlined.InsertDriveFile,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(7.dp))
+                Text(
+                    preview?.name ?: Uri.parse(reference).lastPathSegment.orEmpty(),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+
+        preview?.durationMs?.let { duration ->
+            Surface(
+                color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.56f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.align(Alignment.TopStart).padding(7.dp)
+            ) {
+                Text(
+                    formatDuration(duration),
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                )
+            }
+        }
+
+        if (removable) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onRemove),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("×", style = MaterialTheme.typography.titleLarge)
+                }
+            }
+        }
+    }
+}
+
+private fun loadPreview(context: Context, reference: String): AttachmentPreviewData {
+    val uri = Uri.parse(reference)
+    val resolver = context.contentResolver
+    val name = when {
+        uri.scheme == "content" -> runCatching {
+            resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index >= 0) cursor.getString(index) else null
+                } else null
+            }
+        }.getOrNull()
+        else -> File(uri.path ?: reference).name
+    } ?: uri.lastPathSegment?.substringAfterLast('/') ?: "Attachment"
+    val mime = if (uri.scheme == "content") resolver.getType(uri).orEmpty() else ""
+    val isImage = mime.startsWith("image/")
+    val isVideo = mime.startsWith("video/")
+
+    var bitmap: Bitmap? = null
+    var duration: Long? = null
+    if (isImage) {
+        bitmap = runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && uri.scheme == "content") {
+                resolver.loadThumbnail(uri, Size(480, 320), null)
+            } else {
+                val options = BitmapFactory.Options().apply { inSampleSize = 4 }
+                if (uri.scheme == "content") resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+                else BitmapFactory.decodeFile(uri.path ?: reference, options)
+            }
+        }.getOrNull()
+    } else if (isVideo) {
+        val retriever = MediaMetadataRetriever()
+        runCatching {
+            if (uri.scheme == "content") retriever.setDataSource(context, uri)
+            else retriever.setDataSource(uri.path ?: reference)
+            duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+            bitmap = retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+        }
+        runCatching { retriever.release() }
+    }
+
+    return AttachmentPreviewData(name, mime, bitmap, duration)
+}
+
+private fun formatDuration(durationMs: Long): String {
+    val total = (durationMs / 1000L).coerceAtLeast(0L)
+    val minutes = total / 60L
+    val seconds = total % 60L
+    return "%02d:%02d".format(minutes, seconds)
+}

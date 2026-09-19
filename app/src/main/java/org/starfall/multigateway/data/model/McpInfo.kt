@@ -33,5 +33,7 @@ data class McpInfo(
     val protocol: McpProtocol = McpProtocol.SSE,
     val url: String? = null,
     val headers: Map<String, String>? = null,
-    val auth: McpAuthorization = McpAuthorization()
+    val auth: McpAuthorization = McpAuthorization(),
+    val cachedTools: List<ToolDefinition>? = null,
+    val sortOrder: Int = Int.MAX_VALUE
 )

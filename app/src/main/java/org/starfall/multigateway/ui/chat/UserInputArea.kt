@@ -1,6 +1,11 @@
 package org.starfall.multigateway.ui.chat
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,29 +30,84 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.starfall.multigateway.R
 import org.starfall.multigateway.data.model.LlmProviderInfo
+import org.starfall.multigateway.data.model.ConversationSummaryRequest
+
+data class ChatInputEditDraft(
+    val messageId: String,
+    val text: String,
+    val attachments: List<String>,
+    val revision: Long
+)
 
 @Composable
 fun UserInputArea(
     isGenerating: Boolean,
     onSendMessage: (String, List<String>) -> Boolean,
+    onEditMessage: (String, String, List<String>) -> Boolean,
+    editDraft: ChatInputEditDraft?,
+    onCancelEdit: () -> Unit,
     onStopGenerating: () -> Unit,
     selectedModelName: String,
     providers: List<LlmProviderInfo>,
     selectedProviderId: String,
     onSelectModel: (providerId: String, modelId: String) -> Unit,
+    conversationReasoningEffort: String?,
+    onSetReasoningEffort: (String?) -> Unit,
+    onStartConversationSummary: (ConversationSummaryRequest) -> Boolean,
     onFetchOllamaModels: (suspend (String) -> List<String>)? = null,
     modifier: Modifier = Modifier
 ) {
     var textState by remember { mutableStateOf("") }
+    var attachments by remember { mutableStateOf<List<String>>(emptyList()) }
     val context = LocalContext.current
+
 
     val focusManager = LocalFocusManager.current
     var showModelPicker by remember { mutableStateOf(false) }
     var showQuickActions by remember { mutableStateOf(false) }
+    var showReasoningEffort by remember { mutableStateOf(false) }
+    var showConversationSummary by remember { mutableStateOf(false) }
     var showAddMenu by remember { mutableStateOf(false) }
     var showFilesSheet by remember { mutableStateOf(false) }
 
-    val canSend = !isGenerating && textState.isNotBlank()
+    LaunchedEffect(editDraft?.revision) {
+        editDraft?.let {
+            textState = it.text
+            attachments = it.attachments
+        }
+    }
+
+    fun retainReadPermission(uri: Uri) {
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        }
+    }
+
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(maxItems = 20)
+    ) { uris ->
+        uris.forEach(::retainReadPermission)
+        attachments = (attachments + uris.map(Uri::toString)).distinct()
+    }
+
+    val documentPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val data = result.data
+        val picked = buildList {
+            data?.data?.let(::add)
+            data?.clipData?.let { clip ->
+                for (index in 0 until clip.itemCount) add(clip.getItemAt(index).uri)
+            }
+        }.distinct()
+        picked.forEach(::retainReadPermission)
+        attachments = (attachments + picked.map(Uri::toString)).distinct()
+    }
+
+    val canSend = !isGenerating && (textState.isNotBlank() || attachments.isNotEmpty())
 
     Box(
         modifier = modifier
@@ -66,6 +126,38 @@ fun UserInputArea(
             tonalElevation = 3.dp,
             shadowElevation = 8.dp
         ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                if (editDraft != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 10.dp, top = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Editing message",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(
+                            onClick = {
+                                onCancelEdit()
+                                textState = ""
+                                attachments = emptyList()
+                            }
+                        ) { Text("Cancel") }
+                    }
+                }
+                if (attachments.isNotEmpty()) {
+                    AttachmentStrip(
+                        references = attachments,
+                        removable = true,
+                        onRemove = { ref -> attachments = attachments.filterNot { it == ref } },
+                        modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp),
+                        compact = false
+                    )
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -98,7 +190,7 @@ fun UserInputArea(
                         modifier = Modifier
                             .weight(1f)
                             .padding(horizontal = 8.dp, vertical = 10.dp),
-                        maxLines = 4,
+                        maxLines = 6,
                         decorationBox = { innerTextField ->
                             Box(contentAlignment = Alignment.CenterStart) {
                                 if (textState.isEmpty()) {
@@ -142,8 +234,13 @@ fun UserInputArea(
                                     if (isGenerating) {
                                         onStopGenerating()
                                     } else if (canSend) {
-                                        if (onSendMessage(textState, emptyList())) {
+                                        val submitted = editDraft?.let { draft ->
+                                            onEditMessage(draft.messageId, textState, attachments)
+                                        } ?: onSendMessage(textState, attachments)
+                                        if (submitted) {
                                             textState = ""
+                                            attachments = emptyList()
+                                            if (editDraft != null) onCancelEdit()
                                         } else {
                                             Toast.makeText(
                                                 context,
@@ -179,12 +276,28 @@ fun UserInputArea(
                 }
             }
         }
+    }
 
     if (showAddMenu) {
         FilesActionSheet(
-            onPickImage = { showFilesSheet = true },
-            onPickDocument = { showFilesSheet = true },
+            onPickImage = {
+                photoPicker.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                )
+            },
+            onPickDocument = {
+                documentPicker.launch(
+                    Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                    }
+                )
+            },
             onTakePhoto = { showFilesSheet = true },
+            onOpenReasoningEffort = { showReasoningEffort = true },
+            onOpenConversationSummary = { showConversationSummary = true },
             onOpenTools = { showQuickActions = true },
             onDismiss = { showAddMenu = false }
         )
@@ -205,11 +318,26 @@ fun UserInputArea(
         QuickActionsSheet(onDismiss = { showQuickActions = false })
     }
 
+    if (showReasoningEffort) {
+        ReasoningEffortSheet(
+            currentEffort = conversationReasoningEffort,
+            onApply = onSetReasoningEffort,
+            onDismiss = { showReasoningEffort = false }
+        )
+    }
+
+    if (showConversationSummary) {
+        ConversationSummarySheet(
+            onStart = onStartConversationSummary,
+            onDismiss = { showConversationSummary = false }
+        )
+    }
+
     if (showFilesSheet) {
         AlertDialog(
             onDismissRequest = { showFilesSheet = false },
-            title = { Text("Attachments unavailable") },
-            text = { Text("Sending images and documents is not supported yet. Please paste text into your message.") },
+            title = { Text("Camera unavailable") },
+            text = { Text("Camera capture is not connected yet. Use Photos or Files to attach existing media.") },
             confirmButton = {
                 TextButton(onClick = { showFilesSheet = false }) { Text("OK") }
             }

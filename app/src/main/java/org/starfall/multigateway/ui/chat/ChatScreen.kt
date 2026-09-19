@@ -25,6 +25,9 @@ import org.starfall.multigateway.data.model.ChatRole
 import org.starfall.multigateway.data.model.Conversation
 import org.starfall.multigateway.data.model.LlmProviderInfo
 import org.starfall.multigateway.data.model.StoredMessage
+import org.starfall.multigateway.data.model.ConversationSummaryProgress
+import org.starfall.multigateway.data.model.ConversationSummaryRequest
+import org.starfall.multigateway.data.model.SummaryRole
 
 @Composable
 fun ChatScreen(
@@ -41,11 +44,16 @@ fun ChatScreen(
     onOpenDrawer: () -> Unit,
     onOpenEndDrawer: () -> Unit,
     onRegenerate: (String) -> Unit,
-    onEditMessage: (messageId: String, newContent: String) -> Unit,
+    onEditMessage: (messageId: String, newContent: String, files: List<String>) -> Boolean,
     onDeleteMessage: (messageId: String) -> Unit,
     onDeleteMessageVersion: (messageId: String) -> Unit,
     onSwitchVersion: (messageId: String, versionIndex: Int) -> Unit,
     onSelectModel: (providerId: String, modelId: String) -> Unit,
+    summaryProgress: ConversationSummaryProgress?,
+    onSetReasoningEffort: (String?) -> Unit,
+    onStartConversationSummary: (ConversationSummaryRequest) -> Boolean,
+    onSummaryRoleChange: (SummaryRole) -> Unit,
+    onDeleteSummary: () -> Unit,
     onReadMessage: (String) -> Unit,
     onFetchOllamaModels: (suspend (String) -> List<String>)? = null,
     modifier: Modifier = Modifier
@@ -56,14 +64,13 @@ fun ChatScreen(
 
     val messages = conversation?.messages ?: emptyList()
 
-    // Dialog state for editing a message
-    var editingMessage by remember(conversation?.id) { mutableStateOf<StoredMessage?>(null) }
-    var editContentText by remember { mutableStateOf("") }
+    var editDraft by remember(conversation?.id) { mutableStateOf<ChatInputEditDraft?>(null) }
 
     // Dialog state for deleting a message
     var deletingMessageId by remember(conversation?.id) { mutableStateOf<String?>(null) }
 
     var regeneratingMessageId by remember(conversation?.id) { mutableStateOf<String?>(null) }
+    var showSummaryDialog by remember(conversation?.id) { mutableStateOf(false) }
     val streamingHere = isGenerating && generatingConversationId == conversation?.id
     val lastMessage = messages.lastOrNull()
     val autoScrollTick = if (streamingHere) {
@@ -87,7 +94,14 @@ fun ChatScreen(
             }
         }
     }
-    LaunchedEffect(conversation?.id, messages.size, autoScrollTick, followBottom, streamingHere) {
+    LaunchedEffect(
+        conversation?.id,
+        messages.size,
+        autoScrollTick,
+        followBottom,
+        streamingHere,
+        summaryProgress?.progress
+    ) {
         if (followBottom && messages.isNotEmpty()) {
             listState.scrollToItem(messages.lastIndex)
             val height = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.size ?: 0
@@ -163,8 +177,12 @@ fun ChatScreen(
                             message = msg,
                             onEdit = {
                                 whenIdle {
-                                    editingMessage = msg
-                                    editContentText = msg.content
+                                    editDraft = ChatInputEditDraft(
+                                        messageId = msg.id,
+                                        text = msg.content,
+                                        attachments = msg.files,
+                                        revision = System.nanoTime()
+                                    )
                                 }
                             },
                             onDelete = {
@@ -191,8 +209,12 @@ fun ChatScreen(
                             },
                             onEdit = {
                                 whenIdle {
-                                    editingMessage = msg
-                                    editContentText = msg.content
+                                    editDraft = ChatInputEditDraft(
+                                        messageId = msg.id,
+                                        text = msg.content,
+                                        attachments = msg.files,
+                                        revision = System.nanoTime()
+                                    )
                                 }
                             },
                             onDelete = {
@@ -204,6 +226,21 @@ fun ChatScreen(
                             onSwitchVersion = { newIdx ->
                                 whenIdle { onSwitchVersion(msg.id, newIdx) }
                             }
+                        )
+                    }
+
+                    val progressHere = summaryProgress?.takeIf {
+                        it.conversationId == conversation?.id && it.throughMessageId == msg.id
+                    }
+                    val summaryHere = conversation?.summary?.takeIf {
+                        it.throughMessageId == msg.id && progressHere == null
+                    }
+                    if (progressHere != null || summaryHere != null) {
+                        ConversationSummaryDivider(
+                            summary = summaryHere,
+                            progress = progressHere,
+                            onOpenSummary = { showSummaryDialog = true },
+                            modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
                 }
@@ -240,11 +277,19 @@ fun ChatScreen(
                 onSendMessage = { text, files ->
                     onSendMessage(text, files).also { if (it) followBottom = true }
                 },
+                onEditMessage = { id, text, files ->
+                    onEditMessage(id, text, files).also { if (it) followBottom = true }
+                },
+                editDraft = editDraft,
+                onCancelEdit = { editDraft = null },
                 onStopGenerating = onStopGenerating,
                 selectedModelName = selectedModelName,
                 providers = providers,
                 selectedProviderId = selectedProviderId,
                 onSelectModel = onSelectModel,
+                conversationReasoningEffort = conversation?.reasoningEffort,
+                onSetReasoningEffort = onSetReasoningEffort,
+                onStartConversationSummary = onStartConversationSummary,
                 onFetchOllamaModels = onFetchOllamaModels
             )
         }
@@ -258,6 +303,17 @@ fun ChatScreen(
         )
     }
 
+    if (showSummaryDialog) {
+        conversation?.summary?.let { summary ->
+            ConversationSummaryDialog(
+                summary = summary,
+                onRoleChange = onSummaryRoleChange,
+                onDelete = onDeleteSummary,
+                onDismiss = { showSummaryDialog = false }
+            )
+        } ?: run { showSummaryDialog = false }
+    }
+
     if (regeneratingMessageId != null) {
         AlertDialog(
             onDismissRequest = { regeneratingMessageId = null },
@@ -268,40 +324,6 @@ fun ChatScreen(
                 regeneratingMessageId = null
             }) { Text("Regenerate") } },
             dismissButton = { TextButton(onClick = { regeneratingMessageId = null }) { Text("Cancel") } }
-        )
-    }
-
-    // Edit message dialog
-    if (editingMessage != null) {
-        AlertDialog(
-            onDismissRequest = { editingMessage = null },
-            title = { Text("Edit Message") },
-            text = {
-                OutlinedTextField(
-                    value = editContentText,
-                    onValueChange = { editContentText = it },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 240.dp),
-                    label = { Text("Message Content") }
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val id = editingMessage?.id
-                        if (id != null && editContentText.isNotBlank()) {
-                            onEditMessage(id, editContentText)
-                        }
-                        editingMessage = null
-                    }
-                ) {
-                    Text("Save")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { editingMessage = null }) {
-                    Text("Cancel")
-                }
-            }
         )
     }
 
