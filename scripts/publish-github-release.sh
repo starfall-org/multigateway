@@ -20,6 +20,7 @@ if [[ -n "${CM_TAG:-}" && "$CM_TAG" != "$tag" ]]; then
 fi
 
 commit="$(git rev-parse HEAD)"
+short_commit="$(git rev-parse --short=12 HEAD)"
 shopt -s nullglob
 apks=(app/build/outputs/apk/release/*.apk)
 (( ${#apks[@]} > 0 )) || { echo 'Missing release APKs.' >&2; exit 1; }
@@ -66,7 +67,40 @@ else
     }
   fi
   gh release create "$tag" --repo "$repo" --target "$commit" \
-    --title "MultiGateway $version" --generate-notes --draft
+    --title "MultiGateway $tag" --generate-notes --draft
+fi
+
+# Prefix GitHub's generated changelog with release metadata that makes the
+# downloadable files and verification method obvious at a glance.
+release_body="$(gh release view "$tag" --repo "$repo" --json body --jq '.body // ""')"
+release_marker='<!-- multigateway-release-info -->'
+if [[ "$release_body" != *"$release_marker"* ]]; then
+  notes_file="$(mktemp)"
+  trap 'rm -f "$notes_file"' EXIT
+
+  {
+    printf '%s\n' "$release_marker"
+    printf '## MultiGateway %s\n\n' "$tag"
+    printf 'Android release build for **MultiGateway %s**.\n\n' "$version"
+    printf -- '- **Version:** `%s`\n' "$version"
+    printf -- '- **Git tag:** `%s`\n' "$tag"
+    printf -- '- **Commit:** `%s`\n\n' "$short_commit"
+
+    printf '### Downloads\n\n'
+    for apk in "${apks[@]}"; do
+      printf -- '- `%s`\n' "$(basename "$apk")"
+      printf -- '  - SHA-1 checksum: `%s.sha1`\n' "$(basename "$apk")"
+    done
+
+    printf '\n### Verify a downloaded APK\n\n'
+    printf 'Run `shasum -a 1 <apk-file>` and compare the result with the matching `.sha1` file attached to this release.\n'
+
+    if [[ -n "$release_body" ]]; then
+      printf '\n### Changes\n\n%s\n' "$release_body"
+    fi
+  } > "$notes_file"
+
+  gh release edit "$tag" --repo "$repo" --title "MultiGateway $tag" --notes-file "$notes_file"
 fi
 
 gh release upload "$tag" "${apks[@]}" "${checksums[@]}" --repo "$repo" --clobber
