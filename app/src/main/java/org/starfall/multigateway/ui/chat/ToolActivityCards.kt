@@ -4,6 +4,11 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -46,15 +52,9 @@ fun ToolActivityCards(activities: List<ToolActivity>) {
         ) {
             visibleActivities.forEach { activity ->
                 key(activity.id) {
-                    Text(
-                        text = activity.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedActivityId = activity.id }
-                            .padding(start = 16.dp, top = 7.dp, bottom = 7.dp)
+                    ToolActivityLabel(
+                        activity = activity,
+                        onClick = { selectedActivityId = activity.id }
                     )
                 }
             }
@@ -67,6 +67,40 @@ fun ToolActivityCards(activities: List<ToolActivity>) {
             onDismiss = { selectedActivityId = null }
         )
     }
+}
+
+@Composable
+private fun ToolActivityLabel(
+    activity: ToolActivity,
+    onClick: () -> Unit
+) {
+    val pulse = if (activity.status == "running") {
+        val transition = rememberInfiniteTransition(label = "tool-running")
+        val pulseAlpha by transition.animateFloat(
+            initialValue = 0.58f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 900),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "tool-alpha"
+        )
+        pulseAlpha
+    } else {
+        1f
+    }
+
+    Text(
+        text = activity.name,
+        style = MaterialTheme.typography.bodyLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { this.alpha = pulse }
+            .clickable(onClick = onClick)
+            .padding(start = 16.dp, top = 7.dp, bottom = 7.dp)
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

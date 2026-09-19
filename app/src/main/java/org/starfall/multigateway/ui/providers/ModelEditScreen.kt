@@ -37,21 +37,28 @@ fun ModelEditScreen(
         trimmedId != initialModelId && trimmedId in existingModelIds -> "This provider already has a model with this ID."
         else -> null
     }
-    BackHandler(onBack = onBack)
+    fun saveAndBack() {
+        if (idError == null) {
+            onSave(
+                trimmedId,
+                config.copy(
+                    displayName = config.displayName.trim(),
+                    reasoningEffort = config.reasoningEffort?.trim()?.ifEmpty { null }
+                )
+            )
+        }
+        onBack()
+    }
+    BackHandler(onBack = ::saveAndBack)
     Scaffold(
         modifier = Modifier.fillMaxSize().imePadding(),
         topBar = {
             TopAppBar(
                 title = { Text("Edit Model") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = ::saveAndBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
-                actions = {
-                    TextButton(enabled = idError == null, onClick = {
-                        onSave(trimmedId, config.copy(displayName = config.displayName.trim()))
-                    }) { Text("Save") }
                 }
             )
         }
@@ -117,6 +124,16 @@ fun ModelEditScreen(
                     )
                 }
                 ModelCapabilitySwitch("Thinking", config.supportsThinking) { config = config.copy(supportsThinking = it) }
+                if (config.supportsThinking) {
+                    OutlinedTextField(
+                        value = config.reasoningEffort.orEmpty(),
+                        onValueChange = { config = config.copy(reasoningEffort = it) },
+                        label = { Text("Reasoning effort") },
+                        supportingText = { Text("Leave blank to use the provider or model default (for example: low, medium, high).") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 ModelCapabilitySwitch("Tool calls", config.supportsToolCalls) { config = config.copy(supportsToolCalls = it) }
                 ModelCapabilitySwitch("Send thinking content back to AI", config.sendThinkingContent) {
                     config = config.copy(sendThinkingContent = it)

@@ -27,7 +27,7 @@ class AppContainer(context: Context) {
     private val speech = SpeechRepository(database)
     private val preferences = AppPreferencesRepository(appContext)
     private val toolSettings = ToolSettingsStore(appContext)
-    val defaultDataInitializer = DefaultDataInitializer(providers, speech, preferences)
+    val defaultDataInitializer = DefaultDataInitializer(providers, mcp, speech, preferences)
 
     val viewModelFactory = viewModelFactory {
         initializer {

@@ -2,12 +2,19 @@ package org.starfall.multigateway.data.repository
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import org.starfall.multigateway.data.local.db.AppDatabase
 import org.starfall.multigateway.data.local.db.SecretCipher
 import org.starfall.multigateway.data.local.db.entities.*
 import org.starfall.multigateway.data.model.*
 import org.starfall.multigateway.data.service.McpService
+
+@Serializable
+private data class McpPersistedHttpConfig(
+    val headers: Map<String, String>? = null,
+    val auth: McpAuthorization = McpAuthorization()
+)
 
 class McpRepository(private val db: AppDatabase, private val service: McpService) {
     suspend fun discoverTools(server: McpInfo) = service.discover(server)
@@ -34,20 +41,25 @@ class McpRepository(private val db: AppDatabase, private val service: McpService
     private fun entityToModel(entity: McpServerEntity): McpInfo {
         val savedProtocol = runCatching { McpProtocol.valueOf(entity.protocol) }.getOrNull()
         val protocol = savedProtocol ?: McpProtocol.STREAMABLE_HTTP
-        val headers: Map<String, String>? = entity.headersJson?.let(SecretCipher::decrypt)?.let {
-            try {
-                json.decodeFromString(it)
-            } catch (e: Exception) {
-                null
+        val persisted = entity.headersJson?.let(SecretCipher::decrypt)?.let { raw ->
+            val legacyHeaders = runCatching {
+                json.decodeFromString<Map<String, String>>(raw)
+            }.getOrNull()
+            if (legacyHeaders != null) {
+                McpPersistedHttpConfig(headers = legacyHeaders)
+            } else {
+                runCatching { json.decodeFromString<McpPersistedHttpConfig>(raw) }.getOrNull()
             }
-        }
+        } ?: McpPersistedHttpConfig()
+
         return McpInfo(
             id = entity.id,
             name = entity.name,
             protocol = protocol,
             // Preserve obsolete server records for editing, but never treat a saved command as a URL.
             url = entity.url?.let(SecretCipher::decrypt).takeIf { savedProtocol != null },
-            headers = headers
+            headers = persisted.headers,
+            auth = persisted.auth
         )
     }
 
@@ -57,8 +69,9 @@ class McpRepository(private val db: AppDatabase, private val service: McpService
             name = server.name,
             protocol = server.protocol.name,
             url = server.url?.let(SecretCipher::encrypt),
-            headersJson = server.headers?.let { SecretCipher.encrypt(json.encodeToString(it)) }
+            headersJson = SecretCipher.encrypt(
+                json.encodeToString(McpPersistedHttpConfig(server.headers, server.auth))
+            )
         )
     }
 }
-

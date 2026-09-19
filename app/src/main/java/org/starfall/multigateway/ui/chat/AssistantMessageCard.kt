@@ -5,8 +5,14 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,39 +57,37 @@ fun AssistantMessageCard(
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         if (isStreaming) {
-            ToolActivityCards(activeVersion.toolActivity)
-            if (!message.reasoningContent.isNullOrBlank()) {
-                ReasoningDropdown(
-                    reasoning = message.reasoningContent!!,
-                    isStreaming = message.content.isBlank(),
-                    modifier = Modifier.padding(bottom = 10.dp)
+            if (message.content.isBlank()) {
+                StreamingProcessingPreview(activeVersion)
+            } else {
+                CompletedAssistantContent(
+                    version = activeVersion,
+                    processingDurationMillis = null,
+                    animateStreamingContent = true
                 )
             }
 
-            if (message.content.isBlank() && message.reasoningContent.isNullOrBlank()) {
-                Row(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Thinking...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else if (message.content.isNotBlank()) {
-                FormattedMarkdownMessage(content = message.content)
+            Row(
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = androidx.compose.ui.res.stringResource(org.starfall.multigateway.R.string.generating),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         } else {
             CompletedAssistantContent(
                 version = activeVersion,
-                processingDurationMillis = processingDurationMillis
+                processingDurationMillis = processingDurationMillis,
+                animateStreamingContent = false
             )
         }
 
@@ -196,6 +201,196 @@ fun AssistantMessageCard(
     }
 }
 
+private sealed interface ProcessingTimelineItem {
+    val contentOffset: Int
+
+    data class Thinking(
+        override val contentOffset: Int,
+        val reasoning: String
+    ) : ProcessingTimelineItem
+
+    data class Tool(val activity: ToolActivity) : ProcessingTimelineItem {
+        override val contentOffset: Int get() = activity.contentOffset
+    }
+}
+
+private data class NumberedProcessingItem(
+    val number: Int,
+    val item: ProcessingTimelineItem
+)
+
+private fun buildProcessingTimeline(version: MessageVersion): List<ProcessingTimelineItem> {
+    val activities = version.toolActivity.filterNot { it.name.endsWith(": connect") }
+    val reasoning = version.reasoningContent.orEmpty()
+
+    if (activities.isNotEmpty() && activities.all { it.reasoningOffset == null }) {
+        return buildList {
+            if (reasoning.isNotBlank()) add(ProcessingTimelineItem.Thinking(0, reasoning))
+            activities.forEach { add(ProcessingTimelineItem.Tool(it)) }
+        }
+    }
+
+    val timeline = mutableListOf<ProcessingTimelineItem>()
+    var reasoningCursor = 0
+    activities.forEach { activity ->
+        val reasoningEnd = (activity.reasoningOffset ?: reasoningCursor)
+            .coerceIn(reasoningCursor, reasoning.length)
+        if (reasoningEnd > reasoningCursor) {
+            timeline += ProcessingTimelineItem.Thinking(
+                activity.contentOffset.coerceIn(0, version.content.length),
+                reasoning.substring(reasoningCursor, reasoningEnd)
+            )
+        }
+        timeline += ProcessingTimelineItem.Tool(activity)
+        reasoningCursor = reasoningEnd
+    }
+    if (reasoningCursor < reasoning.length) {
+        timeline += ProcessingTimelineItem.Thinking(
+            activities.lastOrNull()?.contentOffset?.coerceIn(0, version.content.length) ?: 0,
+            reasoning.substring(reasoningCursor)
+        )
+    }
+    return timeline
+}
+
+@Composable
+private fun StreamingProcessingPreview(version: MessageVersion) {
+    val timeline = remember(version.reasoningContent, version.toolActivity, version.content.length) {
+        buildProcessingTimeline(version)
+    }
+    val visibleItems = timeline.mapIndexed { index, item ->
+        NumberedProcessingItem(index + 1, item)
+    }.takeLast(2)
+    val lastItem = timeline.lastOrNull()
+
+    Column(
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        visibleItems.forEach { numbered ->
+            val item = numbered.item
+            key(
+                when (item) {
+                    is ProcessingTimelineItem.Thinking -> "thinking_${numbered.number}_${item.contentOffset}"
+                    is ProcessingTimelineItem.Tool -> item.activity.id
+                }
+            ) {
+                when (item) {
+                    is ProcessingTimelineItem.Thinking -> LiveThinkingBlock(
+                        reasoning = item.reasoning,
+                        blockNumber = numbered.number,
+                        active = item === lastItem
+                    )
+                    is ProcessingTimelineItem.Tool -> LiveToolBlock(
+                        activity = item.activity,
+                        blockNumber = numbered.number
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LiveThinkingBlock(
+    reasoning: String,
+    blockNumber: Int,
+    active: Boolean
+) {
+    val scrollState = rememberScrollState()
+    val previewHeight = with(LocalDensity.current) { 48.sp.toDp() }
+    LaunchedEffect(reasoning, scrollState.maxValue, active) {
+        if (active && scrollState.maxValue > 0) {
+            scrollState.scrollTo(scrollState.maxValue)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 8.dp, end = 8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "$blockNumber. ${if (active) androidx.compose.ui.res.stringResource(org.starfall.multigateway.R.string.thinking_streaming) else androidx.compose.ui.res.stringResource(org.starfall.multigateway.R.string.processed)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+            )
+            if (active) {
+                Spacer(Modifier.width(6.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(12.dp),
+                    strokeWidth = 1.5.dp
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = previewHeight)
+                .verticalScroll(scrollState)
+        ) {
+            Text(
+                text = reasoning,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun LiveToolBlock(activity: ToolActivity, blockNumber: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$blockNumber.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.padding(start = 8.dp, end = 2.dp)
+        )
+        Box(Modifier.weight(1f)) {
+            ToolActivityCards(listOf(activity))
+        }
+    }
+}
+
+@Composable
+private fun SmoothStreamingMarkdownMessage(content: String) {
+    val visibleLength = remember { Animatable(0f) }
+    LaunchedEffect(content.length) {
+        val target = content.length.toFloat()
+        if (target < visibleLength.value) {
+            visibleLength.snapTo(target)
+        } else if (target > visibleLength.value) {
+            val delta = target - visibleLength.value
+            visibleLength.animateTo(
+                targetValue = target,
+                animationSpec = tween(
+                    durationMillis = (delta * 7f).toInt().coerceIn(36, 180),
+                    easing = LinearEasing
+                )
+            )
+        }
+    }
+    val end = visibleLength.value.toInt().coerceIn(0, content.length)
+    if (end > 0) {
+        Text(
+            text = content.substring(0, end),
+            style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 22.sp),
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.fillMaxWidth().animateContentSize()
+        )
+    }
+}
+
 private data class ProcessingBlock(
     val offset: Int,
     val reasoning: String? = null,
@@ -205,7 +400,8 @@ private data class ProcessingBlock(
 @Composable
 private fun CompletedAssistantContent(
     version: MessageVersion,
-    processingDurationMillis: Long?
+    processingDurationMillis: Long?,
+    animateStreamingContent: Boolean
 ) {
     val blocks = remember(version.content, version.reasoningContent, version.toolActivity) {
         buildProcessingBlocks(version)
@@ -213,17 +409,19 @@ private fun CompletedAssistantContent(
     val content = version.content
 
     if (blocks.isEmpty()) {
-        if (content.isNotBlank()) FormattedMarkdownMessage(content = content)
+        if (content.isNotBlank()) {
+            if (animateStreamingContent) SmoothStreamingMarkdownMessage(content) else FormattedMarkdownMessage(content = content)
+        }
         return
     }
 
     var cursor = 0
-    blocks.forEach { block ->
+    blocks.forEachIndexed { index, block ->
         val offset = block.offset.coerceIn(cursor, content.length)
         if (offset > cursor) {
             val textBefore = content.substring(cursor, offset)
             if (textBefore.isNotBlank()) {
-                FormattedMarkdownMessage(content = textBefore)
+                if (animateStreamingContent) SmoothStreamingMarkdownMessage(textBefore) else FormattedMarkdownMessage(content = textBefore)
                 Spacer(Modifier.height(6.dp))
             }
         }
@@ -232,46 +430,33 @@ private fun CompletedAssistantContent(
             reasoning = block.reasoning,
             activities = block.activities,
             durationMillis = processingDurationMillis.takeIf { blocks.size == 1 },
-            modifier = Modifier.padding(bottom = 6.dp)
+            blockNumber = index + 1,
+            modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
         )
         cursor = offset
     }
 
     if (cursor < content.length) {
         val remaining = content.substring(cursor)
-        if (remaining.isNotBlank()) FormattedMarkdownMessage(content = remaining)
-    }
-}
-
-private fun buildProcessingBlocks(version: MessageVersion): List<ProcessingBlock> {
-    val content = version.content
-    val toolsByOffset = version.toolActivity
-        .filterNot { it.name.endsWith(": connect") }
-        .groupBy { it.contentOffset.coerceIn(0, content.length) }
-    val offsets = buildSet {
-        if (!version.reasoningContent.isNullOrBlank()) add(0)
-        addAll(toolsByOffset.keys)
-    }.sorted()
-
-    val merged = mutableListOf<ProcessingBlock>()
-    offsets.forEach { offset ->
-        val block = ProcessingBlock(
-            offset = offset,
-            reasoning = version.reasoningContent?.takeIf { offset == 0 && it.isNotBlank() },
-            activities = toolsByOffset[offset].orEmpty()
-        )
-        val previous = merged.lastOrNull()
-        if (previous != null && content.substring(previous.offset, offset).isBlank()) {
-            merged[merged.lastIndex] = previous.copy(
-                reasoning = previous.reasoning ?: block.reasoning,
-                activities = previous.activities + block.activities
-            )
-        } else {
-            merged += block
+        if (remaining.isNotBlank()) {
+            if (animateStreamingContent) SmoothStreamingMarkdownMessage(remaining) else FormattedMarkdownMessage(content = remaining)
         }
     }
-    return merged
 }
+
+private fun buildProcessingBlocks(version: MessageVersion): List<ProcessingBlock> =
+    buildProcessingTimeline(version).map { item ->
+        when (item) {
+            is ProcessingTimelineItem.Thinking -> ProcessingBlock(
+                offset = item.contentOffset,
+                reasoning = item.reasoning
+            )
+            is ProcessingTimelineItem.Tool -> ProcessingBlock(
+                offset = item.contentOffset,
+                activities = listOf(item.activity)
+            )
+        }
+    }
 
 @Composable
 private fun MessageActionButton(

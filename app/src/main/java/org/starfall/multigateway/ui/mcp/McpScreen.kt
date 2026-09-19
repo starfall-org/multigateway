@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +37,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import org.starfall.multigateway.data.model.McpAuthMethod
+import org.starfall.multigateway.data.model.McpAuthorization
 import org.starfall.multigateway.data.model.McpInfo
 import org.starfall.multigateway.data.model.McpProtocol
 import org.starfall.multigateway.data.model.ToolDefinition
@@ -343,38 +346,75 @@ fun AddOrEditMcpDialog(
     var protocol by remember(initialServer.id) { mutableStateOf(initialServer.protocol) }
     var url by remember(initialServer.id) { mutableStateOf(initialServer.url.orEmpty()) }
     var headers by remember(initialServer.id) { mutableStateOf(initialServer.headers.orEmpty().toList()) }
+    var authMethod by remember(initialServer.id) { mutableStateOf(initialServer.auth.method) }
+    var authKey by remember(initialServer.id) { mutableStateOf(initialServer.auth.key.orEmpty()) }
+    var authValue by remember(initialServer.id) { mutableStateOf(initialServer.auth.value.orEmpty()) }
     var selectedTab by remember(initialServer.id) { mutableStateOf(0) }
     var tools by remember(initialServer.id) { mutableStateOf<List<ToolDefinition>?>(null) }
     var toolsLoading by remember(initialServer.id) { mutableStateOf(false) }
     var toolsError by remember(initialServer.id) { mutableStateOf<String?>(null) }
     var toolRefresh by remember(initialServer.id) { mutableIntStateOf(0) }
 
-    fun currentServer(): McpInfo = initialServer.copy(
-        name = name.trim(), protocol = protocol, url = url.trim().ifEmpty { null },
-        headers = headers.map { it.first.trim() to it.second }.filter { it.first.isNotEmpty() }.toMap().ifEmpty { null }
+    fun currentAuth() = McpAuthorization(
+        method = authMethod,
+        key = if (authMethod in listOf(McpAuthMethod.CUSTOM_HEADER, McpAuthMethod.QUERY_PARAM)) authKey.trim() else null,
+        value = if (authMethod == McpAuthMethod.NONE) null else authValue.trim()
     )
-    val canSave = name.isNotBlank() && url.isNotBlank() && headers.all {
-        it.first.isNotBlank() && !it.first.contains(':') && !it.first.any { ch -> ch == '\r' || ch == '\n' } &&
+    fun currentServer(): McpInfo = initialServer.copy(
+        name = name.trim(),
+        protocol = protocol,
+        url = url.trim().ifEmpty { null },
+        headers = headers.map { it.first.trim() to it.second }
+            .filter { it.first.isNotEmpty() }
+            .toMap()
+            .ifEmpty { null },
+        auth = currentAuth()
+    )
+    val authValid = authMethod !in listOf(McpAuthMethod.CUSTOM_HEADER, McpAuthMethod.QUERY_PARAM) ||
+        (authKey.isNotBlank() && !authKey.contains(':') && authKey.none { it <= ' ' || it.code >= 127 })
+    val canSave = name.isNotBlank() && url.isNotBlank() && authValid && headers.all {
+        it.first.isNotBlank() && !it.first.contains(':') &&
+            !it.first.any { ch -> ch == '\r' || ch == '\n' } &&
             !it.second.any { ch -> ch == '\r' || ch == '\n' }
     }
 
     LaunchedEffect(selectedTab, toolRefresh) {
         if (selectedTab != 1) return@LaunchedEffect
-        if (!canSave) { tools = null; toolsError = null; toolsLoading = false; return@LaunchedEffect }
-        toolsLoading = true; toolsError = null
-        try { tools = onDiscoverTools(currentServer()) }
-        catch (e: CancellationException) { throw e }
-        catch (e: Exception) { tools = null; toolsError = e.localizedMessage ?: "Unable to load tools" }
-        finally { toolsLoading = false }
+        if (!canSave) {
+            tools = null
+            toolsError = null
+            toolsLoading = false
+            return@LaunchedEffect
+        }
+        toolsLoading = true
+        toolsError = null
+        try {
+            tools = onDiscoverTools(currentServer())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            tools = null
+            toolsError = e.localizedMessage ?: "Unable to load tools"
+        } finally {
+            toolsLoading = false
+        }
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onDismiss) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
-                    Text(if (isNew) "Add MCP Server" else "Configure MCP Server",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                    Text(
+                        if (isNew) "Add MCP Server" else "Configure MCP Server",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        modifier = Modifier.weight(1f)
+                    )
                 }
                 TabRow(selectedTabIndex = selectedTab) {
                     Tab(selectedTab == 0, { selectedTab = 0 }, text = { Text("Basic Settings", fontWeight = FontWeight.SemiBold) })
@@ -382,7 +422,24 @@ fun AddOrEditMcpDialog(
                 }
                 if (selectedTab == 0) {
                     McpBasicSettings(
-                        name, { name = it }, protocol, { protocol = it }, url, { url = it }, headers, { headers = it },
+                        name = name,
+                        onNameChange = { name = it },
+                        protocol = protocol,
+                        onProtocolChange = { protocol = it },
+                        url = url,
+                        onUrlChange = { url = it },
+                        authMethod = authMethod,
+                        onAuthMethodChange = { method ->
+                            authMethod = method
+                            if (method == McpAuthMethod.QUERY_PARAM && authKey.isBlank()) authKey = "key"
+                        },
+                        authKey = authKey,
+                        onAuthKeyChange = { authKey = it },
+                        authValue = authValue,
+                        onAuthValueChange = { authValue = it },
+                        authValid = authValid,
+                        headers = headers,
+                        onHeadersChange = { headers = it },
                         modifier = Modifier.weight(1f)
                     )
                 } else {
@@ -392,7 +449,7 @@ fun AddOrEditMcpDialog(
                     )
                 }
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -412,86 +469,161 @@ private fun McpBasicSettings(
     onProtocolChange: (McpProtocol) -> Unit,
     url: String,
     onUrlChange: (String) -> Unit,
+    authMethod: McpAuthMethod,
+    onAuthMethodChange: (McpAuthMethod) -> Unit,
+    authKey: String,
+    onAuthKeyChange: (String) -> Unit,
+    authValue: String,
+    onAuthValueChange: (String) -> Unit,
+    authValid: Boolean,
     headers: List<Pair<String, String>>,
     onHeadersChange: (List<Pair<String, String>>) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Spacer(Modifier.height(28.dp))
-        Text("Display name for the MCP server", style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(12.dp))
+        Text("Display name", style = MaterialTheme.typography.titleSmall)
         OutlinedTextField(
-            value = name, onValueChange = onNameChange, placeholder = { Text("Name") }, singleLine = true,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp), shape = RoundedCornerShape(10.dp)
+            value = name,
+            onValueChange = onNameChange,
+            placeholder = { Text("Name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
 
         McpDivider()
-        Text("Transport Type", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
-        Spacer(Modifier.height(6.dp))
-        Text("Select the transport protocol type for the MCP server", style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(14.dp))
+        Text("Transport Type", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Select the transport protocol type for the MCP server",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         McpTransportSelector(protocol, onProtocolChange)
 
         McpDivider()
-        Text("Server URL", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
-        Spacer(Modifier.height(6.dp))
-        Text("URL address for ${if (protocol == McpProtocol.STREAMABLE_HTTP) "Streamable HTTP" else "SSE"} server",
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(14.dp))
+        Text("Server URL", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "URL address for ${if (protocol == McpProtocol.STREAMABLE_HTTP) "Streamable HTTP" else "SSE"} server",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         OutlinedTextField(
-            value = url, onValueChange = onUrlChange, placeholder = { Text("URL") }, singleLine = true,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp), shape = RoundedCornerShape(10.dp)
+            value = url,
+            onValueChange = onUrlChange,
+            placeholder = { Text("URL") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
         if (url.trim().startsWith("http://", true)) {
-            Spacer(Modifier.height(6.dp))
-            Text("HTTP is unencrypted. Headers, credentials and tool data are visible on the network.",
-                color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Text(
+                "HTTP is unencrypted. Headers, credentials and tool data are visible on the network.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
         }
 
         McpDivider()
-        Text("Custom Headers", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
-        Spacer(Modifier.height(6.dp))
-        Text("Add custom HTTP headers for MCP server requests", style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(12.dp))
+        Text("Auth", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Authentication used for MCP requests",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        var authExpanded by remember { mutableStateOf(false) }
+        Box {
+            OutlinedButton(onClick = { authExpanded = true }) {
+                Text("Type: ${mcpAuthLabel(authMethod)}")
+            }
+            DropdownMenu(expanded = authExpanded, onDismissRequest = { authExpanded = false }) {
+                McpAuthMethod.entries.forEach { method ->
+                    DropdownMenuItem(
+                        text = { Text(mcpAuthLabel(method)) },
+                        onClick = {
+                            onAuthMethodChange(method)
+                            authExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+        if (authMethod in listOf(McpAuthMethod.CUSTOM_HEADER, McpAuthMethod.QUERY_PARAM)) {
+            OutlinedTextField(
+                value = authKey,
+                onValueChange = onAuthKeyChange,
+                label = { Text(if (authMethod == McpAuthMethod.CUSTOM_HEADER) "Header name" else "Query parameter name") },
+                isError = !authValid,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        if (authMethod != McpAuthMethod.NONE) {
+            OutlinedTextField(
+                value = authValue,
+                onValueChange = onAuthValueChange,
+                label = {
+                    Text(
+                        when (authMethod) {
+                            McpAuthMethod.OAUTH2 -> "OAuth2 access token"
+                            McpAuthMethod.BEARER_TOKEN -> "Bearer token"
+                            else -> "Value"
+                        }
+                    )
+                },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
+        McpDivider()
+        Text("Custom Headers", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Add custom HTTP headers for MCP server requests",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         headers.forEachIndexed { index, header ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
                     value = header.first,
-                    onValueChange = { value -> onHeadersChange(headers.toMutableList().also { it[index] = value to header.second }) },
-                    placeholder = { Text("Header") }, singleLine = true, modifier = Modifier.weight(1f)
+                    onValueChange = { value ->
+                        onHeadersChange(headers.toMutableList().also { it[index] = value to header.second })
+                    },
+                    placeholder = { Text("Header") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
                 )
                 OutlinedTextField(
                     value = header.second,
-                    onValueChange = { value -> onHeadersChange(headers.toMutableList().also { it[index] = header.first to value }) },
-                    placeholder = { Text("Value") }, singleLine = true, modifier = Modifier.weight(1f)
+                    onValueChange = { value ->
+                        onHeadersChange(headers.toMutableList().also { it[index] = header.first to value })
+                    },
+                    placeholder = { Text("Value") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = { onHeadersChange(headers.filterIndexed { i, _ -> i != index }) }) {
                     Icon(Icons.Outlined.Delete, contentDescription = "Remove header")
                 }
             }
         }
-
         Button(
             onClick = { onHeadersChange(headers + ("" to "")) },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = RoundedCornerShape(28.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Add Header", style = MaterialTheme.typography.titleMedium)
+            Text("Add Header")
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(4.dp))
     }
 }
 
@@ -507,11 +639,11 @@ private fun McpToolsTab(
     Column(modifier = modifier.fillMaxWidth()) {
     Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text("Available tools", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text("Available tools", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("Tools exposed by this MCP server", style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -555,12 +687,12 @@ private fun McpToolsTab(
 
 @Composable
 private fun McpDivider() {
-    HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp))
+    HorizontalDivider()
 }
 
 @Composable
 private fun McpTransportSelector(protocol: McpProtocol, onSelect: (McpProtocol) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().height(52.dp)) {
+    Row(modifier = Modifier.fillMaxWidth().height(48.dp)) {
         McpTransportOption(
             label = "Streamable HTTP",
             selected = protocol == McpProtocol.STREAMABLE_HTTP,
@@ -604,4 +736,12 @@ private fun McpTransportOption(
             Text(label, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium)
         }
     }
+}
+
+private fun mcpAuthLabel(method: McpAuthMethod): String = when (method) {
+    McpAuthMethod.NONE -> "None"
+    McpAuthMethod.BEARER_TOKEN -> "Bearer token"
+    McpAuthMethod.QUERY_PARAM -> "Query parameter"
+    McpAuthMethod.CUSTOM_HEADER -> "Custom header"
+    McpAuthMethod.OAUTH2 -> "OAuth2"
 }

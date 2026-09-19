@@ -4,6 +4,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.serialization.json.*
 import okhttp3.*
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.starfall.multigateway.data.model.*
@@ -32,11 +33,28 @@ class McpSession(private val info: McpInfo, private val http: ToolHttp) {
     private var stream: Response? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val messages = Channel<JsonObject>(32)
-    private fun request(url: String) = Request.Builder().url(url).apply {
-        info.headers?.forEach { (k,v) -> header(k,v) }
-        header("Accept", "application/json, text/event-stream")
-        sessionId?.let { header("Mcp-Session-Id", it) }
-        version?.let { header("MCP-Protocol-Version", it) }
+    private fun request(url: String): Request.Builder {
+        val auth = info.auth
+        val requestUrl = if (auth.method == McpAuthMethod.QUERY_PARAM) {
+            url.toHttpUrl().newBuilder()
+                .addQueryParameter(auth.key?.takeIf { it.isNotBlank() } ?: "key", auth.value.orEmpty())
+                .build()
+        } else {
+            url.toHttpUrl()
+        }
+        return Request.Builder().url(requestUrl).apply {
+            info.headers?.forEach { (k, v) -> header(k, v) }
+            when (auth.method) {
+                McpAuthMethod.BEARER_TOKEN, McpAuthMethod.OAUTH2 ->
+                    auth.token.takeIf { it.isNotBlank() }?.let { header("Authorization", "Bearer $it") }
+                McpAuthMethod.CUSTOM_HEADER ->
+                    auth.key?.takeIf { it.isNotBlank() }?.let { header(it, auth.value.orEmpty()) }
+                McpAuthMethod.NONE, McpAuthMethod.QUERY_PARAM -> Unit
+            }
+            header("Accept", "application/json, text/event-stream")
+            sessionId?.let { header("Mcp-Session-Id", it) }
+            version?.let { header("MCP-Protocol-Version", it) }
+        }
     }
     suspend fun initialize() {
         expired = false
@@ -137,7 +155,7 @@ class McpSession(private val info: McpInfo, private val http: ToolHttp) {
             }
             check(answer.text("jsonrpc") == "2.0") { "Invalid MCP JSON-RPC version" }
             check(answer.text("id") == id) { "MCP response ID mismatch" }
-            check(answer["error"] == null || answer["error"] == JsonNull) { "MCP error: " + safeError(answer["error"], info.headers.orEmpty().values) }
+            check(answer["error"] == null || answer["error"] == JsonNull) { "MCP error: " + safeError(answer["error"], info.headers.orEmpty().values + info.auth.value.orEmpty()) }
             answer["result"] as? JsonObject ?: error("Missing MCP result")
         } catch (e: CancellationException) {
             withContext(NonCancellable) { withTimeoutOrNull(2000) { runCatching { notify("notifications/cancelled", obj("requestId" to str(id), "reason" to str("Cancelled by user"))) } } }

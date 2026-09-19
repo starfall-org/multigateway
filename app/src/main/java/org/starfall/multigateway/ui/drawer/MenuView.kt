@@ -84,12 +84,10 @@ fun MenuView(
                         selectedProfile = selectedProfile,
                         onOpenProfiles = {
                             onNavigateToProfiles()
-                            onCloseMenu()
                         },
                         onEditProfile = {
                             if (selectedProfile != null) {
                                 onEditProfile(selectedProfile)
-                                onCloseMenu()
                             }
                         }
                     )
@@ -111,11 +109,10 @@ fun MenuView(
                 item {
                     MenuItemTile(
                         icon = Icons.Outlined.CloudQueue,
-                        title = "LLM Providers",
+                        title = "Providers",
                         subtitle = "Configure API keys & endpoints",
                         onClick = {
                             onNavigateToProviders()
-                            onCloseMenu()
                         }
                     )
                 }
@@ -127,16 +124,15 @@ fun MenuView(
                         subtitle = "Model Context Protocol servers",
                         onClick = {
                             onNavigateToMcp()
-                            onCloseMenu()
                         }
                     )
                 }
 
                 item {
-                    MenuItemTile(icon = Icons.Outlined.Build, title = "Default Models", subtitle = "Image and video generation", onClick = { onNavigateToSystemTools(); onCloseMenu() })
+                    MenuItemTile(icon = Icons.Outlined.Build, title = "Default Models", subtitle = "Image and video generation", onClick = onNavigateToSystemTools)
                 }
                 item {
-                    MenuItemTile(icon = Icons.Outlined.Storage, title = "Storage", subtitle = "Tool files, images and videos", onClick = { onNavigateToStorage(); onCloseMenu() })
+                    MenuItemTile(icon = Icons.Outlined.Storage, title = "Storage", subtitle = "Tool files, images and videos", onClick = onNavigateToStorage)
                 }
 
                 item {
@@ -146,7 +142,6 @@ fun MenuView(
                         subtitle = "Text-to-speech configuration",
                         onClick = {
                             onNavigateToSpeech()
-                            onCloseMenu()
                         }
                     )
                 }
@@ -158,7 +153,6 @@ fun MenuView(
                         subtitle = "Appearance, preferences & data",
                         onClick = {
                             onNavigateToSettings()
-                            onCloseMenu()
                         }
                     )
                 }

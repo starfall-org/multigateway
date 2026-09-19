@@ -19,9 +19,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.starfall.multigateway.R
 import org.starfall.multigateway.data.model.LlmProviderInfo
 
 @Composable
@@ -101,8 +103,8 @@ fun UserInputArea(
                             Box(contentAlignment = Alignment.CenterStart) {
                                 if (textState.isEmpty()) {
                                     Text(
-                                        text = "...",
-                                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp),
+                                        text = stringResource(R.string.chat_input_placeholder),
+                                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
                                     )
                                 }

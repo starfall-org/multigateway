@@ -163,6 +163,7 @@ internal class OfficialLlmSdk {
         temperature: Double?,
         topP: Double?,
         maxTokens: Int,
+        reasoningEffort: String? = null,
         sendThinkingContent: Boolean = false
     ): Flow<GenerationEvent> = flow {
         openAi(provider).useClient { client ->
@@ -187,6 +188,9 @@ internal class OfficialLlmSdk {
             }
             temperature?.let { params.temperature(it) }
             topP?.let { params.topP(it) }
+            reasoningEffort?.trim()?.takeIf { it.isNotEmpty() }?.let { effort ->
+                params.putAdditionalBodyProperty("reasoning_effort", com.openai.core.JsonValue.from(effort))
+            }
 
             fun reasoningFrom(properties: Map<String, com.openai.core.JsonValue>): String? =
                 runCatching { properties["reasoning_content"]?.convert(String::class.java) }
@@ -220,6 +224,7 @@ internal class OfficialLlmSdk {
         temperature: Double?,
         topP: Double?,
         maxTokens: Int,
+        reasoningEffort: String? = null,
         sendThinkingContent: Boolean = false
     ): Flow<GenerationEvent> = flow {
         openAi(provider).useClient { client ->
@@ -249,6 +254,12 @@ internal class OfficialLlmSdk {
             if (systemPrompt.isNotBlank()) params.instructions(systemPrompt)
             temperature?.let { params.temperature(it) }
             topP?.let { params.topP(it) }
+            reasoningEffort?.trim()?.takeIf { it.isNotEmpty() }?.let { effort ->
+                params.putAdditionalBodyProperty(
+                    "reasoning",
+                    com.openai.core.JsonValue.from(mapOf("effort" to effort))
+                )
+            }
             if (!provider.config.supportStream) {
                 val response = sdkCall { client.responses().create(params.build()) }
                 check(!response.error().isPresent) { "OpenAI Responses request failed" }

@@ -35,7 +35,8 @@ data class ToolActivity(
     val files: List<String> = emptyList(),
     val arguments: String = "",
     val response: String = "",
-    val contentOffset: Int = 0
+    val contentOffset: Int = 0,
+    val reasoningOffset: Int? = null
 )
 
 data class ToolDefinition(

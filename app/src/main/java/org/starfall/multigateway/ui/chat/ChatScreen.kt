@@ -207,6 +207,10 @@ fun ChatScreen(
                         )
                     }
                 }
+
+                item(key = "chat-bottom-spacer") {
+                    Spacer(modifier = Modifier.height(96.dp))
+                }
             }
         }
 

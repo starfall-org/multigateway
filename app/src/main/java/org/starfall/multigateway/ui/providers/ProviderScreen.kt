@@ -7,6 +7,8 @@ import android.widget.Toast
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -37,6 +39,7 @@ import org.starfall.multigateway.data.model.AuthMethod
 import org.starfall.multigateway.data.model.Authorization
 import org.starfall.multigateway.data.model.LlmProviderInfo
 import org.starfall.multigateway.data.model.withType
+import org.starfall.multigateway.data.model.defaultAuthorization
 import org.starfall.multigateway.data.model.ProviderType
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,6 +47,7 @@ import org.starfall.multigateway.data.model.ProviderType
 fun ProviderScreen(
     providers: List<LlmProviderInfo>,
     onSaveProvider: (LlmProviderInfo) -> Unit,
+    onSaveModels: (String, Map<String, ModelConfiguration>) -> Unit,
     onDeleteProvider: (String) -> Unit,
     onTestConnection: (suspend (LlmProviderInfo, String) -> Result<String>)? = null,
     onFetchModels: (suspend (LlmProviderInfo) -> List<String>)? = null,
@@ -60,7 +64,7 @@ fun ProviderScreen(
             name = "Ollama",
             type = ProviderType.OLLAMA,
             baseUrl = "https://ollama.com/api",
-            auth = Authorization(method = AuthMethod.OTHER, key = "", value = "")
+            auth = ProviderType.OLLAMA.defaultAuthorization()
         ) }
 
         ProviderEditScreen(
@@ -68,6 +72,7 @@ fun ProviderScreen(
             isNew = isCreatingNew,
             onTestConnection = onTestConnection,
             onFetchModels = onFetchModels,
+            onSaveModels = onSaveModels,
             onDismiss = {
                 editingProvider = null
                 isCreatingNew = false
@@ -356,13 +361,14 @@ fun ProviderGridCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ProviderEditScreen(
     initialProvider: LlmProviderInfo,
     isNew: Boolean,
     onTestConnection: (suspend (LlmProviderInfo, String) -> Result<String>)? = null,
     onFetchModels: (suspend (LlmProviderInfo) -> List<String>)? = null,
+    onSaveModels: (String, Map<String, ModelConfiguration>) -> Unit,
     onDismiss: () -> Unit,
     onSave: (LlmProviderInfo) -> Unit
 ) {
@@ -372,7 +378,11 @@ fun ProviderEditScreen(
     var type by remember { mutableStateOf(initialProvider.type) }
     var baseUrl by remember { mutableStateOf(initialProvider.baseUrl) }
     var authMethod by remember { mutableStateOf(initialProvider.auth.method) }
-    var authName by remember { mutableStateOf(if (initialProvider.auth.method in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) initialProvider.auth.key.orEmpty() else "") }
+    var authName by remember { mutableStateOf(
+        if (initialProvider.auth.method in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) {
+            initialProvider.auth.key.orEmpty().ifBlank { if (initialProvider.type == ProviderType.GOOGLE) "key" else "" }
+        } else ""
+    ) }
     var apiKey by remember { mutableStateOf(if (initialProvider.auth.method in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) initialProvider.auth.value.orEmpty() else initialProvider.auth.token) }
     fun authorization() = Authorization(authMethod, if (authMethod in listOf(AuthMethod.CUSTOM_HEADER, AuthMethod.QUERY_PARAM)) authName.trim() else null, apiKey.trim())
     var showTestDialog by remember { mutableStateOf(false) }
@@ -392,6 +402,7 @@ fun ProviderEditScreen(
         } ?: initialProvider.config.modelConfigs)
     }
     var configuringModel by remember { mutableStateOf<String?>(null) }
+    var selectedModelForDelete by remember { mutableStateOf<String?>(null) }
     var showModelCatalog by remember { mutableStateOf(false) }
     BackHandler(onBack = onDismiss)
     val activeHeaders = headerRows.filterNot { (key, value) -> key.isBlank() && value.isBlank() }
@@ -409,6 +420,10 @@ fun ProviderEditScreen(
         supportStream = supportStream, headers = parsedHeaders ?: initialProvider.config.headers,
         modelConfigs = modelConfigs, modelIds = modelConfigs.keys.toList()
     )
+    fun updateModels(updated: Map<String, ModelConfiguration>) {
+        modelConfigs = updated
+        if (!isNew) onSaveModels(initialProvider.id, updated)
+    }
 
     val editingModelId = configuringModel
     if (editingModelId != null) {
@@ -418,9 +433,9 @@ fun ProviderEditScreen(
                 initialModelId = editingModelId,
                 existingModelIds = modelConfigs.keys,
                 onSave = { newId, config ->
-                    modelConfigs = modelConfigs.entries.associate { (id, value) ->
+                    updateModels(modelConfigs.entries.associate { (id, value) ->
                         if (id == editingModelId) newId to config else id to value
-                    }
+                    })
                     configuringModel = null
                 },
                 onBack = { configuringModel = null }
@@ -440,25 +455,27 @@ fun ProviderEditScreen(
         },
         topBar = {
             TopAppBar(
-                title = { Text(if (isNew) "Add LLM Provider" else "LLM Provider Edit") },
+                title = { Text(if (isNew) "Add Provider" else "Provider Edit") },
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    TextButton(
-                        enabled = requestValid && baseUrl.isNotBlank(),
-                        onClick = {
-                            onSave(initialProvider.copy(
-                                name = name.trim().ifEmpty { type.defaultName },
-                                type = type,
-                                baseUrl = baseUrl.trim(),
-                                auth = authorization(),
-                                config = requestConfig()
-                            ))
-                        }
-                    ) { Text("Save") }
+                    if (selectedTab == 0) {
+                        TextButton(
+                            enabled = requestValid && baseUrl.isNotBlank(),
+                            onClick = {
+                                onSave(initialProvider.copy(
+                                    name = name.trim().ifEmpty { type.defaultName },
+                                    type = type,
+                                    baseUrl = baseUrl.trim(),
+                                    auth = authorization(),
+                                    config = requestConfig()
+                                ))
+                            }
+                        ) { Text("Save") }
+                    }
                 }
             )
         },
@@ -507,10 +524,20 @@ fun ProviderEditScreen(
                                 DropdownMenuItem(
                                     text = { Text(t.displayName) },
                                     onClick = {
-                                        val updated = initialProvider.copy(name = name, type = type, baseUrl = baseUrl).withType(t)
-                                        name = updated.name
-                                        baseUrl = updated.baseUrl
-                                        type = updated.type
+                                        if (t != type) {
+                                            val updated = initialProvider.copy(
+                                                name = name,
+                                                type = type,
+                                                baseUrl = baseUrl
+                                            ).withType(t)
+                                            name = updated.name
+                                            baseUrl = updated.baseUrl
+                                            type = updated.type
+                                            val defaultAuth = t.defaultAuthorization()
+                                            authMethod = defaultAuth.method
+                                            authName = defaultAuth.key.orEmpty()
+                                            apiKey = defaultAuth.value.orEmpty()
+                                        }
                                         typeExpanded = false
                                     }
                                 )
@@ -579,7 +606,7 @@ fun ProviderEditScreen(
                     HorizontalDivider()
                     Text("Custom Headers", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(
-                        "Add custom HTTP headers for LLM provider requests",
+                        "Add custom HTTP headers for provider requests",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -648,16 +675,32 @@ fun ProviderEditScreen(
                         item { Text("No models added. Tap + to browse available models.") }
                     }
                     items(models, key = { it }) { modelId ->
+                        val selectedForDelete = selectedModelForDelete == modelId
                         ListItem(
                             headlineContent = { Text(modelConfigs[modelId]?.displayName?.ifBlank { modelId } ?: modelId,
                                 overflow = TextOverflow.Ellipsis, maxLines = 2) },
                             supportingContent = { Text("$modelId · ${modelConfigs[modelId]?.modelType?.displayName.orEmpty()}") },
                             trailingContent = {
-                                IconButton(onClick = { configuringModel = modelId }) {
-                                    Icon(Icons.Outlined.Tune, contentDescription = "Configure $modelId")
+                                if (selectedForDelete) {
+                                    IconButton(onClick = {
+                                        updateModels(modelConfigs - modelId)
+                                        selectedModelForDelete = null
+                                    }) {
+                                        Icon(Icons.Outlined.Delete, contentDescription = "Delete $modelId", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                } else {
+                                    IconButton(onClick = { configuringModel = modelId }) {
+                                        Icon(Icons.Outlined.Tune, contentDescription = "Configure $modelId")
+                                    }
                                 }
                             },
-                            modifier = Modifier.clickable { configuringModel = modelId }
+                            modifier = Modifier.combinedClickable(
+                                onClick = {
+                                    if (selectedModelForDelete != null) selectedModelForDelete = null
+                                    else configuringModel = modelId
+                                },
+                                onLongClick = { selectedModelForDelete = modelId }
+                            )
                         )
                     }
                 }
@@ -761,14 +804,14 @@ fun ProviderEditScreen(
             selectedModels = modelConfigs.keys,
             onFetchModels = onFetchModels,
             onToggle = { id ->
-                modelConfigs = if (id in modelConfigs) modelConfigs - id else modelConfigs + (id to ModelConfiguration())
+                updateModels(if (id in modelConfigs) modelConfigs - id else modelConfigs + (id to ModelConfiguration()))
             },
             onSetSelection = { ids, selected ->
-                modelConfigs = if (selected) {
+                updateModels(if (selected) {
                     modelConfigs + ids.associateWith { modelConfigs[it] ?: ModelConfiguration() }
                 } else {
                     modelConfigs - ids.toSet()
-                }
+                })
             },
             onDismiss = { showModelCatalog = false }
         )

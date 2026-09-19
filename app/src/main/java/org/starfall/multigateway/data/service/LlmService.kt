@@ -212,13 +212,13 @@ class LlmService {
             ProviderType.OPENAI -> emitAll(
                 sdk.streamOpenAi(
                     requestProvider, modelName, messages, systemPrompt,
-                    temperature, topP, maxTokens, modelConfig.sendThinkingContent
+                    temperature, topP, maxTokens, modelConfig.reasoningEffort, modelConfig.sendThinkingContent
                 )
             )
             ProviderType.OPENAI_RESPONSES -> emitAll(
                 sdk.streamResponses(
                     requestProvider, modelName, messages, systemPrompt,
-                    temperature, topP, maxTokens, modelConfig.sendThinkingContent
+                    temperature, topP, maxTokens, modelConfig.reasoningEffort, modelConfig.sendThinkingContent
                 )
             )
             ProviderType.ANTHROPIC -> emitAll(

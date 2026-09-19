@@ -48,7 +48,7 @@ fun InputBar(
             OutlinedTextField(
                 value = textState,
                 onValueChange = { textState = it },
-                placeholder = { Text("Ask MultiGateway...") },
+                placeholder = { Text("Type some text...") },
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 4.dp),

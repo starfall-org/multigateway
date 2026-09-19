@@ -27,7 +27,8 @@ data class AppPreferences(
     val selectedLanguage: String = "en",
     val showProfilesAsGrid: Boolean = true,
     val showProvidersAsGrid: Boolean = false,
-    val showMcpAsGrid: Boolean = false
+    val showMcpAsGrid: Boolean = false,
+    val mcpPresetsInitialized: Boolean = false
 )
 
 class AppPreferencesRepository(private val context: Context) {
@@ -51,6 +52,7 @@ class AppPreferencesRepository(private val context: Context) {
         val SHOW_PROFILES_AS_GRID = booleanPreferencesKey("show_profiles_as_grid")
         val SHOW_PROVIDERS_AS_GRID = booleanPreferencesKey("show_providers_as_grid")
         val SHOW_MCP_AS_GRID = booleanPreferencesKey("show_mcp_as_grid")
+        val MCP_PRESETS_INITIALIZED = booleanPreferencesKey("mcp_presets_initialized")
     }
 
     val appPreferencesFlow: Flow<AppPreferences> = context.dataStore.data
@@ -76,7 +78,8 @@ class AppPreferencesRepository(private val context: Context) {
                 selectedLanguage = preferences[PreferenceKeys.SELECTED_LANGUAGE] ?: "en",
                 showProfilesAsGrid = preferences[PreferenceKeys.SHOW_PROFILES_AS_GRID] ?: true,
                 showProvidersAsGrid = preferences[PreferenceKeys.SHOW_PROVIDERS_AS_GRID] ?: false,
-                showMcpAsGrid = preferences[PreferenceKeys.SHOW_MCP_AS_GRID] ?: false
+                showMcpAsGrid = preferences[PreferenceKeys.SHOW_MCP_AS_GRID] ?: false,
+                mcpPresetsInitialized = preferences[PreferenceKeys.MCP_PRESETS_INITIALIZED] ?: false
             )
         }
 
@@ -183,6 +186,12 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun setShowMcpAsGrid(isGrid: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.SHOW_MCP_AS_GRID] = isGrid
+        }
+    }
+
+    suspend fun setMcpPresetsInitialized(initialized: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.MCP_PRESETS_INITIALIZED] = initialized
         }
     }
 }

@@ -46,6 +46,21 @@ class ConfigurationViewModel(
         }
     }
 
+    fun saveProviderModels(providerId: String, modelConfigs: Map<String, ModelConfiguration>) {
+        viewModelScope.launch {
+            val provider = llmRepo.getProviderById(providerId) ?: return@launch
+            val modelIds = modelConfigs.keys.toList()
+            llmRepo.saveProvider(provider.copy(config = provider.config.copy(
+                modelConfigs = modelConfigs,
+                modelIds = modelIds
+            )))
+            val prefs = appPreferences.value
+            if (prefs.selectedProviderId == providerId && prefs.selectedModelId !in modelIds) {
+                prefsRepo.setSelectedModel(providerId, modelIds.firstOrNull().orEmpty())
+            }
+        }
+    }
+
     fun saveProvider(provider: LlmProviderInfo) {
         viewModelScope.launch {
             llmRepo.saveProvider(provider)

@@ -180,6 +180,7 @@ fun MainScreen(
                         ProviderScreen(
                             providers = providers,
                             onSaveProvider = { configurationViewModel.saveProvider(it) },
+                            onSaveModels = { providerId, models -> configurationViewModel.saveProviderModels(providerId, models) },
                             onDeleteProvider = { configurationViewModel.deleteProvider(it) },
                             onTestConnection = { prov, modelId -> configurationViewModel.testConnection(prov, modelId) },
                             onFetchModels = { provider -> configurationViewModel.fetchProviderModels(provider) },

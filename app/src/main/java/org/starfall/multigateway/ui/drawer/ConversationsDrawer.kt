@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -66,13 +67,13 @@ fun ConversationsDrawer(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.weight(1f).height(46.dp)
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -85,25 +86,27 @@ fun ConversationsDrawer(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        TextField(
+                        BasicTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = {
-                                Text(
-                                    "Search history...",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                )
-                            },
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                disabledContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
                             singleLine = true,
-                            modifier = Modifier.weight(1f)
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            modifier = Modifier.weight(1f),
+                            decorationBox = { innerTextField ->
+                                Box(contentAlignment = Alignment.CenterStart) {
+                                    if (searchQuery.isEmpty()) {
+                                        Text(
+                                            "Search history...",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                            maxLines = 1
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
                         )
                         if (searchQuery.isNotEmpty()) {
                             IconButton(
@@ -130,7 +133,7 @@ fun ConversationsDrawer(
                     },
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.size(46.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -335,66 +338,70 @@ fun ConversationsDrawer(
                             }
                         }
 
-                        IconButton(
-                            onClick = { showProfileDropdown = true },
-                            modifier = Modifier
-                                .padding(end = 4.dp)
-                                .size(48.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.UnfoldMore,
-                                contentDescription = "Switch Profile",
-                                tint = MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Profile Selector Dropdown (same width as the active profile card)
-                DropdownMenu(
-                    expanded = showProfileDropdown,
-                    onDismissRequest = { showProfileDropdown = false },
-                    modifier = Modifier.matchParentSize()
-                ) {
-                    profiles.forEach { profile ->
-                        val isSelected = profile.id == selectedProfile?.id
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = profile.name,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        Box {
+                            IconButton(
+                                onClick = { showProfileDropdown = !showProfileDropdown },
+                                modifier = Modifier
+                                    .padding(end = 4.dp)
+                                    .size(48.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.UnfoldMore,
+                                    contentDescription = "Switch Profile",
+                                    tint = MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.size(20.dp)
                                 )
-                            },
-                            trailingIcon = {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Active",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(18.dp)
+                            }
+
+                            DropdownMenu(
+                                expanded = showProfileDropdown,
+                                onDismissRequest = { showProfileDropdown = false },
+                                modifier = Modifier.widthIn(min = 220.dp, max = 280.dp)
+                            ) {
+                                profiles.forEach { profile ->
+                                    val isSelected = profile.id == selectedProfile?.id
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = profile.name,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
+                                        trailingIcon = {
+                                            if (isSelected) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Active",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            onSelectProfile(profile)
+                                            showProfileDropdown = false
+                                        }
                                     )
                                 }
-                            },
-                            onClick = {
-                                onSelectProfile(profile)
-                                showProfileDropdown = false
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                DropdownMenuItem(
+                                    text = { Text("Manage Profiles...") },
+                                    leadingIcon = {
+                                        Icon(Icons.Outlined.GridView, contentDescription = null)
+                                    },
+                                    onClick = {
+                                        showProfileDropdown = false
+                                        onNavigateToProfiles()
+                                        onCloseDrawer()
+                                    }
+                                )
                             }
-                        )
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    DropdownMenuItem(
-                        text = { Text("Manage Profiles...") },
-                        leadingIcon = { Icon(Icons.Outlined.GridView, contentDescription = null) },
-                        onClick = {
-                            showProfileDropdown = false
-                            onNavigateToProfiles()
-                            onCloseDrawer()
                         }
-                    )
-                }
             }
+        }
+    }
         }
     }
 

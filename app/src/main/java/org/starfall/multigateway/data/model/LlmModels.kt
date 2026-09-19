@@ -37,6 +37,15 @@ data class Authorization(
     val token: String get() = value?.takeIf { it.isNotBlank() } ?: key.orEmpty()
 }
 
+fun ProviderType.defaultAuthorization(): Authorization = when (this) {
+    ProviderType.OPENAI, ProviderType.OPENAI_RESPONSES, ProviderType.ANTHROPIC ->
+        Authorization(method = AuthMethod.BEARER_TOKEN, value = "")
+    ProviderType.GOOGLE ->
+        Authorization(method = AuthMethod.QUERY_PARAM, key = "key", value = "")
+    ProviderType.OLLAMA ->
+        Authorization(method = AuthMethod.OTHER, value = "")
+}
+
 @Serializable
 data class ProviderConfiguration(
     val httpProxy: Map<String, String> = emptyMap(),
@@ -114,6 +123,7 @@ data class ModelConfiguration(
     val supportsVideoInput: Boolean = false,
     val supportsAudioInput: Boolean = false,
     val supportsThinking: Boolean = true,
+    @SerialName("reasoning_effort") val reasoningEffort: String? = null,
     val supportsToolCalls: Boolean = true,
     @SerialName("send_thinking_content") val sendThinkingContent: Boolean = false
 )

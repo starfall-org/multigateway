@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">MultiGateway</string>
+    <string name="thinking">Thinking</string>
+    <string name="thinking_streaming">Thinking...</string>
+    <string name="generating">Generating...</string>
+    <string name="chat_input_placeholder">Type some text...</string>
+    <string name="thought_process">Thought Process</string>
+    <string name="collapse">Collapse</string>
+    <string name="expand">Expand</string>
+    <string name="processed">Processed</string>
+    <string name="processed_in">Processed in %1$s</string>
+    <string name="processing_block_label">%1$d. %2$s</string>
 </resources>

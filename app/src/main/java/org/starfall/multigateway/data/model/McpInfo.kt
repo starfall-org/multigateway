@@ -9,10 +9,29 @@ enum class McpProtocol {
 }
 
 @Serializable
+enum class McpAuthMethod {
+    NONE,
+    BEARER_TOKEN,
+    QUERY_PARAM,
+    CUSTOM_HEADER,
+    OAUTH2
+}
+
+@Serializable
+data class McpAuthorization(
+    val method: McpAuthMethod = McpAuthMethod.NONE,
+    val key: String? = null,
+    val value: String? = null
+) {
+    val token: String get() = value.orEmpty()
+}
+
+@Serializable
 data class McpInfo(
     val id: String,
     val name: String,
     val protocol: McpProtocol = McpProtocol.SSE,
     val url: String? = null,
-    val headers: Map<String, String>? = null
+    val headers: Map<String, String>? = null,
+    val auth: McpAuthorization = McpAuthorization()
 )

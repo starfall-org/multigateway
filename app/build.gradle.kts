@@ -8,14 +8,15 @@ plugins {
 
 android {
     namespace = "org.starfall.multigateway"
-    compileSdk = 34
+    compileSdk = 36
+    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "org.starfall.multigateway"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 4
-        versionName = "2.0.2"
+        targetSdk = 36
+        versionCode = 5
+        versionName = "2.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

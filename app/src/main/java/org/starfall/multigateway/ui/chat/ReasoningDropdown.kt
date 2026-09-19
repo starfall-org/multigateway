@@ -19,10 +19,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.starfall.multigateway.R
 
 @Composable
 fun ReasoningDropdown(
@@ -48,13 +50,13 @@ fun ReasoningDropdown(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Lightbulb,
-                    contentDescription = "Thinking",
+                    contentDescription = stringResource(R.string.thinking),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (isStreaming) "Thinking..." else "Thought Process",
+                    text = if (isStreaming) stringResource(R.string.thinking_streaming) else stringResource(R.string.thought_process),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
@@ -69,7 +71,7 @@ fun ReasoningDropdown(
                 }
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    contentDescription = if (isExpanded) stringResource(R.string.collapse) else stringResource(R.string.expand),
                     tint = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.size(20.dp)
                 )
@@ -95,13 +97,24 @@ fun ProcessingDropdown(
     reasoning: String?,
     activities: List<org.starfall.multigateway.data.model.ToolActivity>,
     durationMillis: Long?,
+    blockNumber: Int,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
     val visibleActivities = activities.filterNot { it.name.endsWith(": connect") }
     if (reasoning.isNullOrBlank() && visibleActivities.isEmpty()) return
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    val processingLabel = if (durationMillis != null) {
+        stringResource(R.string.processed_in, formatProcessingDuration(durationMillis))
+    } else {
+        stringResource(R.string.processed)
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 8.dp)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -110,14 +123,14 @@ fun ProcessingDropdown(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = durationMillis?.let { "Đã xử lý trong ${formatProcessingDuration(it)}" } ?: "Đã xử lý",
+                text = stringResource(R.string.processing_block_label, blockNumber, processingLabel),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.outline
             )
             Spacer(Modifier.width(4.dp))
             Icon(
                 imageVector = if (expanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
-                contentDescription = if (expanded) "Thu gọn" else "Mở rộng",
+                contentDescription = if (expanded) stringResource(R.string.collapse) else stringResource(R.string.expand),
                 tint = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.size(20.dp)
             )

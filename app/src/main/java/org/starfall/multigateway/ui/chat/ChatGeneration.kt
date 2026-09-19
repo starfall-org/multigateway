@@ -90,9 +90,16 @@ internal class ChatGeneration(
                                     if (index != message.activeVersionIndex) version else {
                                         val existingIndex = version.toolActivity.indexOfFirst { it.id == chunk.activity.id }
                                         val anchoredActivity = if (existingIndex >= 0) {
-                                            chunk.activity.copy(contentOffset = version.toolActivity[existingIndex].contentOffset)
+                                            val existing = version.toolActivity[existingIndex]
+                                            chunk.activity.copy(
+                                                contentOffset = existing.contentOffset,
+                                                reasoningOffset = existing.reasoningOffset
+                                            )
                                         } else {
-                                            chunk.activity.copy(contentOffset = contentOffset)
+                                            chunk.activity.copy(
+                                                contentOffset = contentOffset,
+                                                reasoningOffset = reasoningOutput.length
+                                            )
                                         }
                                         val updatedActivities = version.toolActivity.toMutableList().apply {
                                             if (existingIndex >= 0) set(existingIndex, anchoredActivity) else add(anchoredActivity)
