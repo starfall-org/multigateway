@@ -2,6 +2,8 @@ package org.starfall.multigateway.ui.settings
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -67,6 +69,10 @@ fun SettingsScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
+    BackHandler(enabled = selectedCategory != null) {
+        selectedCategory = null
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -98,106 +104,123 @@ fun SettingsScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            when (selectedCategory) {
-                null -> {
-                    // Main Settings Categories List
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(SettingsCategory.values().size) { idx ->
-                            val cat = SettingsCategory.values()[idx]
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedCategory = cat }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+            AnimatedContent(
+                targetState = selectedCategory,
+                transitionSpec = {
+                    if (targetState != null) {
+                        // Slide in from right to left
+                        (slideInHorizontally { width -> width / 4 } + fadeIn())
+                            .togetherWith(slideOutHorizontally { width -> -width / 4 } + fadeOut())
+                    } else {
+                        // Slide in from left to right (going back)
+                        (slideInHorizontally { width -> -width / 4 } + fadeIn())
+                            .togetherWith(slideOutHorizontally { width -> width / 4 } + fadeOut())
+                    }
+                },
+                label = "settings_transition",
+                modifier = Modifier.fillMaxSize()
+            ) { category ->
+                when (category) {
+                    null -> {
+                        // Main Settings Categories List
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(SettingsCategory.values().size) { idx ->
+                                val cat = SettingsCategory.values()[idx]
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedCategory = cat }
                                 ) {
-                                    Surface(
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(44.dp)
+                                    Row(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = cat.icon,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(22.dp)
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                                            modifier = Modifier.size(44.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = cat.icon,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(16.dp))
+
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = cat.title,
+                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = cat.subtitle,
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                                                color = MaterialTheme.colorScheme.outline
                                             )
                                         }
-                                    }
 
-                                    Spacer(modifier = Modifier.width(16.dp))
-
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = cat.title,
-                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = cat.subtitle,
-                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                                            color = MaterialTheme.colorScheme.outline
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                                            modifier = Modifier.size(14.dp)
                                         )
                                     }
-
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                                        modifier = Modifier.size(14.dp)
-                                    )
                                 }
                             }
                         }
                     }
-                }
 
-                SettingsCategory.APPEARANCE -> {
-                    AppearanceSettingsView(
-                        appPreferences = appPreferences,
-                        onThemeChange = onThemeChange,
-                        onAmoledChange = onAmoledChange,
-                        onDynamicColorChange = onDynamicColorChange,
-                        onColorSchemeChange = onColorSchemeChange
-                    )
-                }
+                    SettingsCategory.APPEARANCE -> {
+                        AppearanceSettingsView(
+                            appPreferences = appPreferences,
+                            onThemeChange = onThemeChange,
+                            onAmoledChange = onAmoledChange,
+                            onDynamicColorChange = onDynamicColorChange,
+                            onColorSchemeChange = onColorSchemeChange
+                        )
+                    }
 
-                SettingsCategory.PREFERENCES -> {
-                    PreferencesSettingsView(
-                        appPreferences = appPreferences,
-                        onContinueLastConversationChange = onContinueLastConversationChange,
-                        onPersistChatSelectionChange = onPersistChatSelectionChange,
-                        onEnableVibrationChange = onEnableVibrationChange,
-                        onHideStatusBarChange = onHideStatusBarChange,
-                        onDebugModeChange = onDebugModeChange
-                    )
-                }
+                    SettingsCategory.PREFERENCES -> {
+                        PreferencesSettingsView(
+                            appPreferences = appPreferences,
+                            onContinueLastConversationChange = onContinueLastConversationChange,
+                            onPersistChatSelectionChange = onPersistChatSelectionChange,
+                            onEnableVibrationChange = onEnableVibrationChange,
+                            onHideStatusBarChange = onHideStatusBarChange,
+                            onDebugModeChange = onDebugModeChange
+                        )
+                    }
 
-                SettingsCategory.USER_DATA -> {
-                    UserDataSettingsView(
-                        conversationCount = conversationCount,
-                        profileCount = profileCount,
-                        providerCount = providerCount,
-                        onClearAllConversations = onClearAllConversations,
-                        onResetAllData = onResetAllData
-                    )
-                }
+                    SettingsCategory.USER_DATA -> {
+                        UserDataSettingsView(
+                            conversationCount = conversationCount,
+                            profileCount = profileCount,
+                            providerCount = providerCount,
+                            onClearAllConversations = onClearAllConversations,
+                            onResetAllData = onResetAllData
+                        )
+                    }
 
-                SettingsCategory.UPDATE -> {
-                    UpdateSettingsView()
-                }
+                    SettingsCategory.UPDATE -> {
+                        UpdateSettingsView()
+                    }
 
-                SettingsCategory.ABOUT -> {
-                    AboutSettingsView()
+                    SettingsCategory.ABOUT -> {
+                        AboutSettingsView()
+                    }
                 }
             }
         }

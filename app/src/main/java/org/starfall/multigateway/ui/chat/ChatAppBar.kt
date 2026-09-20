@@ -10,10 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.starfall.multigateway.R
 import org.starfall.multigateway.data.model.ChatProfile
 import org.starfall.multigateway.data.model.Conversation
 
@@ -44,8 +46,8 @@ fun ChatAppBar(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = "Open conversations",
+                    painter = painterResource(R.drawable.ic_side_navigation),
+                    contentDescription = "Open side navigation",
                     tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(24.dp)
                 )
