@@ -45,4 +45,4 @@ use the existing signing environment variables and `scripts/publish-github-relea
 Version name/code live in `app/build.gradle.kts`.
 
 Do not commit API keys, local SDK paths, build outputs, or release signing secrets.
-Contributions are covered by the repository [LICENSE](LICENSE).
+Contributions are covered by the repository [LICENSE](LICENSE). By submitting code for inclusion, you represent that you have the right to submit it and agree that an accepted, merged code contribution is licensed under the repository license. A qualifying code contribution also gives the contributing person or organization the contributor-only commercial-use permission defined in the license; documentation-only, issue, review, sponsorship, and other non-code contributions do not qualify.

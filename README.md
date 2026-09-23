@@ -121,4 +121,6 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for repository
 
 ## License
 
-[![License: SPLicense](https://img.shields.io/badge/Starfall-LICENSE-blue.svg)](LICENSE)
+[![License: Starfall Contributor Commercial Copyleft](https://img.shields.io/badge/license-Starfall%20Contributor%20Commercial%20Copyleft-blue.svg)](LICENSE)
+
+This project is **source-available, not OSI open source**. Non-commercial use, modification, and redistribution are allowed under the copyleft terms in [LICENSE](LICENSE). Commercial use is allowed only for a person or organization that has made a qualifying code contribution accepted and merged into this repository, or that has separate written permission from the relevant copyright holders. Distribution of modified or binary versions must keep the same license and make the corresponding source available.
